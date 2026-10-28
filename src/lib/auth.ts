@@ -16,20 +16,22 @@ export const authOptions: AuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
+        // Normalizamos el correo (minúsculas y sin espacios invisibles)
         const cleanEmail = credentials.email.trim().toLowerCase()
 
+        // Buscamos al usuario en la base de datos de Supabase
         const user = await prisma.user.findUnique({
           where: { email: cleanEmail },
         })
 
-        if (!user) return null
+        if (!user || !user.password) return null
 
         // 1. Validar si está baneado
         if (user.isBanned) {
           throw new Error('BANNED')
         }
 
-        // 2. Validar si está pendiente de aprobación por el Administrador
+        // 2. Validar estado de aprobación
         if (user.status === 'PENDING') {
           throw new Error('PENDING_APPROVAL')
         }
@@ -38,11 +40,11 @@ export const authOptions: AuthOptions = {
           throw new Error('REJECTED')
         }
 
-        // 3. Validar contraseña
+        // 3. Validar contraseña encriptada con bcrypt
         const isValid = await bcrypt.compare(credentials.password, user.password)
         if (!isValid) return null
 
-        // Registrar log de actividad
+        // Registrar log de actividad de forma segura
         try {
           await prisma.activityLog.create({
             data: {
@@ -54,7 +56,7 @@ export const authOptions: AuthOptions = {
             },
           })
         } catch {
-          // No bloquear el login si falla el log
+          // No bloquear el inicio de sesión si falla la escritura del log
         }
 
         return {
@@ -93,7 +95,7 @@ export const authOptions: AuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 días
   },
-  secret: process.env.NEXTAUTH_SECRET || 'invictus-mentoria-super-secret-key-2024-trading',
+  secret: process.env.NEXTAUTH_SECRET,
 }
 
 export default NextAuth(authOptions)
