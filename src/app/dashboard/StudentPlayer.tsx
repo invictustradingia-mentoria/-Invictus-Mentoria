@@ -78,12 +78,12 @@ export function StudentPlayer({
     return map
   })
 
-  // ── Security state ──────────────────────────────────────────────────────────
+  // Estado de seguridad (Únicamente ante grabación real de pantalla)
   const [isBlackout, setIsBlackout] = useState(false)
   const [blackoutReason, setBlackoutReason] = useState<string>('')
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  // ── Watermark drift ─────────────────────────────────────────────────────────
+  // Marca de agua dinámica flotante
   const [watermarkPos, setWatermarkPos] = useState({ top: 15, left: 15 })
 
   useEffect(() => {
@@ -96,62 +96,35 @@ export function StudentPlayer({
     return () => clearInterval(interval)
   }, [])
 
-  // ── Anti‑recording protection ────────────────────────────────────────────────
+  // Protección anti-grabación estricta y sin falsos positivos
   useEffect(() => {
-    const triggerBlackout = (reason: string, track = true) => {
+    const triggerBlackout = (reason: string) => {
       setIsBlackout(true)
       setBlackoutReason(reason)
       if (videoRef.current) videoRef.current.pause()
-      if (track && activeLesson) {
-        fetch('/api/track', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'SECURITY_BLACKOUT',
-            page: `/dashboard?lesson=${activeLesson.id}`,
-            lessonId: activeLesson.id,
-            lessonTitle: activeLesson.title,
-            metadata: { reason },
-          }),
-        }).catch(() => {})
-      }
+      
+      // Enviar reporte oficial de seguridad a la base de datos para la administración
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'SECURITY_BLACKOUT',
+          page: `/dashboard?lesson=${activeLesson?.id}`,
+          lessonId: activeLesson?.id,
+          lessonTitle: activeLesson?.title,
+          metadata: { reason, email: studentEmail, ip: studentIp },
+        }),
+      }).catch(() => {})
     }
 
+    // Interceptar getDisplayMedia (Software de captura de pantalla tipo OBS, Discord, etc.)
     if (typeof window !== 'undefined' && navigator?.mediaDevices?.getDisplayMedia) {
       navigator.mediaDevices.getDisplayMedia = async function () {
-        triggerBlackout('Software de grabación o transmisión de pantalla detectado.')
+        triggerBlackout('Se detectó un software externo intentando grabar o transmitir la clase.')
         throw new Error('Screen capture blocked by security policy')
       }
     }
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
-        triggerBlackout('Captura de pantalla bloqueada.')
-        try { navigator.clipboard?.writeText('') } catch (_) {}
-        setTimeout(() => setIsBlackout(false), 2500)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [activeLesson])
-
-  // ── Track video play on lesson change ───────────────────────────────────────
-  useEffect(() => {
-    if (!activeLesson) return
-    fetch('/api/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'VIDEO_PLAY',
-        page: `/dashboard?lesson=${activeLesson.id}`,
-        lessonId: activeLesson.id,
-        lessonTitle: activeLesson.title,
-      }),
-    }).catch(() => {})
-  }, [activeLesson?.id])
+  }, [activeLesson, studentEmail, studentIp])
 
   const toggleModule = (modId: string) => {
     setOpenModules((prev) => ({ ...prev, [modId]: !prev[modId] }))
@@ -171,16 +144,6 @@ export function StudentPlayer({
           watchedSecs: nextState ? (activeLesson.duration || 1200) : 0,
         }),
       })
-      await fetch('/api/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: nextState ? 'VIDEO_COMPLETE' : 'VIDEO_UNCOMPLETE',
-          page: '/dashboard',
-          lessonId: activeLesson.id,
-          lessonTitle: activeLesson.title,
-        }),
-      })
     } catch (err) {
       console.error(err)
     }
@@ -194,7 +157,7 @@ export function StudentPlayer({
   const completedCount = Object.values(completedMap).filter(Boolean).length
   const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
 
-  // ── Extractor de ID limpio para YouTube / Vimeo ─────────────────────────────
+  // Renderizador universal adaptado para YouTube, Vimeo, archivos locales o URLs directas
   const renderVideoContent = (url: string) => {
     if (!url) {
       return (
@@ -214,7 +177,6 @@ export function StudentPlayer({
         videoId = url.split('v=')[1]?.split('&')[0]
       }
 
-      // Usando parámetros de incrustación universales avanzados anti-error 153
       const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&controls=1&rel=0&modestbranding=1&playsinline=1`
 
       return (
@@ -260,9 +222,9 @@ export function StudentPlayer({
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <BookOpen size={48} className="text-[#fcd5c3] mb-4" />
-        <h2 className="text-xl font-bold text-[#1d1d1f] mb-2">Todavía no hay clases disponibles</h2>
+        <h2 className="text-xl font-bold text-[#1d1d1f] mb-2">No hay clases disponibles para tu nivel</h2>
         <p className="text-[#86868b] text-sm max-w-sm">
-          El contenido estará disponible pronto. El equipo de Invictus está preparando tus módulos.
+          Es posible que el contenido esté asignado a otro rol institucional o los módulos estén vacíos.
         </p>
       </div>
     )
@@ -270,7 +232,6 @@ export function StudentPlayer({
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-[70vh]">
-      {/* ── Blackout overlay ─────────────────────────────────────────────────── */}
       {isBlackout && (
         <div
           className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center cursor-pointer"
@@ -287,7 +248,6 @@ export function StudentPlayer({
         </div>
       )}
 
-      {/* ── Left: Video player ───────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col gap-4">
         {activeLesson ? (
           <>
@@ -376,12 +336,11 @@ export function StudentPlayer({
           </>
         ) : (
           <div className="flex items-center justify-center h-64 bg-[#f9f9fb] rounded-2xl border border-[#ededf0]">
-            <p className="text-[#86868b] text-sm">Selecciona una clase para empezar</p>
+            <p className="text-[#86868b] text-sm">No hay clases disponibles para tu rol actual.</p>
           </div>
         )}
       </div>
 
-      {/* ── Right: Modules sidebar ───────────────────────────────────────────── */}
       <div className="w-full lg:w-80 xl:w-96 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-[#1d1d1f]">Módulos del Curso</h3>
@@ -418,7 +377,7 @@ export function StudentPlayer({
                 {isOpen && (
                   <div className="border-t border-[#f4f4f7] divide-y divide-[#f4f4f7]">
                     {mod.lessons.length === 0 ? (
-                      <p className="px-4 py-3 text-xs text-[#999] italic">Sin clases en este módulo</p>
+                      <p className="px-4 py-3 text-xs text-[#999] italic">Sin clases para tu rol</p>
                     ) : (
                       mod.lessons.map((lesson) => {
                         const isActive = lesson.id === activeLesson?.id
@@ -429,9 +388,7 @@ export function StudentPlayer({
                             key={lesson.id}
                             onClick={() => setActiveLesson(lesson)}
                             className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
-                              isActive
-                                ? 'bg-[#fff4ef]'
-                                : 'hover:bg-[#fafafc]'
+                              isActive ? 'bg-[#fff4ef]' : 'hover:bg-[#fafafc]'
                             }`}
                           >
                             <div className="shrink-0 mt-0.5">

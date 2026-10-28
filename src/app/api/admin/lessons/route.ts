@@ -19,6 +19,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'El título y el módulo son obligatorios' }, { status: 400 })
     }
 
+    // Asegurar que el rol sea exactamente CLUB o MENTORIA
+    const cleanRole = allowedRole?.includes('MENTORIA') ? 'MENTORIA' : 'CLUB'
+
     const lessonCount = await prisma.lesson.count({ where: { moduleId } })
 
     const lesson = await prisma.lesson.create({
@@ -28,7 +31,7 @@ export async function POST(req: Request) {
         videoUrl: videoUrl || '',
         duration: duration ? parseInt(duration) : null,
         moduleId,
-        allowedRole: allowedRole || 'CLUB',
+        allowedRole: cleanRole,
         order: lessonCount + 1,
         isPublished: true,
       },
@@ -37,6 +40,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, lesson })
   } catch (error: any) {
     console.error('Error al crear lección:', error)
-    return NextResponse.json({ error: 'Error interno al crear la clase' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Error al guardar la lección' }, { status: 500 })
   }
 }

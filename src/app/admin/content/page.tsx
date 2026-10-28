@@ -84,7 +84,7 @@ export default function AdminContentPage() {
 
       if (res.ok && data.module) {
         setModules((prev) => [...prev, data.module])
-        setSelectedModuleId(data.module.id) // Seleccionar automáticamente el módulo creado
+        setSelectedModuleId(data.module.id)
         setModTitle('')
         setModDesc('')
         showNotification('¡Módulo creado con éxito y añadido al selector!', 'success')
@@ -136,7 +136,7 @@ export default function AdminContentPage() {
           description: lessonDesc,
           videoUrl: finalVideoUrl,
           duration: duration ? parseInt(duration) : null,
-          allowedRole: lessonRole,
+          allowedRole: lessonRole, // Envía limpiamente "CLUB" o "MENTORIA"
         }),
       })
 
@@ -222,7 +222,6 @@ export default function AdminContentPage() {
         </div>
       </div>
 
-      {/* Notificación flotante moderna en lugar de alertas cutres */}
       {message && (
         <div className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-sm ${
           message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
@@ -314,8 +313,8 @@ export default function AdminContentPage() {
                       onChange={(e) => setLessonRole(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-[#e25822] focus:outline-none focus:border-[#e25822]"
                     >
-                      <option value="CLUB">CLUB (Solo Club)</option>
-                      <option value="MENTORIA">MENTORIA (Mentoria + Club)</option>
+                      <option value="CLUB">CLUB</option>
+                      <option value="MENTORIA">MENTORIA</option>
                     </select>
                   </div>
                 </div>
