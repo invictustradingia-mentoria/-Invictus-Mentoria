@@ -1,10 +1,9 @@
-import type { Metadata } from 'next'
 import './globals.css'
-import { Providers } from '@/components/Providers'
+import { Metadata } from 'net'
 
-export const metadata: Metadata = {
-  title: 'Invictus Master | Mentoría de Trading',
-  description: 'Plataforma oficial de formación y mentoría de trading.',
+export const metadata = {
+  title: 'Invictus Mentoria',
+  description: 'Plataforma oficial de formación y trading',
 }
 
 export default function RootLayout({
@@ -14,10 +13,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="bg-[#fcfcfd] text-[#2d2d2d] font-sans antialiased">
-        <Providers>
-          {children}
-        </Providers>
+      <body className="bg-[#fdfdfd] text-[#1d1d1f] antialiased min-h-screen">
+        {children}
       </body>
     </html>
   )
