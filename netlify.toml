@@ -4,6 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "18.17.0"
+  SECRETS_SCAN_OMIT_KEYS = "NEXTAUTH_URL"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
