@@ -19,17 +19,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'El título y el módulo son obligatorios' }, { status: 400 })
     }
 
-    // Asegurar que el rol sea exactamente CLUB o MENTORIA
+    // Asegurar valores por defecto válidos
     const cleanRole = allowedRole?.toUpperCase() === 'MENTORIA' ? 'MENTORIA' : 'CLUB'
+    const finalVideoUrl = videoUrl && videoUrl.trim() !== '' ? videoUrl.trim() : 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
 
+    // Contar las lecciones existentes en el módulo para asignar orden
     const lessonCount = await prisma.lesson.count({ where: { moduleId } })
 
     const lesson = await prisma.lesson.create({
       data: {
         title: title.trim(),
         description: description ? description.trim() : null,
-        videoUrl: videoUrl || '',
-        duration: duration ? parseInt(duration) : null,
+        videoUrl: finalVideoUrl,
+        duration: duration ? parseInt(duration) : 1200,
         moduleId,
         allowedRole: cleanRole,
         order: lessonCount + 1,
