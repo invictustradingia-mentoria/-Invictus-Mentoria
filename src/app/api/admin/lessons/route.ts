@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     }
 
     // Asegurar que el rol sea exactamente CLUB o MENTORIA
-    const cleanRole = allowedRole?.includes('MENTORIA') ? 'MENTORIA' : 'CLUB'
+    const cleanRole = allowedRole?.toUpperCase() === 'MENTORIA' ? 'MENTORIA' : 'CLUB'
 
     const lessonCount = await prisma.lesson.count({ where: { moduleId } })
 

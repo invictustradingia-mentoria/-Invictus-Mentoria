@@ -78,7 +78,7 @@ export function StudentPlayer({
     return map
   })
 
-  // Estado de seguridad (Únicamente ante grabación real de pantalla)
+  // Estado de seguridad (Únicamente ante grabación externa real)
   const [isBlackout, setIsBlackout] = useState(false)
   const [blackoutReason, setBlackoutReason] = useState<string>('')
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -96,14 +96,13 @@ export function StudentPlayer({
     return () => clearInterval(interval)
   }, [])
 
-  // Protección anti-grabación estricta y sin falsos positivos
+  // Protección anti-grabación (Solo intercepta getDisplayMedia para evitar falsos positivos con pantalla completa)
   useEffect(() => {
     const triggerBlackout = (reason: string) => {
       setIsBlackout(true)
       setBlackoutReason(reason)
       if (videoRef.current) videoRef.current.pause()
       
-      // Enviar reporte oficial de seguridad a la base de datos para la administración
       fetch('/api/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,7 +116,6 @@ export function StudentPlayer({
       }).catch(() => {})
     }
 
-    // Interceptar getDisplayMedia (Software de captura de pantalla tipo OBS, Discord, etc.)
     if (typeof window !== 'undefined' && navigator?.mediaDevices?.getDisplayMedia) {
       navigator.mediaDevices.getDisplayMedia = async function () {
         triggerBlackout('Se detectó un software externo intentando grabar o transmitir la clase.')
@@ -157,7 +155,6 @@ export function StudentPlayer({
   const completedCount = Object.values(completedMap).filter(Boolean).length
   const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
 
-  // Renderizador universal adaptado para YouTube, Vimeo, archivos locales o URLs directas
   const renderVideoContent = (url: string) => {
     if (!url) {
       return (
@@ -183,7 +180,7 @@ export function StudentPlayer({
         <iframe
           src={embedUrl}
           className="w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"
           style={{ pointerEvents: isBlackout ? 'none' : 'auto' }}
