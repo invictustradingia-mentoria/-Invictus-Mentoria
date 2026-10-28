@@ -1,10 +1,14 @@
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
-import React from 'react'
-import { Providers } from './providers'
+import { Providers } from '@/components/Providers'
 
-export const metadata = {
-  title: 'Invictus Mentoria',
-  description: 'Plataforma oficial de formación y trading',
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXTAUTH_URL || 'https://invictus-mentoria.netlify.app'),
+  title: 'Invictus Mentoría - Plataforma de Trading',
+  description: 'Plataforma Institucional de Trading y Mentoría Avanzada',
 }
 
 export default function RootLayout({
@@ -14,7 +18,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="bg-[#fdfdfd] text-[#1d1d1f] antialiased min-h-screen">
+      <body className={inter.className}>
         <Providers>{children}</Providers>
       </body>
     </html>
