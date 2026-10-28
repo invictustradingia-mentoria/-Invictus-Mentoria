@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
+import { signIn } from 'next-auth/react'
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
@@ -18,19 +19,28 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      // Usamos el sistema oficial de NextAuth para generar la cookie de sesión segura
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
       })
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || 'Credenciales incorrectas')
+      if (result?.error) {
+        setError(result.error || 'Credenciales incorrectas')
         setLoading(false)
       } else {
-        window.location.href = '/admin'
+        // Consultamos la sesión recién creada para verificar el rol y redirigir correctamente
+        const sessionRes = await fetch('/api/auth/session')
+        const session = await sessionRes.json()
+        
+        const userRole = session?.user?.role
+
+        if (userRole === 'ADMIN') {
+          window.location.href = '/admin'
+        } else {
+          window.location.href = '/dashboard'
+        }
       }
     } catch (err) {
       setError('Error de conexión con el servidor')
