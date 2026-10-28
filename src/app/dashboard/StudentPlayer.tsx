@@ -78,7 +78,7 @@ export function StudentPlayer({
     return map
   })
 
-  // ── Security state (Solo se activa por captura real de pantalla/streaming) ──
+  // ── Security state ──────────────────────────────────────────────────────────
   const [isBlackout, setIsBlackout] = useState(false)
   const [blackoutReason, setBlackoutReason] = useState<string>('')
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -96,7 +96,7 @@ export function StudentPlayer({
     return () => clearInterval(interval)
   }, [])
 
-  // ── Anti‑recording protection (Estricto para apps de grabación) ──────────────
+  // ── Anti‑recording protection (Solo aplicaciones reales de captura) ─────────
   useEffect(() => {
     const triggerBlackout = (reason: string, track = true) => {
       setIsBlackout(true)
@@ -117,24 +117,22 @@ export function StudentPlayer({
       }
     }
 
-    // Interceptar la API de captura de pantalla del navegador (OBS, grabadores, etc.)
     if (typeof window !== 'undefined' && navigator?.mediaDevices?.getDisplayMedia) {
       navigator.mediaDevices.getDisplayMedia = async function () {
-        triggerBlackout('Se ha detectado un software intentando grabar o transmitir la pantalla. Reproducción bloqueada.')
+        triggerBlackout('Software de grabación o transmisión de pantalla detectado.')
         throw new Error('Screen capture blocked by security policy')
       }
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
-        triggerBlackout('Captura de pantalla bloqueada por seguridad institucional.')
+        triggerBlackout('Captura de pantalla bloqueada.')
         try { navigator.clipboard?.writeText('') } catch (_) {}
         setTimeout(() => setIsBlackout(false), 2500)
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
@@ -196,7 +194,7 @@ export function StudentPlayer({
   const completedCount = Object.values(completedMap).filter(Boolean).length
   const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
 
-  // ── Renderizador de video adaptativo y libre de errores 153 ──────────────────
+  // ── Renderizador de video adaptativo y libre de errores de YouTube ──────────
   const renderVideoContent = (url: string) => {
     if (!url) {
       return (
@@ -206,29 +204,30 @@ export function StudentPlayer({
       )
     }
 
-    // Transformación robusta de YouTube para evitar errores de incrustación
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       let videoId = ''
       if (url.includes('youtu.be/')) {
-        videoId = url.split('youtu.be/')[1]?.split('?')[0]
+        videoId = url.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0]
       } else if (url.includes('embed/')) {
-        videoId = url.split('embed/')[1]?.split('?')[0]
+        videoId = url.split('embed/')[1]?.split('?')[0]?.split('&')[0]
       } else if (url.includes('v=')) {
         videoId = url.split('v=')[1]?.split('&')[0]
       }
-      const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1`
+
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://invictustradingia-mentoria.netlify.app'
+      const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(currentOrigin)}`
+
       return (
         <iframe
           src={embedUrl}
           className="w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; full-screen"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
           style={{ pointerEvents: isBlackout ? 'none' : 'auto' }}
         />
       )
     }
 
-    // Transformación de Vimeo
     if (url.includes('vimeo.com')) {
       const videoId = url.split('vimeo.com/')[1]?.split('?')[0]
       return (
@@ -242,7 +241,6 @@ export function StudentPlayer({
       )
     }
 
-    // Video directo (MP4 / WebM / Supabase) con soporte de pantalla completa habilitado
     return (
       <video
         ref={videoRef}
@@ -271,7 +269,7 @@ export function StudentPlayer({
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-[70vh]">
-      {/* ── Blackout overlay de seguridad (Solo por streaming/grabación) ──────── */}
+      {/* ── Blackout overlay ─────────────────────────────────────────────────── */}
       {isBlackout && (
         <div
           className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center cursor-pointer"
@@ -284,7 +282,7 @@ export function StudentPlayer({
           <p className="text-white font-bold text-lg text-center max-w-md px-6">
             {blackoutReason || 'Contenido protegido'}
           </p>
-          <p className="text-[#999] text-sm mt-2">Haz clic para reanudar la visualización</p>
+          <p className="text-[#999] text-sm mt-2">Haz clic para continuar viendo</p>
         </div>
       )}
 
@@ -304,7 +302,6 @@ export function StudentPlayer({
               )}
             </div>
 
-            {/* Video container con soporte limpio para pantalla completa */}
             <div
               className="relative rounded-2xl overflow-hidden bg-black shadow-xl border border-[#ededf0]"
               style={{ aspectRatio: '16/9' }}
@@ -312,7 +309,6 @@ export function StudentPlayer({
             >
               {renderVideoContent(activeLesson.videoUrl)}
 
-              {/* Watermark */}
               <div
                 className="absolute pointer-events-none select-none z-10"
                 style={{
@@ -331,7 +327,6 @@ export function StudentPlayer({
               </div>
             </div>
 
-            {/* Controls row */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <button
@@ -363,7 +358,6 @@ export function StudentPlayer({
               </button>
             </div>
 
-            {/* Progress bar */}
             <div className="bg-white rounded-2xl p-4 border border-[#ededf0] shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold text-[#1d1d1f]">Progreso del curso</span>
