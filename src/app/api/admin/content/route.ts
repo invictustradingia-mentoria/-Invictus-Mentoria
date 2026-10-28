@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'ADMIN') {
+    if (!session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
@@ -21,7 +21,7 @@ export async function GET() {
 
     return NextResponse.json({ modules })
   } catch (error) {
-    console.error('Error fetching admin content:', error)
+    console.error('Error fetching content:', error)
     return NextResponse.json({ error: 'Error al obtener el contenido' }, { status: 500 })
   }
 }
