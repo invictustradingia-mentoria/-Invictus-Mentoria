@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Video, FolderPlus, Trash2, Layers, Upload, Link as LinkIcon, Shield } from 'lucide-react'
+import { Plus, Video, FolderPlus, Trash2, Layers, Upload, Link as LinkIcon, CheckCircle2 } from 'lucide-react'
 
 interface Lesson {
   id: string
@@ -21,10 +21,12 @@ interface Module {
 export default function AdminContentPage() {
   const [modules, setModules] = useState<Module[]>([])
   const [activeTab, setActiveTab] = useState<'courses' | 'resources'>('courses')
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   // Formulario Módulo
   const [modTitle, setModTitle] = useState('')
   const [modDesc, setModDesc] = useState('')
+  const [loadingMod, setLoadingMod] = useState(false)
 
   // Formulario Lección
   const [selectedModuleId, setSelectedModuleId] = useState('')
@@ -62,31 +64,51 @@ export default function AdminContentPage() {
     }
   }
 
+  const showNotification = (text: string, type: 'success' | 'error') => {
+    setMessage({ text, type })
+    setTimeout(() => setMessage(null), 4000)
+  }
+
   const handleCreateModule = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!modTitle) return
-    const res = await fetch('/api/admin/modules', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: modTitle, description: modDesc }),
-    })
-    if (res.ok) {
-      setModTitle('')
-      setModDesc('')
-      loadData()
-      alert('Módulo creado con éxito')
+
+    setLoadingMod(true)
+    try {
+      const res = await fetch('/api/admin/modules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: modTitle, description: modDesc }),
+      })
+      const data = await res.json()
+
+      if (res.ok && data.module) {
+        setModules((prev) => [...prev, data.module])
+        setSelectedModuleId(data.module.id) // Seleccionar automáticamente el módulo creado
+        setModTitle('')
+        setModDesc('')
+        showNotification('¡Módulo creado con éxito y añadido al selector!', 'success')
+      } else {
+        showNotification(data.error || 'Error al crear el módulo', 'error')
+      }
+    } catch (err) {
+      showNotification('Error de red al crear el módulo', 'error')
+    } finally {
+      setLoadingMod(false)
     }
   }
 
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedModuleId || !lessonTitle) return
+    if (!selectedModuleId || !lessonTitle) {
+      showNotification('Selecciona un módulo y escribe el título de la clase', 'error')
+      return
+    }
 
     setUploading(true)
     let finalVideoUrl = lessonUrl
 
     try {
-      // Si eligió subir desde el ordenador, procesamos el archivo
       if (videoSourceType === 'upload' && videoFile) {
         const formData = new FormData()
         formData.append('file', videoFile)
@@ -99,7 +121,7 @@ export default function AdminContentPage() {
         if (uploadData.url) {
           finalVideoUrl = uploadData.url
         } else {
-          alert('Error al subir el archivo de video')
+          showNotification('Error al subir el archivo de video', 'error')
           setUploading(false)
           return
         }
@@ -125,13 +147,12 @@ export default function AdminContentPage() {
         setVideoFile(null)
         setDuration('')
         loadData()
-        alert('Clase publicada correctamente')
+        showNotification('¡Clase publicada correctamente!', 'success')
       } else {
-        alert('Error al guardar la lección')
+        showNotification('Error al guardar la lección', 'error')
       }
     } catch (err) {
-      console.error(err)
-      alert('Error de red al publicar la clase')
+      showNotification('Error de red al publicar la clase', 'error')
     } finally {
       setUploading(false)
     }
@@ -155,7 +176,9 @@ export default function AdminContentPage() {
       setResUrl('')
       setResDesc('')
       loadData()
-      alert('Recurso compartido con éxito')
+      showNotification('¡Recurso compartido con éxito!', 'success')
+    } else {
+      showNotification('Error al crear el recurso', 'error')
     }
   }
 
@@ -166,8 +189,9 @@ export default function AdminContentPage() {
     })
     if (res.ok) {
       loadData()
+      showNotification('Elemento eliminado correctamente', 'success')
     } else {
-      alert('Error al eliminar')
+      showNotification('Error al eliminar', 'error')
     }
   }
 
@@ -197,6 +221,16 @@ export default function AdminContentPage() {
           </button>
         </div>
       </div>
+
+      {/* Notificación flotante moderna en lugar de alertas cutres */}
+      {message && (
+        <div className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-sm ${
+          message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
+        }`}>
+          <CheckCircle2 size={16} />
+          {message.text}
+        </div>
+      )}
 
       {activeTab === 'courses' ? (
         <div className="space-y-8">
@@ -231,9 +265,10 @@ export default function AdminContentPage() {
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-[#1d1d1f] text-white hover:bg-[#e25822] transition-all cursor-pointer"
+                  disabled={loadingMod}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-[#1d1d1f] text-white hover:bg-[#e25822] disabled:opacity-50 transition-all cursor-pointer"
                 >
-                  Crear Módulo
+                  {loadingMod ? 'Creando...' : 'Crear Módulo'}
                 </button>
               </form>
             </div>
@@ -250,10 +285,10 @@ export default function AdminContentPage() {
                   <select
                     value={selectedModuleId}
                     onChange={(e) => setSelectedModuleId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822]"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold bg-white focus:outline-none focus:border-[#e25822]"
                     required
                   >
-                    <option value="">-- Elige un módulo --</option>
+                    <option value="">-- Elige un módulo ({modules.length} disponibles) --</option>
                     {modules.map((m) => (
                       <option key={m.id} value={m.id}>{m.title}</option>
                     ))}
@@ -285,7 +320,6 @@ export default function AdminContentPage() {
                   </div>
                 </div>
 
-                {/* Selector de origen del video: Ordenador o URL Externa */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Origen del Video</label>
                   <div className="grid grid-cols-2 gap-2 mb-3">
