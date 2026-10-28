@@ -19,11 +19,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'El título y el módulo son obligatorios' }, { status: 400 })
     }
 
-    // Asegurar valores por defecto válidos
+    // Limpiar y validar el rol institucional
     const cleanRole = allowedRole?.toUpperCase() === 'MENTORIA' ? 'MENTORIA' : 'CLUB'
     const finalVideoUrl = videoUrl && videoUrl.trim() !== '' ? videoUrl.trim() : 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
 
-    // Contar las lecciones existentes en el módulo para asignar orden
+    // Obtener el conteo actual para asignar el orden correlativo
     const lessonCount = await prisma.lesson.count({ where: { moduleId } })
 
     const lesson = await prisma.lesson.create({
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, lesson })
   } catch (error: any) {
-    console.error('Error al crear lección:', error)
+    console.error('Error detallado al crear lección:', error)
     return NextResponse.json({ error: error?.message || 'Error al guardar la lección' }, { status: 500 })
   }
 }
