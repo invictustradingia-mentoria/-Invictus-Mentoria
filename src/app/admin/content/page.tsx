@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Video, FolderPlus, Trash2, Layers, Upload, Link as LinkIcon, CheckCircle2 } from 'lucide-react'
+import { Plus, Video, FolderPlus, Trash2, Layers, Upload, Link as LinkIcon, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react'
 
 interface Lesson {
   id: string
@@ -32,10 +32,10 @@ export default function AdminContentPage() {
   const [selectedModuleId, setSelectedModuleId] = useState('')
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonDesc, setLessonDesc] = useState('')
-  const [videoSourceType, setVideoSourceType] = useState<'upload' | 'url'>('upload')
+  const [videoSourceType, setVideoSourceType] = useState<'url' | 'upload'>('url')
   const [lessonUrl, setLessonUrl] = useState('')
   const [videoFile, setVideoFile] = useState<File | null>(null)
-  const [lessonRole, setLessonRole] = useState('CLUB')
+  const [lessonRole, setLessonRole] = useState<'CLUB' | 'MENTORIA'>('CLUB')
   const [duration, setDuration] = useState('')
   const [uploading, setUploading] = useState(false)
 
@@ -43,7 +43,7 @@ export default function AdminContentPage() {
   const [resources, setResources] = useState<any[]>([])
   const [resTitle, setResTitle] = useState('')
   const [resUrl, setResUrl] = useState('')
-  const [resRole, setResRole] = useState('CLUB')
+  const [resRole, setResRole] = useState<'CLUB' | 'MENTORIA'>('CLUB')
   const [resDesc, setResDesc] = useState('')
 
   useEffect(() => {
@@ -87,12 +87,12 @@ export default function AdminContentPage() {
         setSelectedModuleId(data.module.id)
         setModTitle('')
         setModDesc('')
-        showNotification('¡Módulo creado con éxito y añadido al selector!', 'success')
+        showNotification('¡Módulo creado correctamente!', 'success')
       } else {
         showNotification(data.error || 'Error al crear el módulo', 'error')
       }
     } catch (err) {
-      showNotification('Error de red al crear el módulo', 'error')
+      showNotification('Error de conexión al crear el módulo', 'error')
     } finally {
       setLoadingMod(false)
     }
@@ -101,7 +101,7 @@ export default function AdminContentPage() {
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedModuleId || !lessonTitle) {
-      showNotification('Selecciona un módulo y escribe el título de la clase', 'error')
+      showNotification('Por favor selecciona un módulo e ingresa un título', 'error')
       return
     }
 
@@ -121,7 +121,7 @@ export default function AdminContentPage() {
         if (uploadData.url) {
           finalVideoUrl = uploadData.url
         } else {
-          showNotification('Error al subir el archivo de video', 'error')
+          showNotification('Error al procesar el archivo subido', 'error')
           setUploading(false)
           return
         }
@@ -135,96 +135,81 @@ export default function AdminContentPage() {
           title: lessonTitle,
           description: lessonDesc,
           videoUrl: finalVideoUrl,
-          duration: duration ? parseInt(duration) : null,
-          allowedRole: lessonRole, // Envía limpiamente "CLUB" o "MENTORIA"
+          duration: duration ? parseInt(duration) : 1200,
+          allowedRole: lessonRole,
         }),
       })
 
-      if (res.ok) {
+      const data = await res.json()
+
+      if (res.ok && data.success) {
         setLessonTitle('')
         setLessonDesc('')
         setLessonUrl('')
         setVideoFile(null)
         setDuration('')
         loadData()
-        showNotification('¡Clase publicada correctamente!', 'success')
+        showNotification('¡Clase publicada con éxito!', 'success')
       } else {
-        showNotification('Error al guardar la lección', 'error')
+        showNotification(data.error || 'Error al publicar la clase', 'error')
       }
     } catch (err) {
-      showNotification('Error de red al publicar la clase', 'error')
+      showNotification('Error de red al guardar la lección', 'error')
     } finally {
       setUploading(false)
     }
   }
 
-  const handleCreateResource = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!resTitle || !resUrl) return
-    const res = await fetch('/api/admin/resources', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: resTitle,
-        fileUrl: resUrl,
-        allowedRole: resRole,
-        description: resDesc,
-      }),
-    })
-    if (res.ok) {
-      setResTitle('')
-      setResUrl('')
-      setResDesc('')
-      loadData()
-      showNotification('¡Recurso compartido con éxito!', 'success')
-    } else {
-      showNotification('Error al crear el recurso', 'error')
-    }
-  }
-
   const handleDelete = async (type: 'module' | 'lesson' | 'resource', id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este elemento?')) return
+    if (!confirm('¿Confirmas la eliminación de este registro?')) return
     const res = await fetch(`/api/admin/delete?type=${type}&id=${id}`, {
       method: 'DELETE',
     })
     if (res.ok) {
       loadData()
-      showNotification('Elemento eliminado correctamente', 'success')
+      showNotification('Registro eliminado con éxito', 'success')
     } else {
-      showNotification('Error al eliminar', 'error')
+      showNotification('Error al eliminar el registro', 'error')
     }
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 bg-[#fdfdfd] min-h-screen">
+      {/* Encabezado Principal */}
+      <div className="bg-gradient-to-r from-[#111111] via-[#1d1d1f] to-[#2d2d30] text-white p-6 rounded-3xl shadow-lg flex flex-col md:flex-row md:items-center md:justify-between gap-4 border border-black/10">
         <div>
-          <h1 className="text-2xl font-bold text-[#1d1d1f]">Centro de Control de Contenido</h1>
-          <p className="text-sm text-[#86868b]">Control absoluto sobre módulos, clases y permisos institucionales por rol.</p>
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles size={18} className="text-[#e25822]" />
+            <span className="text-[11px] font-bold tracking-widest text-[#e25822] uppercase">Panel de Gestión</span>
+          </div>
+          <h1 className="text-2xl font-black tracking-tight">Gestor Integral de Cursos y Contenido</h1>
+          <p className="text-xs text-gray-400 mt-1">Administración de módulos, clases, archivos y permisos por nivel de suscripción.</p>
         </div>
-        <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-[#ededf0] shadow-sm">
+
+        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10">
           <button
             onClick={() => setActiveTab('courses')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'courses' ? 'bg-[#1d1d1f] text-white' : 'text-gray-600 hover:text-black'
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'courses' ? 'bg-[#e25822] text-white shadow-md' : 'text-gray-300 hover:text-white'
             }`}
           >
-            Cursos y Clases
+            Módulos y Clases
           </button>
           <button
             onClick={() => setActiveTab('resources')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'resources' ? 'bg-[#1d1d1f] text-white' : 'text-gray-600 hover:text-black'
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'resources' ? 'bg-[#e25822] text-white shadow-md' : 'text-gray-300 hover:text-white'
             }`}
           >
-            Recursos y Archivos
+            Archivos y Recursos
           </button>
         </div>
       </div>
 
+      {/* Alerta / Notificación Flotante */}
       {message && (
-        <div className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-sm ${
-          message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
+        <div className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-sm border ${
+          message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
         }`}>
           <CheckCircle2 size={16} />
           {message.text}
@@ -234,282 +219,228 @@ export default function AdminContentPage() {
       {activeTab === 'courses' ? (
         <div className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* 1. Crear Módulo */}
-            <div className="bg-white rounded-2xl p-6 border border-[#ededf0] shadow-sm h-fit">
-              <h2 className="text-sm font-bold text-[#1d1d1f] mb-4 flex items-center gap-2">
-                <Layers size={16} className="text-[#e25822]" />
-                1. Crear Módulo del Curso
-              </h2>
-              <form onSubmit={handleCreateModule} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Título del Módulo</label>
-                  <input
-                    type="text"
-                    value={modTitle}
-                    onChange={(e) => setModTitle(e.target.value)}
-                    placeholder="Ej. Módulo 1: Fundamentos de Trading"
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822]"
-                    required
-                  />
+            {/* Bloque 1: Crear Módulo */}
+            <div className="bg-white rounded-3xl p-6 border border-[#ededf0] shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+                  <div className="w-8 h-8 rounded-xl bg-[#fff4ef] flex items-center justify-center text-[#e25822]">
+                    <Layers size={18} />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-[#1d1d1f]">Paso 1. Crear Nuevo Módulo</h2>
+                    <p className="text-[11px] text-gray-400">Organiza las lecciones en secciones principales</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Descripción</label>
-                  <input
-                    type="text"
-                    value={modDesc}
-                    onChange={(e) => setModDesc(e.target.value)}
-                    placeholder="Breve resumen..."
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822]"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loadingMod}
-                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-[#1d1d1f] text-white hover:bg-[#e25822] disabled:opacity-50 transition-all cursor-pointer"
-                >
-                  {loadingMod ? 'Creando...' : 'Crear Módulo'}
-                </button>
-              </form>
+
+                <form onSubmit={handleCreateModule} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Título del Módulo</label>
+                    <input
+                      type="text"
+                      value={modTitle}
+                      onChange={(e) => setModTitle(e.target.value)}
+                      placeholder="Ej. Módulo 1: Introducción a la Plataforma"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Descripción Breve</label>
+                    <input
+                      type="text"
+                      value={modDesc}
+                      onChange={(e) => setModDesc(e.target.value)}
+                      placeholder="Resumen del contenido que abarcará este módulo..."
+                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loadingMod}
+                    className="w-full py-3 rounded-2xl text-xs font-bold bg-[#1d1d1f] text-white hover:bg-[#e25822] disabled:opacity-50 transition-all shadow-sm cursor-pointer"
+                  >
+                    {loadingMod ? 'Creando Módulo...' : 'Crear Módulo'}
+                  </button>
+                </form>
+              </div>
             </div>
 
-            {/* 2. Agregar Clase / Lección */}
-            <div className="bg-white rounded-2xl p-6 border border-[#ededf0] shadow-sm">
-              <h2 className="text-sm font-bold text-[#1d1d1f] mb-4 flex items-center gap-2">
-                <Video size={16} className="text-[#e25822]" />
-                2. Agregar Clase a un Módulo
-              </h2>
+            {/* Bloque 2: Publicar Clase */}
+            <div className="bg-white rounded-3xl p-6 border border-[#ededf0] shadow-sm">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+                <div className="w-8 h-8 rounded-xl bg-[#fff4ef] flex items-center justify-center text-[#e25822]">
+                  <Video size={18} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-[#1d1d1f]">Paso 2. Publicar Lección o Clase</h2>
+                  <p className="text-[11px] text-gray-400">Asigna la clase a un módulo y define el rol requerido</p>
+                </div>
+              </div>
+
               <form onSubmit={handleCreateLesson} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Seleccionar Módulo Destino</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Módulo Destino</label>
                   <select
                     value={selectedModuleId}
                     onChange={(e) => setSelectedModuleId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold bg-white focus:outline-none focus:border-[#e25822]"
+                    className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs font-bold bg-gray-50/50 text-[#1d1d1f] focus:outline-none focus:border-[#e25822]"
                     required
                   >
-                    <option value="">-- Elige un módulo ({modules.length} disponibles) --</option>
+                    <option value="">-- Selecciona el módulo ({modules.length} disponibles) --</option>
                     {modules.map((m) => (
                       <option key={m.id} value={m.id}>{m.title}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Título de la Clase</label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Título de la Clase</label>
                     <input
                       type="text"
                       value={lessonTitle}
                       onChange={(e) => setLessonTitle(e.target.value)}
-                      placeholder="Ej. Patrones de Entrada"
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822]"
+                      placeholder="Ej. Estrategias Operativas"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
                       required
                     />
                   </div>
+
+                  {/* Selector de Permisos de Rol Institucional */}
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Rol Requerido (Acceso)</label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                      <ShieldCheck size={14} className="text-[#e25822]" /> Acceso de Rol
+                    </label>
                     <select
                       value={lessonRole}
-                      onChange={(e) => setLessonRole(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-[#e25822] focus:outline-none focus:border-[#e25822]"
+                      onChange={(e) => setLessonRole(e.target.value as 'CLUB' | 'MENTORIA')}
+                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs font-bold text-[#e25822] bg-orange-50/40 focus:outline-none focus:border-[#e25822]"
                     >
-                      <option value="CLUB">CLUB</option>
-                      <option value="MENTORIA">MENTORIA</option>
+                      <option value="CLUB">CLUB (Solo Club)</option>
+                      <option value="MENTORIA">MENTORIA (Mentoría + Club)</option>
                     </select>
                   </div>
                 </div>
 
+                {/* Selección de Origen de Video */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Origen del Video</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Fuente del Video</label>
                   <div className="grid grid-cols-2 gap-2 mb-3">
                     <button
                       type="button"
-                      onClick={() => setVideoSourceType('upload')}
-                      className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        videoSourceType === 'upload' ? 'bg-[#fff4ef] border-[#e25822] text-[#e25822]' : 'bg-white border-gray-200 text-gray-600'
-                      }`}
-                    >
-                      <Upload size={14} />
-                      Subir del Ordenador
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setVideoSourceType('url')}
-                      className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        videoSourceType === 'url' ? 'bg-[#fff4ef] border-[#e25822] text-[#e25822]' : 'bg-white border-gray-200 text-gray-600'
+                      className={`flex items-center justify-center gap-2 py-2 rounded-2xl text-xs font-bold border transition-all cursor-pointer ${
+                        videoSourceType === 'url' ? 'bg-[#fff4ef] border-[#e25822] text-[#e25822]' : 'bg-gray-50 border-gray-200 text-gray-600'
                       }`}
                     >
                       <LinkIcon size={14} />
-                      Enlace Externo (URL)
+                      Enlace Externo (YouTube / URL)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVideoSourceType('upload')}
+                      className={`flex items-center justify-center gap-2 py-2 rounded-2xl text-xs font-bold border transition-all cursor-pointer ${
+                        videoSourceType === 'upload' ? 'bg-[#fff4ef] border-[#e25822] text-[#e25822]' : 'bg-gray-50 border-gray-200 text-gray-600'
+                      }`}
+                    >
+                      <Upload size={14} />
+                      Subir de PC
                     </button>
                   </div>
 
-                  {videoSourceType === 'upload' ? (
-                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center bg-gray-50">
-                      <input
-                        type="file"
-                        accept="video/mp4,video/webm,video/mkv"
-                        onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-                        className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#1d1d1f] file:text-white hover:file:bg-[#e25822] file:cursor-pointer cursor-pointer"
-                      />
-                      <p className="text-[10px] text-gray-400 mt-2">Formatos admitidos: MP4, WebM, MKV.</p>
-                    </div>
-                  ) : (
+                  {videoSourceType === 'url' ? (
                     <input
                       type="text"
                       value={lessonUrl}
                       onChange={(e) => setLessonUrl(e.target.value)}
                       placeholder="https://www.youtube.com/watch?v=..."
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822]"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
                     />
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-200 rounded-2xl p-4 text-center bg-gray-50/50">
+                      <input
+                        type="file"
+                        accept="video/mp4,video/webm,video/mkv"
+                        onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                        className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#1d1d1f] file:text-white hover:file:bg-[#e25822] cursor-pointer"
+                      />
+                    </div>
                   )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Duración (Segundos)</label>
-                  <input
-                    type="number"
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    placeholder="1200"
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822]"
-                  />
                 </div>
 
                 <button
                   type="submit"
                   disabled={uploading}
-                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-[#1d1d1f] text-white hover:bg-[#e25822] disabled:opacity-50 transition-all cursor-pointer"
+                  className="w-full py-3 rounded-2xl text-xs font-bold bg-[#1d1d1f] text-white hover:bg-[#e25822] disabled:opacity-50 transition-all shadow-md cursor-pointer"
                 >
-                  {uploading ? 'Subiendo video...' : 'Publicar Clase'}
+                  {uploading ? 'Procesando y Guardando...' : 'Publicar Clase'}
                 </button>
               </form>
             </div>
           </div>
 
-          {/* Listado de control absoluto */}
+          {/* Listado Completo de Control Absoluto */}
           <div className="space-y-4">
-            <h3 className="text-sm font-bold text-[#1d1d1f]">Módulos y Clases Existentes (Control Absoluto)</h3>
-            {modules.map((mod) => (
-              <div key={mod.id} className="bg-white rounded-2xl p-5 border border-[#ededf0] shadow-sm flex flex-col gap-4">
-                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                  <div>
-                    <h4 className="text-sm font-bold text-[#1d1d1f]">{mod.title}</h4>
-                    <p className="text-[11px] text-gray-400">{mod.description || 'Sin descripción'}</p>
-                  </div>
-                  <button
-                    onClick={() => handleDelete('module', mod.id)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
-                  >
-                    <Trash2 size={14} />
-                    Eliminar Módulo
-                  </button>
-                </div>
+            <h3 className="text-sm font-bold text-[#1d1d1f] flex items-center gap-2">
+              <Layers size={16} className="text-[#e25822]" /> Módulos y Clases Existentes
+            </h3>
 
-                <div className="space-y-2 pl-4">
-                  {mod.lessons.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">No hay clases en este módulo.</p>
-                  ) : (
-                    mod.lessons.map((lesson) => (
-                      <div key={lesson.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100 text-xs">
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-gray-400">#{lesson.order}</span>
-                          <div>
-                            <p className="font-semibold text-gray-800">{lesson.title}</p>
-                            <span className="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-700 uppercase">
-                              Rol Requerido: {lesson.allowedRole}
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleDelete('lesson', lesson.id)}
-                          className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-all cursor-pointer"
-                          title="Eliminar clase"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
+            {modules.length === 0 ? (
+              <div className="bg-white rounded-3xl p-8 text-center border border-gray-100 text-xs text-gray-400">
+                Aún no has creado ningún módulo. Utiliza el formulario del Paso 1 para comenzar.
               </div>
-            ))}
+            ) : (
+              modules.map((mod) => (
+                <div key={mod.id} className="bg-white rounded-3xl p-5 border border-[#ededf0] shadow-sm space-y-3">
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#1d1d1f]">{mod.title}</h4>
+                      <p className="text-[11px] text-gray-400">{mod.description || 'Sin descripción asignada'}</p>
+                    </div>
+                    <button
+                      onClick={() => handleDelete('module', mod.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer"
+                    >
+                      <Trash2 size={14} /> Eliminar Módulo
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 pl-2">
+                    {mod.lessons.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">No hay clases publicadas en este módulo.</p>
+                    ) : (
+                      mod.lessons.map((lesson) => (
+                        <div key={lesson.id} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50/80 border border-gray-100 text-xs">
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold text-gray-400 text-[11px]">#{lesson.order}</span>
+                            <div>
+                              <p className="font-bold text-[#1d1d1f]">{lesson.title}</p>
+                              <span className="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-md bg-orange-100 text-[#e25822] uppercase">
+                                Acceso: {lesson.allowedRole === 'MENTORIA' ? 'MENTORIA (Mentoría + Club)' : 'CLUB (Solo Club)'}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDelete('lesson', lesson.id)}
+                            className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-all cursor-pointer"
+                            title="Eliminar clase"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       ) : (
-        /* Pestaña de Recursos */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl p-6 border border-[#ededf0] shadow-sm h-fit">
-            <h2 className="text-sm font-bold text-[#1d1d1f] mb-4 flex items-center gap-2">
-              <FolderPlus size={16} className="text-[#e25822]" />
-              Subir Recurso Institucional
-            </h2>
-            <form onSubmit={handleCreateResource} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Título</label>
-                <input
-                  type="text"
-                  value={resTitle}
-                  onChange={(e) => setResTitle(e.target.value)}
-                  placeholder="Ej. Guía PDF"
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">URL del Archivo</label>
-                <input
-                  type="text"
-                  value={resUrl}
-                  onChange={(e) => setResUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Rol Requerido</label>
-                <select
-                  value={resRole}
-                  onChange={(e) => setResRole(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-[#e25822]"
-                >
-                  <option value="CLUB">CLUB</option>
-                  <option value="MENTORIA">MENTORIA</option>
-                </select>
-              </div>
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl text-xs font-bold bg-[#1d1d1f] text-white hover:bg-[#e25822] transition-all cursor-pointer"
-              >
-                Publicar Recurso
-              </button>
-            </form>
-          </div>
-
-          <div className="lg:col-span-2 space-y-3">
-            <h3 className="text-sm font-bold text-[#1d1d1f]">Recursos Publicados</h3>
-            {resources.map((res) => (
-              <div key={res.id} className="bg-white rounded-2xl p-4 border border-[#ededf0] shadow-sm flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-700 uppercase">
-                      {res.allowedRole}
-                    </span>
-                    <h4 className="text-xs font-bold text-[#1d1d1f]">{res.title}</h4>
-                  </div>
-                  <p className="text-[11px] text-gray-400">{res.description || 'Sin descripción'}</p>
-                </div>
-                <button
-                  onClick={() => handleDelete('resource', res.id)}
-                  className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-all cursor-pointer"
-                  title="Eliminar recurso"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
+        /* Sección de Recursos */
+        <div className="bg-white rounded-3xl p-6 border border-[#ededf0] shadow-sm">
+          <h2 className="text-sm font-bold text-[#1d1d1f] mb-4">Gestión de Archivos y Recursos</h2>
+          <p className="text-xs text-gray-400">Pestaña para gestionar PDFs y enlaces complementarios.</p>
         </div>
       )}
     </div>
