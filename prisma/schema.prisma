@@ -54,7 +54,7 @@ model Lesson {
   duration    Int?     // in seconds
   order       Int      @default(0)
   isPublished Boolean  @default(true)
-  allowedRole String   @default("CLUB") // CLUB, MENTORIA (ADMIN ve todo)
+  allowedRole String   @default("CLUB") // CLUB, MENTORIA
   moduleId    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -129,9 +129,9 @@ model ActivityLog {
   id          String   @id @default(cuid())
   userId      String
   lessonId    String?
-  action      String   // PAGE_VIEW, VIDEO_PLAY, VIDEO_PAUSE, VIDEO_COMPLETE, LOGIN, LOGOUT, SECURITY_*
+  action      String   
   page        String?
-  metadata    String?  // JSON string for extra data
+  metadata    String?  
   ip          String?
   userAgent   String?
   createdAt   DateTime @default(now())
