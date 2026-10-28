@@ -1,0 +1,115 @@
+// Invictus Mentoria - Prisma Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          String    @default("STUDENT") // ADMIN, VIP, STUDENT
+  status        String    @default("APPROVED") // PENDING, APPROVED, REJECTED
+  isBanned      Boolean   @default(false)
+  phone         String?
+  avatarUrl     String?
+  registeredIp  String?
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      Session[]
+  activityLogs  ActivityLog[]
+  progress      LessonProgress[]
+
+  @@map("users")
+}
+
+model Module {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  order       Int       @default(0)
+  isPublished Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  lessons     Lesson[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  videoUrl    String
+  duration    Int?      // in seconds
+  order       Int       @default(0)
+  isPublished Boolean   @default(true)
+  moduleId    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  module      Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  activityLogs ActivityLog[]
+  progress    LessonProgress[]
+
+  @@map("lessons")
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonId    String
+  completed   Boolean   @default(false)
+  watchedSecs Int       @default(0)
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Session {
+  id            String    @id @default(cuid())
+  userId        String
+  token         String    @unique
+  ip            String?
+  userAgent     String?
+  currentPage   String?
+  currentLesson String?
+  isActive      Boolean   @default(true)
+  lastSeen      DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  expiresAt     DateTime
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model ActivityLog {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonId    String?
+  action      String    // PAGE_VIEW, VIDEO_PLAY, VIDEO_PAUSE, VIDEO_COMPLETE, LOGIN, LOGOUT, SECURITY_*
+  page        String?
+  metadata    String?   // JSON string for extra data
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson?   @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@map("activity_logs")
+}

@@ -1,0 +1,20 @@
+# Este archivo conserva la estructura de la carpeta en Git
+# Los videos subidos localmente NO se incluyen en el repositorio
+# En producción, los videos se almacenan en Cloudinary (o servicio CDN externo)
+
+# Ignorar todos los archivos de video
+*.mp4
+*.webm
+*.mov
+*.mkv
+*.avi
+*.m4v
+*.ogg
+
+# Ignorar imágenes grandes (usar CDN en producción)
+# *.jpg  <- descomenta si quieres ignorar imágenes también
+# *.png
+
+# Mantener este archivo .gitignore y el .gitkeep
+!.gitignore
+!.gitkeep

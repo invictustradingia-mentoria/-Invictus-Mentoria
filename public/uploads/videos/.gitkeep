@@ -1,0 +1,2 @@
+# Este archivo vacío le indica a Git que mantenga la carpeta en el repositorio.
+# Los videos reales se almacenan en Cloudinary (producción) o localmente (desarrollo).
