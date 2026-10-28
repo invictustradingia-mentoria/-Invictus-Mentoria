@@ -96,7 +96,7 @@ export function StudentPlayer({
     return () => clearInterval(interval)
   }, [])
 
-  // ── Anti‑recording protection (Solo aplicaciones reales de captura) ─────────
+  // ── Anti‑recording protection ────────────────────────────────────────────────
   useEffect(() => {
     const triggerBlackout = (reason: string, track = true) => {
       setIsBlackout(true)
@@ -194,7 +194,7 @@ export function StudentPlayer({
   const completedCount = Object.values(completedMap).filter(Boolean).length
   const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
 
-  // ── Renderizador de video adaptativo y libre de errores de YouTube ──────────
+  // ── Extractor de ID limpio para YouTube / Vimeo ─────────────────────────────
   const renderVideoContent = (url: string) => {
     if (!url) {
       return (
@@ -214,8 +214,8 @@ export function StudentPlayer({
         videoId = url.split('v=')[1]?.split('&')[0]
       }
 
-      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://invictustradingia-mentoria.netlify.app'
-      const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(currentOrigin)}`
+      // Usando parámetros de incrustación universales avanzados anti-error 153
+      const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&controls=1&rel=0&modestbranding=1&playsinline=1`
 
       return (
         <iframe
@@ -223,6 +223,7 @@ export function StudentPlayer({
           className="w-full h-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
           style={{ pointerEvents: isBlackout ? 'none' : 'auto' }}
         />
       )
