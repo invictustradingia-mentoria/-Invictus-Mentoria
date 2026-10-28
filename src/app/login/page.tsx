@@ -196,7 +196,7 @@ export default function LoginPage() {
           {/* Atajos de acceso directo para prueba */}
           <div className="mt-6 pt-5 border-t border-[#f4f4f7] space-y-2">
             <span className="text-[11px] text-[#86868b] uppercase tracking-wider block font-semibold text-center">
-              Acceso Rápido (Entorno de Pruebas)
+              Acceso Rápido ()
             </span>
             <div className="grid grid-cols-2 gap-2">
               <button
