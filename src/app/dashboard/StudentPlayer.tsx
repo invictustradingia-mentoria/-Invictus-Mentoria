@@ -78,7 +78,7 @@ export function StudentPlayer({
     return map
   })
 
-  // ── Security state ──────────────────────────────────────────────────────────
+  // ── Security state (Solo se activa por captura real de pantalla/streaming) ──
   const [isBlackout, setIsBlackout] = useState(false)
   const [blackoutReason, setBlackoutReason] = useState<string>('')
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -96,7 +96,7 @@ export function StudentPlayer({
     return () => clearInterval(interval)
   }, [])
 
-  // ── Anti‑recording protection ────────────────────────────────────────────────
+  // ── Anti‑recording protection (Estricto para apps de grabación) ──────────────
   useEffect(() => {
     const triggerBlackout = (reason: string, track = true) => {
       setIsBlackout(true)
@@ -117,59 +117,25 @@ export function StudentPlayer({
       }
     }
 
-    const handleBlur = () =>
-      triggerBlackout('Grabación o captura de pantalla detectada. La visualización se oscurece automáticamente.')
-
-    const handleFocus = () => {
-      setIsBlackout(false)
-      setBlackoutReason('')
-    }
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        triggerBlackout('Pestaña en segundo plano. Contenido protegido.')
-      } else {
-        setIsBlackout(false)
-        setBlackoutReason('')
-      }
-    }
-
-    // Block getDisplayMedia
+    // Interceptar la API de captura de pantalla del navegador (OBS, grabadores, etc.)
     if (typeof window !== 'undefined' && navigator?.mediaDevices?.getDisplayMedia) {
       navigator.mediaDevices.getDisplayMedia = async function () {
-        triggerBlackout('La grabación y transmisión de pantalla de las clases está terminantemente prohibida.')
+        triggerBlackout('Se ha detectado un software intentando grabar o transmitir la pantalla. Reproducción bloqueada.')
         throw new Error('Screen capture blocked by security policy')
       }
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
-        triggerBlackout('Captura de pantalla bloqueada.')
+        triggerBlackout('Captura de pantalla bloqueada por seguridad institucional.')
         try { navigator.clipboard?.writeText('') } catch (_) {}
-        setTimeout(() => setIsBlackout(false), 3000)
-        return
-      }
-      if (
-        e.key === 'F12' ||
-        (e.ctrlKey && e.shiftKey && ['I', 'i', 'C', 'c', 'J', 'j'].includes(e.key)) ||
-        (e.ctrlKey && ['u', 'U', 's', 'S', 'p', 'P'].includes(e.key))
-      ) {
-        e.preventDefault()
-        e.stopPropagation()
-        triggerBlackout('Acceso a código fuente y herramientas de descarga bloqueado.', false)
-        setTimeout(() => setIsBlackout(false), 2000)
+        setTimeout(() => setIsBlackout(false), 2500)
       }
     }
 
-    window.addEventListener('blur', handleBlur)
-    window.addEventListener('focus', handleFocus)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      window.removeEventListener('blur', handleBlur)
-      window.removeEventListener('focus', handleFocus)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [activeLesson])
@@ -230,7 +196,7 @@ export function StudentPlayer({
   const completedCount = Object.values(completedMap).filter(Boolean).length
   const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
 
-  // ── Helper robusto para renderizar URLs de video externas y directas ────────
+  // ── Renderizador de video adaptativo y libre de errores 153 ──────────────────
   const renderVideoContent = (url: string) => {
     if (!url) {
       return (
@@ -240,27 +206,29 @@ export function StudentPlayer({
       )
     }
 
-    // YouTube Embed
+    // Transformación robusta de YouTube para evitar errores de incrustación
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       let videoId = ''
       if (url.includes('youtu.be/')) {
         videoId = url.split('youtu.be/')[1]?.split('?')[0]
+      } else if (url.includes('embed/')) {
+        videoId = url.split('embed/')[1]?.split('?')[0]
       } else if (url.includes('v=')) {
         videoId = url.split('v=')[1]?.split('&')[0]
       }
-      const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`
+      const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1`
       return (
         <iframe
           src={embedUrl}
           className="w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; full-screen"
           allowFullScreen
           style={{ pointerEvents: isBlackout ? 'none' : 'auto' }}
         />
       )
     }
 
-    // Vimeo Embed
+    // Transformación de Vimeo
     if (url.includes('vimeo.com')) {
       const videoId = url.split('vimeo.com/')[1]?.split('?')[0]
       return (
@@ -274,7 +242,7 @@ export function StudentPlayer({
       )
     }
 
-    // Archivo de video directo (MP4, WebM, etc.)
+    // Video directo (MP4 / WebM / Supabase) con soporte de pantalla completa habilitado
     return (
       <video
         ref={videoRef}
@@ -282,7 +250,6 @@ export function StudentPlayer({
         src={url}
         controls
         controlsList="nodownload noremoteplayback"
-        disablePictureInPicture
         playsInline
         className="w-full h-full object-contain"
         onContextMenu={(e) => e.preventDefault()}
@@ -304,7 +271,7 @@ export function StudentPlayer({
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-[70vh]">
-      {/* ── Blackout overlay ─────────────────────────────────────────────────── */}
+      {/* ── Blackout overlay de seguridad (Solo por streaming/grabación) ──────── */}
       {isBlackout && (
         <div
           className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center cursor-pointer"
@@ -317,16 +284,14 @@ export function StudentPlayer({
           <p className="text-white font-bold text-lg text-center max-w-md px-6">
             {blackoutReason || 'Contenido protegido'}
           </p>
-          <p className="text-[#999] text-sm mt-2">Haz clic para continuar viendo</p>
+          <p className="text-[#999] text-sm mt-2">Haz clic para reanudar la visualización</p>
         </div>
       )}
 
       {/* ── Left: Video player ───────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col gap-4">
-        {/* Video area */}
         {activeLesson ? (
           <>
-            {/* Module / lesson breadcrumb */}
             <div>
               <span className="text-[11px] font-bold text-[#e25822] uppercase tracking-wider">
                 {activeModule?.title}
@@ -339,7 +304,7 @@ export function StudentPlayer({
               )}
             </div>
 
-            {/* Video container */}
+            {/* Video container con soporte limpio para pantalla completa */}
             <div
               className="relative rounded-2xl overflow-hidden bg-black shadow-xl border border-[#ededf0]"
               style={{ aspectRatio: '16/9' }}
@@ -347,7 +312,7 @@ export function StudentPlayer({
             >
               {renderVideoContent(activeLesson.videoUrl)}
 
-              {/* Floating watermark */}
+              {/* Watermark */}
               <div
                 className="absolute pointer-events-none select-none z-10"
                 style={{
@@ -361,7 +326,6 @@ export function StudentPlayer({
                 </span>
               </div>
 
-              {/* No-download icon */}
               <div className="absolute top-3 right-3 pointer-events-none z-10">
                 <Lock size={16} className="text-white/40" />
               </div>
@@ -422,7 +386,7 @@ export function StudentPlayer({
         )}
       </div>
 
-      {/* ── Right: Modules / lessons sidebar ─────────────────────────────────── */}
+      {/* ── Right: Modules sidebar ───────────────────────────────────────────── */}
       <div className="w-full lg:w-80 xl:w-96 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-[#1d1d1f]">Módulos del Curso</h3>
@@ -439,7 +403,6 @@ export function StudentPlayer({
                 key={mod.id}
                 className="bg-white rounded-2xl border border-[#ededf0] overflow-hidden shadow-sm"
               >
-                {/* Module header */}
                 <button
                   onClick={() => toggleModule(mod.id)}
                   className="w-full flex items-center justify-between p-4 text-left hover:bg-[#fafafc] transition-colors cursor-pointer"
@@ -457,7 +420,6 @@ export function StudentPlayer({
                   )}
                 </button>
 
-                {/* Lessons list */}
                 {isOpen && (
                   <div className="border-t border-[#f4f4f7] divide-y divide-[#f4f4f7]">
                     {mod.lessons.length === 0 ? (
@@ -477,7 +439,6 @@ export function StudentPlayer({
                                 : 'hover:bg-[#fafafc]'
                             }`}
                           >
-                            {/* Status icon */}
                             <div className="shrink-0 mt-0.5">
                               {isDone ? (
                                 <Check size={14} className="text-[#24a148]" />
@@ -511,11 +472,10 @@ export function StudentPlayer({
           })}
         </div>
 
-        {/* Security notice */}
         <div className="bg-[#fffaf8] border border-[#fcd5c3] rounded-2xl p-3 flex items-start gap-2 mt-1">
           <ShieldAlert size={14} className="text-[#e25822] shrink-0 mt-0.5" />
           <p className="text-[11px] text-[#86868b] leading-relaxed">
-            Contenido protegido. Prohibida la grabación, captura y descarga.
+            Contenido protegido. Prohibida la grabación y retransmisión no autorizada.
           </p>
         </div>
       </div>
