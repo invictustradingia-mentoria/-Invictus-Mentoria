@@ -3,14 +3,6 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 
-// Fallback seguro para evitar ERR_INVALID_URL si la variable de entorno no carga a tiempo en el build
-const getNextAuthUrl = () => {
-  if (process.env.NEXTAUTH_URL) {
-    return process.env.NEXTAUTH_URL
-  }
-  return 'https://invictus-mentoria.netlify.app'
-}
-
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -33,7 +25,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (user.isBanned) {
-          throw new Error('Usuario baneado')
+          throw new Error('Cuenta suspendida')
         }
 
         const isValidPassword = await bcrypt.compare(credentials.password, user.password)
@@ -76,5 +68,5 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'fallback_secret_key_invictus_2026',
+  secret: process.env.NEXTAUTH_SECRET || 'fallback_secret_invictus_2026',
 }
