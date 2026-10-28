@@ -1,11 +1,12 @@
 // Invictus Mentoria - Prisma Schema
 generator client {
   provider = "prisma-client-js"
+  output   = "./generated/client"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -74,4 +75,69 @@ model LessonProgress {
   updatedAt   DateTime @updatedAt
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson      Lesson   @relation(fields:
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  fileUrl     String
+  description String?
+  allowedRole String   @default("CLUB") // CLUB, MENTORIA
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("resources")
+}
+
+model SecurityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  email       String?
+  action      String
+  details     String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("security_logs")
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  token         String   @unique
+  ip            String?
+  userAgent     String?
+  currentPage   String?
+  currentLesson String?
+  isActive      Boolean  @default(true)
+  lastSeen      DateTime @default(now())
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String?
+  action      String   
+  page        String?
+  metadata    String?  
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@map("activity_logs")
+}
