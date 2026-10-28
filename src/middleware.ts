@@ -1,31 +1,31 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { withAuth } from "next-auth/middleware"
+import { NextResponse } from "next/server"
 
-export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
-  const { pathname } = request.nextUrl
+export default withAuth(
+  function middleware(req) {
+    const token = req.nextauth.token
+    const path = req.nextUrl.pathname
 
-  // Admin routes
-  if (pathname.startsWith('/admin')) {
-    if (!token) return NextResponse.redirect(new URL('/login', request.url))
-    if ((token as any).role !== 'ADMIN') return NextResponse.redirect(new URL('/dashboard', request.url))
+    // Si intenta ingresar a rutas de Admin sin el rol adecuado
+    if (path.startsWith("/admin") && token?.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/login", req.url))
+    }
+
+    // Si el usuario está pendiente de aprobación o baneado
+    if (token?.status === "PENDING" || token?.isBanned) {
+      return NextResponse.redirect(new URL("/login", req.url))
+    }
+
+    return NextResponse.next()
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token,
+    },
+    secret: process.env.NEXTAUTH_SECRET,
   }
-
-  // Dashboard routes
-  if (pathname.startsWith('/dashboard')) {
-    if (!token) return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // Redirect logged in users away from auth pages
-  if ((pathname === '/login' || pathname === '/register') && token) {
-    const role = (token as any).role
-    return NextResponse.redirect(new URL(role === 'ADMIN' ? '/admin' : '/dashboard', request.url))
-  }
-
-  return NextResponse.next()
-}
+)
 
 export const config = {
-  matcher: ['/admin/:path*', '/dashboard/:path*', '/login', '/register'],
+  matcher: ["/admin/:path*", "/dashboard/:path*"],
 }
