@@ -4,11 +4,10 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, ShieldCheck, Play, ArrowRight, Lock, CheckCircle2 } from 'lucide-react'
+import { Sparkles, ShieldCheck, ArrowRight } from 'lucide-react'
 
 export default function HomePage() {
   const { data: session, status } = useSession()
-  const [loading, setLoading] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#fdfdfd] text-[#1d1d1f] flex flex-col justify-between">
@@ -62,12 +61,6 @@ export default function HomePage() {
             className="w-full sm:w-auto px-8 py-4 rounded-2xl text-xs font-bold bg-[#1d1d1f] text-white hover:bg-[#e25822] transition-all shadow-md flex items-center justify-center gap-2"
           >
             Acceder a la Plataforma <ArrowRight size={16} />
-          </a>
-          <a
-            href="#modulos"
-            className="w-full sm:w-auto px-8 py-4 rounded-2xl text-xs font-bold bg-white text-[#1d1d1f] border border-gray-200 hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center gap-2"
-          >
-            Ver Módulos <Play size={14} />
           </a>
         </div>
       </main>
