@@ -1,4 +1,4 @@
-﻿[build]
+[build]
   command = "npx prisma generate && npx @next/env . && next build"
   publish = ".next"
 
