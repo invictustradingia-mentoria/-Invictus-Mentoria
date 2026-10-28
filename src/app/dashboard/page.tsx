@@ -16,22 +16,32 @@ export default async function DashboardPage() {
           id: true,
           name: true,
           email: true,
+          role: true,
           registeredIp: true,
         },
       })
     : null
 
-  // Obtener módulos publicados con sus clases y progreso del usuario
+  const userRole = user?.role || 'CLUB'
+
+  // Consulta protegida de módulos y clases filtradas estrictamente por rol
   const modules = await prisma.module.findMany({
     where: { isPublished: true },
     orderBy: { order: 'asc' },
     include: {
       lessons: {
-        where: { isPublished: true },
+        where: {
+          isPublished: true,
+          ...(userRole !== 'ADMIN'
+            ? userRole === 'MENTORIA'
+              ? { allowedRole: { in: ['CLUB', 'MENTORIA'] } }
+              : { allowedRole: 'CLUB' }
+            : {}),
+        },
         orderBy: { order: 'asc' },
         include: {
           progress: {
-            where: { userId },
+            where: { userId: userId || '' },
           },
         },
       },
@@ -42,7 +52,7 @@ export default async function DashboardPage() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <StudentPlayer
         modules={modules}
-        userId={userId}
+        userId={userId || ''}
         studentName={user?.name || ''}
         studentEmail={user?.email || ''}
         studentIp={user?.registeredIp || '127.0.0.1'}
