@@ -25,9 +25,8 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
-    
-    // Verificación flexible de administrador
     const userRole = (session?.user as any)?.role?.toUpperCase()
+
     if (!session || userRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Permisos de administrador requeridos' }, { status: 403 })
     }
@@ -39,9 +38,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'El título del módulo es obligatorio' }, { status: 400 })
     }
 
-    // Calcular el orden automáticamente
     const currentCount = await prisma.module.count()
 
+    // Creamos el módulo sin el include para evitar cualquier error de columnas pendientes en la BD
     const newModule = await prisma.module.create({
       data: {
         title: title.trim(),
@@ -49,16 +48,14 @@ export async function POST(req: Request) {
         order: currentCount + 1,
         isPublished: true,
       },
-      include: {
-        lessons: true,
-      },
     })
 
-    return NextResponse.json({ success: true, module: newModule })
+    // Devolvemos el módulo con un array de lecciones vacío para que el frontend lo incorpore al instante
+    return NextResponse.json({ success: true, module: { ...newModule, lessons: [] } })
   } catch (error: any) {
     console.error('Error al crear módulo:', error)
     return NextResponse.json(
-      { error: error?.message || 'Error interno al crear el módulo en la base de datos' },
+      { error: error?.message || 'Error interno al crear el módulo' },
       { status: 500 }
     )
   }
