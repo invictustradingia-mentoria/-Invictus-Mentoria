@@ -230,14 +230,65 @@ export function StudentPlayer({
   const completedCount = Object.values(completedMap).filter(Boolean).length
   const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
 
-  // Determine if URL is an embed (iframe) or direct video
-  const isEmbedUrl = (url: string) =>
-    url.includes('youtube.com/embed') ||
-    url.includes('vimeo.com') ||
-    url.includes('bunnycdn') ||
-    url.includes('iframe') ||
-    url.includes('player.') ||
-    (!url.endsWith('.mp4') && !url.endsWith('.webm') && !url.endsWith('.ogg') && !url.startsWith('/uploads/'))
+  // ── Helper robusto para renderizar URLs de video externas y directas ────────
+  const renderVideoContent = (url: string) => {
+    if (!url) {
+      return (
+        <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm p-4 text-center">
+          Esta lección no tiene un video configurado.
+        </div>
+      )
+    }
+
+    // YouTube Embed
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      let videoId = ''
+      if (url.includes('youtu.be/')) {
+        videoId = url.split('youtu.be/')[1]?.split('?')[0]
+      } else if (url.includes('v=')) {
+        videoId = url.split('v=')[1]?.split('&')[0]
+      }
+      const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`
+      return (
+        <iframe
+          src={embedUrl}
+          className="w-full h-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          style={{ pointerEvents: isBlackout ? 'none' : 'auto' }}
+        />
+      )
+    }
+
+    // Vimeo Embed
+    if (url.includes('vimeo.com')) {
+      const videoId = url.split('vimeo.com/')[1]?.split('?')[0]
+      return (
+        <iframe
+          src={`https://player.vimeo.com/video/${videoId}`}
+          className="w-full h-full"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          style={{ pointerEvents: isBlackout ? 'none' : 'auto' }}
+        />
+      )
+    }
+
+    // Archivo de video directo (MP4, WebM, etc.)
+    return (
+      <video
+        ref={videoRef}
+        key={url}
+        src={url}
+        controls
+        controlsList="nodownload noremoteplayback"
+        disablePictureInPicture
+        playsInline
+        className="w-full h-full object-contain"
+        onContextMenu={(e) => e.preventDefault()}
+      />
+    )
+  }
 
   if (modules.length === 0) {
     return (
@@ -288,37 +339,17 @@ export function StudentPlayer({
               )}
             </div>
 
-            {/* Video container – no download, no right-click */}
+            {/* Video container */}
             <div
               className="relative rounded-2xl overflow-hidden bg-black shadow-xl border border-[#ededf0]"
               style={{ aspectRatio: '16/9' }}
               onContextMenu={(e) => e.preventDefault()}
             >
-              {isEmbedUrl(activeLesson.videoUrl) ? (
-                <iframe
-                  src={activeLesson.videoUrl}
-                  className="w-full h-full"
-                  allow="autoplay; encrypted-media"
-                  allowFullScreen={false}
-                  style={{ pointerEvents: isBlackout ? 'none' : 'auto' }}
-                />
-              ) : (
-                <video
-                  ref={videoRef}
-                  key={activeLesson.id}
-                  src={activeLesson.videoUrl}
-                  controls
-                  controlsList="nodownload noremoteplayback"
-                  disablePictureInPicture
-                  playsInline
-                  className="w-full h-full object-contain"
-                  onContextMenu={(e) => e.preventDefault()}
-                />
-              )}
+              {renderVideoContent(activeLesson.videoUrl)}
 
               {/* Floating watermark */}
               <div
-                className="absolute pointer-events-none select-none"
+                className="absolute pointer-events-none select-none z-10"
                 style={{
                   top: `${watermarkPos.top}%`,
                   left: `${watermarkPos.left}%`,
@@ -331,7 +362,7 @@ export function StudentPlayer({
               </div>
 
               {/* No-download icon */}
-              <div className="absolute top-3 right-3 pointer-events-none">
+              <div className="absolute top-3 right-3 pointer-events-none z-10">
                 <Lock size={16} className="text-white/40" />
               </div>
             </div>
