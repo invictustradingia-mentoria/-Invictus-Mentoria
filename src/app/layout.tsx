@@ -1,5 +1,5 @@
 import './globals.css'
-import { Metadata } from 'net'
+import React from 'react'
 
 export const metadata = {
   title: 'Invictus Mentoria',
