@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
@@ -11,7 +10,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,14 +27,14 @@ export default function LoginPage() {
         setError(result.error === 'CredentialsSignin' ? 'Credenciales incorrectas' : result.error)
         setLoading(false)
       } else if (result?.ok) {
-        router.push('/admin')
-        router.refresh()
+        // Redirección directa del navegador para romper cualquier bucle
+        window.location.href = '/admin'
       } else {
-        setError('Error desconocido al intentar acceder.')
+        setError('Error al procesar el inicio de sesión.')
         setLoading(false)
       }
-    } catch (err) {
-      setError('Error de conexión con el servidor.')
+    } catch (err: any) {
+      setError(err?.message || 'Error de conexión con el servidor.')
       setLoading(false)
     }
   }
