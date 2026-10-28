@@ -11,8 +11,6 @@ import {
   Mail,
   AlertCircle,
   Clock,
-  ShieldCheck,
-  UserCheck,
 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -84,12 +82,6 @@ export default function LoginPage() {
         text: 'Error de conexión con el servidor. Intenta de nuevo.',
       })
     }
-  }
-
-  const fillCredentials = (userEmail: string, userPass: string) => {
-    setEmail(userEmail)
-    setPassword(userPass)
-    setError(null)
   }
 
   return (
@@ -192,31 +184,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Atajos de acceso directo para prueba */}
-          <div className="mt-6 pt-5 border-t border-[#f4f4f7] space-y-2">
-            <span className="text-[11px] text-[#86868b] uppercase tracking-wider block font-semibold text-center">
-              Acceso Rápido ()
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => fillCredentials('admin@invictus-mentoria.com', 'Invictus2024!')}
-                className="px-3 py-2 rounded-xl bg-[#f8f4fe] hover:bg-[#f3eafd] text-[#8a38ec] border border-[#ecdcfd] text-[11px] font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <ShieldCheck size={13} />
-                Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => fillCredentials('alumno@invictus.com', 'student123')}
-                className="px-3 py-2 rounded-xl bg-[#fff4ef] hover:bg-[#ffede4] text-[#e25822] border border-[#fcd5c3] text-[11px] font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <UserCheck size={13} />
-                Alumno Demo
-              </button>
-            </div>
-          </div>
 
           <p className="text-center text-[#86868b] text-[13px] mt-6">
             ¿No tienes cuenta?{' '}
