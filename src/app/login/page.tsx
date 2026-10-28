@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { ShieldCheck, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -26,14 +26,17 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        setError('Credenciales incorrectas o cuenta pendiente de aprobación.')
+        setError(result.error === 'CredentialsSignin' ? 'Credenciales incorrectas' : result.error)
         setLoading(false)
-      } else {
+      } else if (result?.ok) {
         router.push('/admin')
         router.refresh()
+      } else {
+        setError('Error desconocido al intentar acceder.')
+        setLoading(false)
       }
     } catch (err) {
-      setError('Ocurrió un error al iniciar sesión.')
+      setError('Error de conexión con el servidor.')
       setLoading(false)
     }
   }
