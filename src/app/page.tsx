@@ -1,6 +1,7 @@
-'export const dynamic = 'force-dynamic''
+'use client'
 
-import { useState } from 'react'
+export const dynamic = 'force-dynamic'
+
 import { useSession } from 'next-auth/react'
 import { Sparkles, ShieldCheck, ArrowRight } from 'lucide-react'
 
