@@ -1,122 +1,155 @@
-import { ReactNode } from 'react'
-import Link from 'next/link'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
-import { ActivityTracker } from '@/components/ActivityTracker'
-import { DashboardNav } from './DashboardNav'
+'use client'
 
-export const dynamic = 'force-dynamic'
+import { useSession, signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { 
+  LayoutDashboard, 
+  BookOpen, 
+  Video, 
+  TrendingUp, 
+  User, 
+  LogOut, 
+  Menu, 
+  X,
+  ShieldCheck
+} from 'lucide-react'
 
-export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  const session = await getServerSession(authOptions)
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  if (!session || !session.user) {
-    redirect('/login')
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-[#fdfdfd] flex items-center justify-center">
+        <div className="text-xs font-bold text-gray-400 animate-pulse">Cargando plataforma...</div>
+      </div>
+    )
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: (session.user as any).id },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      avatarUrl: true,
-      isBanned: true,
-      progress: {
-        where: { completed: true },
-      },
-    },
-  })
-
-  if (!user || user.isBanned) {
-    redirect('/login?error=BANNED')
-  }
-
-  const totalLessons = await prisma.lesson.count()
-  const completedCount = user.progress.length
-  const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
-
-  const initials = user.name
-    ? user.name
-        .split(' ')
-        .map(n => n[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase()
-    : 'U'
+  const user = session?.user as any
 
   return (
-    <div className="min-h-screen bg-[#fcfcfd] flex flex-col md:flex-row text-[#2d2d2d] font-sans antialiased">
-      {/* Silent activity tracker */}
-      <ActivityTracker />
-
-      {/* Sidebar estilo Apple / Etsy Master */}
-      <aside className="w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-[#ededf0] flex flex-col justify-between shrink-0 select-none">
-        <div>
-          {/* Brand Header */}
-          <div className="px-6 pt-7 pb-5">
-            <Link href="/" className="inline-block">
-              <h1 className="text-[17px] font-black tracking-tight flex items-center gap-1 text-[#2d2d2d]">
-                <span>INVICTUS</span>
-                <span className="text-[#e25822] font-extrabold">MASTER</span>
-              </h1>
-            </Link>
+    <div className="min-h-screen bg-[#fdfdfd] text-[#1d1d1f] flex flex-col md:flex-row">
+      {/* Sidebar Desktop */}
+      <aside className="hidden md:flex flex-col w-64 border-r border-[#ededf0] bg-white p-6 justify-between shrink-0">
+        <div className="space-y-8">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-[#e25822] text-white flex items-center justify-center font-black text-xs shadow-sm">
+              IT
+            </div>
+            <span className="font-black text-xs tracking-tight text-[#1d1d1f]">INVICTUS MENTORIA</span>
           </div>
 
-          {/* User Profile avatar + Progreso del curso */}
-          <div className="px-6 py-4">
-            <div className="flex items-center gap-3 mb-4">
-              <Link href="/dashboard/profile" className="shrink-0 group">
-                <div className="w-10 h-10 rounded-full bg-[#fdeee7] text-[#e25822] font-bold text-xs flex items-center justify-center border border-[#fcd5c3] overflow-hidden group-hover:border-[#e25822] transition-colors">
-                  {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span>{initials}</span>
-                  )}
-                </div>
-              </Link>
-              <div className="min-w-0">
-                <Link
-                  href="/dashboard/profile"
-                  className="text-[13px] font-bold text-[#1d1d1f] truncate leading-tight block hover:text-[#e25822] transition-colors"
-                >
-                  {user.name}
-                </Link>
-                <p className="text-[11px] text-[#86868b] leading-tight mt-0.5">
-                  Acceso completo
-                </p>
-              </div>
-            </div>
+          <nav className="space-y-1">
+            <a
+              href="/dashboard"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-[#f4f4f6] text-[#1d1d1f] transition-all"
+            >
+              <LayoutDashboard size={16} /> Panel Principal
+            </a>
+            <a
+              href="/dashboard/clases"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-gray-500 hover:text-[#1d1d1f] hover:bg-gray-50 transition-all"
+            >
+              <Video size={16} /> Clases y Grabaciones
+            </a>
+            <a
+              href="/dashboard/material"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-gray-500 hover:text-[#1d1d1f] hover:bg-gray-50 transition-all"
+            >
+              <BookOpen size={16} /> Material Educativo
+            </a>
+            <a
+              href="/dashboard/operativa"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-gray-500 hover:text-[#1d1d1f] hover:bg-gray-50 transition-all"
+            >
+              <TrendingUp size={16} /> Bitácora / Operativa
+            </a>
 
-            {/* Progreso del curso bar */}
-            <div>
-              <div className="flex items-center justify-between text-[11px] mb-1.5 font-medium">
-                <span className="text-[#86868b]">Progreso del curso</span>
-                <span className="text-[#e25822] font-bold">{progressPercent}%</span>
-              </div>
-              <div className="w-full bg-[#f0f0f4] h-1.5 rounded-full overflow-hidden">
-                <div
-                  className="bg-[#e25822] h-full rounded-full transition-all duration-500"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            </div>
-          </div>
+            {user?.role === 'ADMIN' && (
+              <a
+                href="/admin"
+                className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-[#e25822] hover:bg-orange-50 transition-all pt-4"
+              >
+                <ShieldCheck size={16} /> Panel de Administración
+              </a>
+            )}
+          </nav>
         </div>
 
-        {/* Dynamic client-aware sidebar navigation */}
-        <DashboardNav role={user.role} />
+        <div className="border-t border-gray-100 pt-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name ?? ''}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User size={18} className="text-gray-400" />
+              )}
+            </div>
+            <div className="overflow-hidden text-ellipsis">
+              <p className="text-xs font-bold text-[#1d1d1f] truncate">{user?.name || 'Alumno'}</p>
+              <p className="text-[10px] text-gray-400 truncate">{user?.email}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+          >
+            <LogOut size={14} /> Cerrar Sesión
+          </button>
+        </div>
       </aside>
 
-      {/* Main Content Viewport */}
-      <main className="flex-1 overflow-y-auto min-h-screen bg-[#fcfcfd]">
+      {/* Header Mobile */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-[#e25822] text-white flex items-center justify-center font-black text-xs">
+            IT
+          </div>
+          <span className="font-black text-xs text-[#1d1d1f]">INVICTUS</span>
+        </div>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 text-gray-600 focus:outline-none"
+        >
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-white border-b border-gray-100 p-4 space-y-3">
+          <nav className="space-y-1">
+            <a href="/dashboard" className="block px-3 py-2 text-xs font-bold text-[#1d1d1f]">Panel Principal</a>
+            <a href="/dashboard/clases" className="block px-3 py-2 text-xs font-bold text-gray-500">Clases</a>
+            <a href="/dashboard/material" className="block px-3 py-2 text-xs font-bold text-gray-500">Material</a>
+            <a href="/dashboard/operativa" className="block px-3 py-2 text-xs font-bold text-gray-500">Operativa</a>
+            {user?.role === 'ADMIN' && (
+              <a href="/admin" className="block px-3 py-2 text-xs font-bold text-[#e25822]">Administración</a>
+            )}
+          </nav>
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600"
+          >
+            Cerrar Sesión
+          </button>
+        </div>
+      )}
+
+      {/* Content Area */}
+      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
         {children}
       </main>
     </div>
