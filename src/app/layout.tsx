@@ -1,5 +1,6 @@
 import './globals.css'
 import React from 'react'
+import { Providers } from './providers'
 
 export const metadata = {
   title: 'Invictus Mentoria',
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="bg-[#fdfdfd] text-[#1d1d1f] antialiased min-h-screen">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   )
