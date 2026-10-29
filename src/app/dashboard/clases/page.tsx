@@ -3,30 +3,25 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prismaDash } from '@/lib/prisma-dashboard'
+import { visibleLevels } from '@/lib/access'
 import LessonVideo from '@/components/dashboard/LessonVideo'
 import { PlayCircle, Video } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ClasesPage({
-  searchParams,
-}: {
-  searchParams: { lesson?: string }
-}) {
+export default async function ClasesPage({ searchParams }: { searchParams: { lesson?: string } }) {
   const session: any = await getServerSession(authOptions)
   if (!session?.user) redirect('/login')
 
-  const role: string = session.user.role ?? 'CLUB'
-  // ADMIN y MENTORIA ven todo. CLUB solo ve las clases de nivel CLUB.
-  const allowed = role === 'CLUB' ? ['CLUB'] : ['CLUB', 'MENTORIA']
+  const levels = visibleLevels(session.user.role)
 
   const modules = await prismaDash.module.findMany({
     where: { isPublished: true },
-    orderBy: { order: 'asc' },
+    orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
     include: {
       lessons: {
-        where: { isPublished: true, allowedRole: { in: allowed } },
-        orderBy: { order: 'asc' },
+        where: { isPublished: true, ...(levels ? { allowedRole: { in: levels } } : {}) },
+        orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
       },
     },
   })
@@ -52,22 +47,18 @@ export default async function ClasesPage({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Reproductor */}
           <div className="space-y-4 lg:col-span-2">
             {current && (
               <>
                 <LessonVideo key={current.id} url={current.videoUrl} title={current.title} />
                 <div className="rounded-3xl border border-[#ededf0] bg-white p-5 shadow-sm">
                   <h2 className="text-lg font-bold text-[#1d1d1f]">{current.title}</h2>
-                  {current.description && (
-                    <p className="mt-2 text-sm text-gray-500">{current.description}</p>
-                  )}
+                  {current.description && <p className="mt-2 text-sm text-gray-500">{current.description}</p>}
                 </div>
               </>
             )}
           </div>
 
-          {/* Lista de módulos y clases */}
           <div className="space-y-4">
             {visibleModules.map((mod) => (
               <div key={mod.id} className="rounded-3xl border border-[#ededf0] bg-white p-4 shadow-sm">
@@ -80,9 +71,7 @@ export default async function ClasesPage({
                         key={lesson.id}
                         href={`/dashboard/clases?lesson=${lesson.id}`}
                         className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 text-xs font-bold transition-all ${
-                          active
-                            ? 'bg-[#fff4ef] text-[#e25822]'
-                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                          active ? 'bg-[#fff4ef] text-[#e25822]' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                         }`}
                       >
                         <PlayCircle size={15} className="shrink-0" />

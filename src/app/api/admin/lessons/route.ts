@@ -1,47 +1,52 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { prismaDash } from '@/lib/prisma-dashboard'
+import { ACCESS_LEVELS } from '@/lib/access'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    const userRole = (session?.user as any)?.role?.toUpperCase()
-
-    if (!session || userRole !== 'ADMIN') {
-      return NextResponse.json({ error: 'Permisos de administrador requeridos' }, { status: 403 })
+    const session: any = await getServerSession(authOptions)
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const body = await req.json()
-    const { title, description, videoUrl, duration, moduleId, allowedRole } = body
+    const title = typeof body.title === 'string' ? body.title.trim() : ''
+    const videoUrl = typeof body.videoUrl === 'string' ? body.videoUrl.trim() : ''
+    const moduleId = typeof body.moduleId === 'string' ? body.moduleId : ''
+    const description = typeof body.description === 'string' ? body.description.trim() : ''
+    const allowedRole = typeof body.allowedRole === 'string' ? body.allowedRole : 'ALL'
 
-    if (!title || !moduleId) {
-      return NextResponse.json({ error: 'El título y el módulo son obligatorios' }, { status: 400 })
-    }
+    if (!title) return NextResponse.json({ error: 'Falta el título de la clase' }, { status: 400 })
+    if (!/^https?:\/\//i.test(videoUrl)) return NextResponse.json({ error: 'El enlace del video debe empezar con http:// o https://' }, { status: 400 })
+    if (!ACCESS_LEVELS.includes(allowedRole)) return NextResponse.json({ error: 'Nivel de acceso no válido' }, { status: 400 })
 
-    // Limpiar y validar el rol institucional
-    const cleanRole = allowedRole?.toUpperCase() === 'MENTORIA' ? 'MENTORIA' : 'CLUB'
-    const finalVideoUrl = videoUrl && videoUrl.trim() !== '' ? videoUrl.trim() : 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+    const mod = await prismaDash.module.findUnique({ where: { id: moduleId } })
+    if (!mod) return NextResponse.json({ error: 'El módulo seleccionado no existe' }, { status: 400 })
 
-    // Obtener el conteo actual para asignar el orden correlativo
-    const lessonCount = await prisma.lesson.count({ where: { moduleId } })
+    const count = await prismaDash.lesson.count({ where: { moduleId } })
+    const d = parseInt(String(body.duration), 10)
 
-    const lesson = await prisma.lesson.create({
+    const lesson = await prismaDash.lesson.create({
       data: {
-        title: title.trim(),
-        description: description ? description.trim() : null,
-        videoUrl: finalVideoUrl,
-        duration: duration ? parseInt(duration) : 1200,
+        title,
+        description: description || null,
+        videoUrl,
+        duration: Number.isFinite(d) && d > 0 ? d : null,
+        allowedRole,
         moduleId,
-        allowedRole: cleanRole,
-        order: lessonCount + 1,
+        order: count + 1,
         isPublished: true,
       },
     })
 
     return NextResponse.json({ success: true, lesson })
-  } catch (error: any) {
-    console.error('Error detallado al crear lección:', error)
-    return NextResponse.json({ error: error?.message || 'Error al guardar la lección' }, { status: 500 })
+  } catch (err: any) {
+    console.error('POST lessons:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
   }
 }

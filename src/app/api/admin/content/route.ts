@@ -1,22 +1,26 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prismaDash } from '@/lib/prisma-dashboard'
 
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    // Cast flexible para evitar que TypeScript aborte la compilación si el modelo varía en el schema
-    const prismaAny = prisma as any
-    if (prismaAny.content) {
-      const content = await prismaAny.content.findMany({
-        orderBy: { createdAt: 'desc' },
-      })
-      return NextResponse.json(content)
+    const session: any = await getServerSession(authOptions)
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    return NextResponse.json([])
-  } catch (error) {
-    console.error('Error fetching content:', error)
-    return NextResponse.json({ error: 'Error al obtener contenido' }, { status: 500 })
+    const modules = await prismaDash.module.findMany({
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      include: { lessons: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] } },
+    })
+
+    return NextResponse.json({ modules })
+  } catch (err: any) {
+    console.error('GET content:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
   }
 }

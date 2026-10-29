@@ -6,7 +6,7 @@ import { prismaDash } from '@/lib/prisma-dashboard'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const ROLES = ['CLUB', 'MENTORIA']
+const ROLES = ['ALL', 'CLUB', 'MENTORIA']
 
 async function isAdmin() {
   const session: any = await getServerSession(authOptions)
