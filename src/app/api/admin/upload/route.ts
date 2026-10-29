@@ -21,17 +21,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Falta el nombre del archivo' }, { status: 400 })
     }
 
-    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
+    // Acepta SUPABASE_URL o NEXT_PUBLIC_SUPABASE_URL
+    const supabaseUrl = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
     const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
 
     const missing: string[] = []
-    if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL')
+    if (!supabaseUrl) missing.push('SUPABASE_URL (o NEXT_PUBLIC_SUPABASE_URL)')
     if (!serviceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY')
 
     if (missing.length > 0) {
       return NextResponse.json(
         {
-          error: `El servidor no ve estas variables: ${missing.join(', ')}. Revisa el nombre, que tengan alcance Functions/Runtime en Netlify y haz un redeploy.`,
+          error: `El servidor no ve: ${missing.join(', ')}. En Netlify revisa el nombre, el alcance (Builds, Functions, Runtime) y el contexto Production, y luego haz Clear cache and deploy site.`,
         },
         { status: 500 }
       )
