@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Video, FolderPlus, Trash2, Layers, Upload, Link as LinkIcon, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react'
+import { Video, Trash2, Layers, Upload, Link as LinkIcon, CheckCircle2, AlertCircle, ShieldCheck, Sparkles } from 'lucide-react'
 
 interface Lesson {
   id: string
@@ -15,7 +15,18 @@ interface Module {
   id: string
   title: string
   description: string | null
-  lessons: Lesson[]
+  lessons?: Lesson[]
+}
+
+// Lee la respuesta de forma segura (aunque el servidor devuelva HTML o vacío)
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text()
+  if (!text) return {}
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { error: `Respuesta no válida del servidor (HTTP ${res.status})` }
+  }
 }
 
 export default function AdminContentPage() {
@@ -41,10 +52,6 @@ export default function AdminContentPage() {
 
   // Recursos
   const [resources, setResources] = useState<any[]>([])
-  const [resTitle, setResTitle] = useState('')
-  const [resUrl, setResUrl] = useState('')
-  const [resRole, setResRole] = useState<'CLUB' | 'MENTORIA'>('CLUB')
-  const [resDesc, setResDesc] = useState('')
 
   useEffect(() => {
     loadData()
@@ -52,46 +59,64 @@ export default function AdminContentPage() {
 
   const loadData = async () => {
     try {
-      const res = await fetch('/api/admin/content')
-      const data = await res.json()
-      if (data.modules) setModules(data.modules)
-
-      const resRes = await fetch('/api/admin/resources')
-      const resData = await resRes.json()
-      if (resData.resources) setResources(resData.resources)
+      const res = await fetch('/api/admin/content', { cache: 'no-store' })
+      const data = await safeJson(res)
+      if (res.ok && Array.isArray(data.modules)) {
+        setModules(data.modules)
+      } else if (!res.ok) {
+        console.error('Error cargando contenido:', data)
+      }
     } catch (err) {
-      console.error(err)
+      console.error('Error cargando contenido:', err)
+    }
+
+    try {
+      const resRes = await fetch('/api/admin/resources', { cache: 'no-store' })
+      const resData = await safeJson(resRes)
+      if (resRes.ok && Array.isArray(resData.resources)) setResources(resData.resources)
+    } catch (err) {
+      console.error('Error cargando recursos:', err)
     }
   }
 
   const showNotification = (text: string, type: 'success' | 'error') => {
     setMessage({ text, type })
-    setTimeout(() => setMessage(null), 4000)
+    setTimeout(() => setMessage(null), 5000)
   }
 
   const handleCreateModule = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!modTitle) return
+    if (!modTitle.trim()) {
+      showNotification('Ingresa un título para el módulo', 'error')
+      return
+    }
 
     setLoadingMod(true)
     try {
       const res = await fetch('/api/admin/modules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: modTitle, description: modDesc }),
+        body: JSON.stringify({ title: modTitle.trim(), description: modDesc.trim() }),
       })
-      const data = await res.json()
+      const data = await safeJson(res)
 
-      if (res.ok && data.module) {
-        setModules((prev) => [...prev, data.module])
-        setSelectedModuleId(data.module.id)
+      if (res.ok && !data.error) {
+        const created = data.module ?? data.data ?? null
+        if (created?.id) {
+          setModules((prev) => [...prev, { ...created, lessons: created.lessons ?? [] }])
+          setSelectedModuleId(created.id)
+        } else {
+          // Si la API no devuelve el módulo, recargamos la lista
+          await loadData()
+        }
         setModTitle('')
         setModDesc('')
         showNotification('¡Módulo creado correctamente!', 'success')
       } else {
-        showNotification(data.error || 'Error al crear el módulo', 'error')
+        showNotification(data.error || data.message || `Error al crear el módulo (HTTP ${res.status})`, 'error')
       }
     } catch (err) {
+      console.error(err)
       showNotification('Error de conexión al crear el módulo', 'error')
     } finally {
       setLoadingMod(false)
@@ -100,13 +125,22 @@ export default function AdminContentPage() {
 
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedModuleId || !lessonTitle) {
-      showNotification('Por favor selecciona un módulo e ingresa un título', 'error')
+
+    if (!selectedModuleId || !lessonTitle.trim()) {
+      showNotification('Selecciona un módulo e ingresa un título', 'error')
+      return
+    }
+    if (videoSourceType === 'url' && !lessonUrl.trim()) {
+      showNotification('Ingresa el enlace del video', 'error')
+      return
+    }
+    if (videoSourceType === 'upload' && !videoFile) {
+      showNotification('Selecciona un archivo de video', 'error')
       return
     }
 
     setUploading(true)
-    let finalVideoUrl = lessonUrl
+    let finalVideoUrl = lessonUrl.trim()
 
     try {
       if (videoSourceType === 'upload' && videoFile) {
@@ -117,12 +151,16 @@ export default function AdminContentPage() {
           method: 'POST',
           body: formData,
         })
-        const uploadData = await uploadRes.json()
-        if (uploadData.url) {
-          finalVideoUrl = uploadData.url
+        const uploadData = await safeJson(uploadRes)
+        const uploadedUrl = uploadData.url ?? uploadData.fileUrl ?? uploadData.path
+
+        if (uploadRes.ok && uploadedUrl) {
+          finalVideoUrl = uploadedUrl
         } else {
-          showNotification('Error al procesar el archivo subido', 'error')
-          setUploading(false)
+          showNotification(
+            uploadData.error || `Error al subir el archivo (HTTP ${uploadRes.status})`,
+            'error'
+          )
           return
         }
       }
@@ -132,28 +170,29 @@ export default function AdminContentPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           moduleId: selectedModuleId,
-          title: lessonTitle,
-          description: lessonDesc,
+          title: lessonTitle.trim(),
+          description: lessonDesc.trim(),
           videoUrl: finalVideoUrl,
-          duration: duration ? parseInt(duration) : 1200,
+          duration: duration ? parseInt(duration, 10) : 1200,
           allowedRole: lessonRole,
         }),
       })
 
-      const data = await res.json()
+      const data = await safeJson(res)
 
-      if (res.ok && data.success) {
+      if (res.ok && data.success !== false && !data.error) {
         setLessonTitle('')
         setLessonDesc('')
         setLessonUrl('')
         setVideoFile(null)
         setDuration('')
-        loadData()
+        await loadData()
         showNotification('¡Clase publicada con éxito!', 'success')
       } else {
-        showNotification(data.error || 'Error al publicar la clase', 'error')
+        showNotification(data.error || data.message || `Error al publicar la clase (HTTP ${res.status})`, 'error')
       }
     } catch (err) {
+      console.error(err)
       showNotification('Error de red al guardar la lección', 'error')
     } finally {
       setUploading(false)
@@ -162,14 +201,20 @@ export default function AdminContentPage() {
 
   const handleDelete = async (type: 'module' | 'lesson' | 'resource', id: string) => {
     if (!confirm('¿Confirmas la eliminación de este registro?')) return
-    const res = await fetch(`/api/admin/delete?type=${type}&id=${id}`, {
-      method: 'DELETE',
-    })
-    if (res.ok) {
-      loadData()
-      showNotification('Registro eliminado con éxito', 'success')
-    } else {
-      showNotification('Error al eliminar el registro', 'error')
+    try {
+      const res = await fetch(`/api/admin/delete?type=${type}&id=${id}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        await loadData()
+        showNotification('Registro eliminado con éxito', 'success')
+      } else {
+        const data = await safeJson(res)
+        showNotification(data.error || 'Error al eliminar el registro', 'error')
+      }
+    } catch (err) {
+      console.error(err)
+      showNotification('Error de conexión al eliminar', 'error')
     }
   }
 
@@ -188,6 +233,7 @@ export default function AdminContentPage() {
 
         <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10">
           <button
+            type="button"
             onClick={() => setActiveTab('courses')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'courses' ? 'bg-[#e25822] text-white shadow-md' : 'text-gray-300 hover:text-white'
@@ -196,6 +242,7 @@ export default function AdminContentPage() {
             Módulos y Clases
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('resources')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'resources' ? 'bg-[#e25822] text-white shadow-md' : 'text-gray-300 hover:text-white'
@@ -206,12 +253,16 @@ export default function AdminContentPage() {
         </div>
       </div>
 
-      {/* Alerta / Notificación Flotante */}
+      {/* Notificación */}
       {message && (
-        <div className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-sm border ${
-          message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
-        }`}>
-          <CheckCircle2 size={16} />
+        <div
+          className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-sm border ${
+            message.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              : 'bg-rose-50 border-rose-200 text-rose-700'
+          }`}
+        >
+          {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
           {message.text}
         </div>
       )}
@@ -306,7 +357,6 @@ export default function AdminContentPage() {
                     />
                   </div>
 
-                  {/* Selector de Permisos de Rol Institucional */}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
                       <ShieldCheck size={14} className="text-[#e25822]" /> Acceso de Rol
@@ -322,7 +372,31 @@ export default function AdminContentPage() {
                   </div>
                 </div>
 
-                {/* Selección de Origen de Video */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Descripción (opcional)</label>
+                    <input
+                      type="text"
+                      value={lessonDesc}
+                      onChange={(e) => setLessonDesc(e.target.value)}
+                      placeholder="Breve resumen de la clase"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Duración en segundos (opcional)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={duration}
+                      onChange={(e) => setDuration(e.target.value)}
+                      placeholder="1200 = 20 min"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
+                    />
+                  </div>
+                </div>
+
+                {/* Origen del video */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Fuente del Video</label>
                   <div className="grid grid-cols-2 gap-2 mb-3">
@@ -350,7 +424,7 @@ export default function AdminContentPage() {
 
                   {videoSourceType === 'url' ? (
                     <input
-                      type="text"
+                      type="url"
                       value={lessonUrl}
                       onChange={(e) => setLessonUrl(e.target.value)}
                       placeholder="https://www.youtube.com/watch?v=..."
@@ -360,10 +434,15 @@ export default function AdminContentPage() {
                     <div className="border-2 border-dashed border-gray-200 rounded-2xl p-4 text-center bg-gray-50/50">
                       <input
                         type="file"
-                        accept="video/mp4,video/webm,video/mkv"
+                        accept="video/mp4,video/webm,video/x-matroska,.mkv"
                         onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
                         className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#1d1d1f] file:text-white hover:file:bg-[#e25822] cursor-pointer"
                       />
+                      {videoFile && (
+                        <p className="text-[11px] text-gray-500 mt-2">
+                          {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(1)} MB)
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -379,7 +458,7 @@ export default function AdminContentPage() {
             </div>
           </div>
 
-          {/* Listado Completo de Control Absoluto */}
+          {/* Listado */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-[#1d1d1f] flex items-center gap-2">
               <Layers size={16} className="text-[#e25822]" /> Módulos y Clases Existentes
@@ -390,57 +469,63 @@ export default function AdminContentPage() {
                 Aún no has creado ningún módulo. Utiliza el formulario del Paso 1 para comenzar.
               </div>
             ) : (
-              modules.map((mod) => (
-                <div key={mod.id} className="bg-white rounded-3xl p-5 border border-[#ededf0] shadow-sm space-y-3">
-                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                    <div>
-                      <h4 className="text-sm font-bold text-[#1d1d1f]">{mod.title}</h4>
-                      <p className="text-[11px] text-gray-400">{mod.description || 'Sin descripción asignada'}</p>
+              modules.map((mod) => {
+                const lessons = mod.lessons ?? []
+                return (
+                  <div key={mod.id} className="bg-white rounded-3xl p-5 border border-[#ededf0] shadow-sm space-y-3">
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                      <div>
+                        <h4 className="text-sm font-bold text-[#1d1d1f]">{mod.title}</h4>
+                        <p className="text-[11px] text-gray-400">{mod.description || 'Sin descripción asignada'}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete('module', mod.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer"
+                      >
+                        <Trash2 size={14} /> Eliminar Módulo
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleDelete('module', mod.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer"
-                    >
-                      <Trash2 size={14} /> Eliminar Módulo
-                    </button>
-                  </div>
 
-                  <div className="space-y-2 pl-2">
-                    {mod.lessons.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">No hay clases publicadas en este módulo.</p>
-                    ) : (
-                      mod.lessons.map((lesson) => (
-                        <div key={lesson.id} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50/80 border border-gray-100 text-xs">
-                          <div className="flex items-center gap-3">
-                            <span className="font-bold text-gray-400 text-[11px]">#{lesson.order}</span>
-                            <div>
-                              <p className="font-bold text-[#1d1d1f]">{lesson.title}</p>
-                              <span className="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-md bg-orange-100 text-[#e25822] uppercase">
-                                Acceso: {lesson.allowedRole === 'MENTORIA' ? 'MENTORIA (Mentoría + Club)' : 'CLUB (Solo Club)'}
-                              </span>
+                    <div className="space-y-2 pl-2">
+                      {lessons.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic">No hay clases publicadas en este módulo.</p>
+                      ) : (
+                        lessons.map((lesson) => (
+                          <div key={lesson.id} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50/80 border border-gray-100 text-xs">
+                            <div className="flex items-center gap-3">
+                              <span className="font-bold text-gray-400 text-[11px]">#{lesson.order}</span>
+                              <div>
+                                <p className="font-bold text-[#1d1d1f]">{lesson.title}</p>
+                                <span className="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-md bg-orange-100 text-[#e25822] uppercase">
+                                  Acceso: {lesson.allowedRole === 'MENTORIA' ? 'MENTORIA (Mentoría + Club)' : 'CLUB (Solo Club)'}
+                                </span>
+                              </div>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete('lesson', lesson.id)}
+                              className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-all cursor-pointer"
+                              title="Eliminar clase"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleDelete('lesson', lesson.id)}
-                            className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-all cursor-pointer"
-                            title="Eliminar clase"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
       ) : (
-        /* Sección de Recursos */
         <div className="bg-white rounded-3xl p-6 border border-[#ededf0] shadow-sm">
           <h2 className="text-sm font-bold text-[#1d1d1f] mb-4">Gestión de Archivos y Recursos</h2>
-          <p className="text-xs text-gray-400">Pestaña para gestionar PDFs y enlaces complementarios.</p>
+          <p className="text-xs text-gray-400">
+            Pestaña para gestionar PDFs y enlaces complementarios. ({resources.length} recursos cargados)
+          </p>
         </div>
       )}
     </div>

@@ -1,9 +1,9 @@
 [build]
-  command = "npx prisma db push --accept-data-loss && prisma generate && npm run build"
+  command = "prisma generate && npm run build"
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "18.17.0"
+  NODE_VERSION = "20.11.0"
   SECRETS_SCAN_OMIT_KEYS = "NEXTAUTH_URL"
 
 [[plugins]]
