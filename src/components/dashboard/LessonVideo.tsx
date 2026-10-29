@@ -1,3 +1,5 @@
+import { ExternalLink } from 'lucide-react'
+
 function getEmbedUrl(url: string): string | null {
   try {
     const u = new URL(url)
@@ -13,6 +15,7 @@ function getEmbedUrl(url: string): string | null {
       if (u.pathname === '/watch') id = u.searchParams.get('v')
       else if (u.pathname.startsWith('/embed/')) id = u.pathname.split('/')[2]
       else if (u.pathname.startsWith('/shorts/')) id = u.pathname.split('/')[2]
+      else if (u.pathname.startsWith('/live/')) id = u.pathname.split('/')[2]
       return id ? `https://www.youtube.com/embed/${id}` : null
     }
 
@@ -29,25 +32,34 @@ function getEmbedUrl(url: string): string | null {
 export default function LessonVideo({ url, title }: { url: string; title: string }) {
   const embed = getEmbedUrl(url)
 
-  if (embed) {
-    return (
-      <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black">
-        <iframe
-          src={embed}
-          title={title}
-          className="h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-          allowFullScreen
-        />
-      </div>
-    )
-  }
-
   return (
-    <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black">
-      <video src={url} controls controlsList="nodownload" className="h-full w-full" preload="metadata">
-        Tu navegador no puede reproducir este video.
-      </video>
+    <div className="space-y-2">
+      <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black">
+        {embed ? (
+          <iframe
+            src={embed}
+            title={title}
+            className="h-full w-full"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+          />
+        ) : (
+          <video src={url} controls controlsList="nodownload" className="h-full w-full" preload="metadata">
+            Tu navegador no puede reproducir este video.
+          </video>
+        )}
+      </div>
+
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-gray-500 hover:text-[#e25822]"
+      >
+        <ExternalLink size={13} />
+        ¿No carga? Abrir video en una pestaña nueva
+      </a>
     </div>
   )
 }

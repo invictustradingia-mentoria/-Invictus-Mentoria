@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { Video, Trash2, Layers, Upload, Link as LinkIcon, CheckCircle2, AlertCircle, ShieldCheck, Sparkles } from 'lucide-react'
+import {
+  Video, Trash2, Layers, Upload, Link as LinkIcon, CheckCircle2, AlertCircle,
+  ShieldCheck, Sparkles, Pencil, X, Save, EyeOff,
+} from 'lucide-react'
 
 const BUCKET = 'videos'
 
@@ -12,16 +15,38 @@ interface Lesson {
   videoUrl: string
   allowedRole: string
   order: number
+  isPublished?: boolean
 }
 
 interface Module {
   id: string
   title: string
   description: string | null
+  order?: number
+  isPublished?: boolean
   lessons?: Lesson[]
 }
 
-// Lee la respuesta de forma segura (aunque el servidor devuelva HTML o vacío)
+interface EditLessonState {
+  id: string
+  title: string
+  description: string
+  videoUrl: string
+  duration: string
+  order: string
+  isPublished: boolean
+  allowedRole: 'CLUB' | 'MENTORIA'
+  moduleId: string
+}
+
+interface EditModuleState {
+  id: string
+  title: string
+  description: string
+  order: string
+  isPublished: boolean
+}
+
 async function safeJson(res: Response): Promise<any> {
   const text = await res.text()
   if (!text) return {}
@@ -31,6 +56,9 @@ async function safeJson(res: Response): Promise<any> {
     return { error: `Respuesta no válida del servidor (HTTP ${res.status})` }
   }
 }
+
+const inputCls =
+  'w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50'
 
 export default function AdminContentPage() {
   const [modules, setModules] = useState<Module[]>([])
@@ -53,6 +81,11 @@ export default function AdminContentPage() {
   const [duration, setDuration] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState('')
+
+  // Edición
+  const [editLesson, setEditLesson] = useState<EditLessonState | null>(null)
+  const [editModule, setEditModule] = useState<EditModuleState | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
 
   // Recursos
   const [resources, setResources] = useState<any[]>([])
@@ -88,6 +121,7 @@ export default function AdminContentPage() {
     setTimeout(() => setMessage(null), 6000)
   }
 
+  // ---------- Crear módulo ----------
   const handleCreateModule = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!modTitle.trim()) {
@@ -126,7 +160,7 @@ export default function AdminContentPage() {
     }
   }
 
-  // Sube el video directo a Supabase Storage y devuelve la URL pública
+  // ---------- Subida de video ----------
   const uploadVideoToStorage = async (file: File): Promise<string | null> => {
     setUploadStatus('Preparando subida...')
 
@@ -138,10 +172,7 @@ export default function AdminContentPage() {
     const signData = await safeJson(signRes)
 
     if (!signRes.ok || !signData.token || !signData.path) {
-      showNotification(
-        signData.error || `No se pudo preparar la subida (HTTP ${signRes.status})`,
-        'error'
-      )
+      showNotification(signData.error || `No se pudo preparar la subida (HTTP ${signRes.status})`, 'error')
       return null
     }
 
@@ -169,6 +200,7 @@ export default function AdminContentPage() {
     return signData.url as string
   }
 
+  // ---------- Crear lección ----------
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -233,12 +265,15 @@ export default function AdminContentPage() {
     }
   }
 
+  // ---------- Eliminar ----------
   const handleDelete = async (type: 'module' | 'lesson' | 'resource', id: string) => {
-    if (!confirm('¿Confirmas la eliminación de este registro?')) return
+    const msg =
+      type === 'module'
+        ? '¿Eliminar este módulo? También se eliminarán TODAS sus clases.'
+        : '¿Confirmas la eliminación de este registro?'
+    if (!confirm(msg)) return
     try {
-      const res = await fetch(`/api/admin/delete?type=${type}&id=${id}`, {
-        method: 'DELETE',
-      })
+      const res = await fetch(`/api/admin/delete?type=${type}&id=${id}`, { method: 'DELETE' })
       if (res.ok) {
         await loadData()
         showNotification('Registro eliminado con éxito', 'success')
@@ -249,6 +284,110 @@ export default function AdminContentPage() {
     } catch (err) {
       console.error(err)
       showNotification('Error de conexión al eliminar', 'error')
+    }
+  }
+
+  // ---------- Editar lección ----------
+  const openEditLesson = async (lessonId: string, moduleId: string) => {
+    try {
+      const res = await fetch(`/api/admin/lessons/${lessonId}`, { cache: 'no-store' })
+      const data = await safeJson(res)
+      if (!res.ok || !data.lesson) {
+        showNotification(data.error || `No se pudo cargar la clase (HTTP ${res.status})`, 'error')
+        return
+      }
+      const l = data.lesson
+      setEditLesson({
+        id: l.id,
+        title: l.title ?? '',
+        description: l.description ?? '',
+        videoUrl: l.videoUrl ?? '',
+        duration: l.duration ? String(l.duration) : '',
+        order: String(l.order ?? 0),
+        isPublished: l.isPublished !== false,
+        allowedRole: l.allowedRole === 'MENTORIA' ? 'MENTORIA' : 'CLUB',
+        moduleId: l.moduleId ?? moduleId,
+      })
+    } catch (err) {
+      console.error(err)
+      showNotification('Error de conexión al cargar la clase', 'error')
+    }
+  }
+
+  const handleSaveLesson = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editLesson) return
+    setSavingEdit(true)
+    try {
+      const res = await fetch(`/api/admin/lessons/${editLesson.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editLesson.title,
+          description: editLesson.description,
+          videoUrl: editLesson.videoUrl,
+          duration: editLesson.duration,
+          order: editLesson.order,
+          isPublished: editLesson.isPublished,
+          allowedRole: editLesson.allowedRole,
+          moduleId: editLesson.moduleId,
+        }),
+      })
+      const data = await safeJson(res)
+      if (res.ok && data.success) {
+        setEditLesson(null)
+        await loadData()
+        showNotification('Clase actualizada correctamente', 'success')
+      } else {
+        showNotification(data.error || `Error al guardar (HTTP ${res.status})`, 'error')
+      }
+    } catch (err) {
+      console.error(err)
+      showNotification('Error de conexión al guardar la clase', 'error')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  // ---------- Editar módulo ----------
+  const openEditModule = (mod: Module) => {
+    setEditModule({
+      id: mod.id,
+      title: mod.title ?? '',
+      description: mod.description ?? '',
+      order: String(mod.order ?? 0),
+      isPublished: mod.isPublished !== false,
+    })
+  }
+
+  const handleSaveModule = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editModule) return
+    setSavingEdit(true)
+    try {
+      const res = await fetch(`/api/admin/modules/${editModule.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editModule.title,
+          description: editModule.description,
+          order: editModule.order,
+          isPublished: editModule.isPublished,
+        }),
+      })
+      const data = await safeJson(res)
+      if (res.ok && data.success) {
+        setEditModule(null)
+        await loadData()
+        showNotification('Módulo actualizado correctamente', 'success')
+      } else {
+        showNotification(data.error || `Error al guardar (HTTP ${res.status})`, 'error')
+      }
+    } catch (err) {
+      console.error(err)
+      showNotification('Error de conexión al guardar el módulo', 'error')
+    } finally {
+      setSavingEdit(false)
     }
   }
 
@@ -325,7 +464,7 @@ export default function AdminContentPage() {
                       value={modTitle}
                       onChange={(e) => setModTitle(e.target.value)}
                       placeholder="Ej. Módulo 1: Introducción a la Plataforma"
-                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
+                      className={inputCls}
                       required
                     />
                   </div>
@@ -336,7 +475,7 @@ export default function AdminContentPage() {
                       value={modDesc}
                       onChange={(e) => setModDesc(e.target.value)}
                       placeholder="Resumen del contenido que abarcará este módulo..."
-                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
+                      className={inputCls}
                     />
                   </div>
                   <button
@@ -386,7 +525,7 @@ export default function AdminContentPage() {
                       value={lessonTitle}
                       onChange={(e) => setLessonTitle(e.target.value)}
                       placeholder="Ej. Estrategias Operativas"
-                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
+                      className={inputCls}
                       required
                     />
                   </div>
@@ -414,7 +553,7 @@ export default function AdminContentPage() {
                       value={lessonDesc}
                       onChange={(e) => setLessonDesc(e.target.value)}
                       placeholder="Breve resumen de la clase"
-                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
+                      className={inputCls}
                     />
                   </div>
                   <div>
@@ -425,7 +564,7 @@ export default function AdminContentPage() {
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
                       placeholder="1200 = 20 min"
-                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
+                      className={inputCls}
                     />
                   </div>
                 </div>
@@ -462,7 +601,7 @@ export default function AdminContentPage() {
                       value={lessonUrl}
                       onChange={(e) => setLessonUrl(e.target.value)}
                       placeholder="https://www.youtube.com/watch?v=..."
-                      className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822] bg-gray-50/50"
+                      className={inputCls}
                     />
                   ) : (
                     <div className="border-2 border-dashed border-gray-200 rounded-2xl p-4 text-center bg-gray-50/50">
@@ -511,18 +650,34 @@ export default function AdminContentPage() {
                 const lessons = mod.lessons ?? []
                 return (
                   <div key={mod.id} className="bg-white rounded-3xl p-5 border border-[#ededf0] shadow-sm space-y-3">
-                    <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-100">
                       <div>
-                        <h4 className="text-sm font-bold text-[#1d1d1f]">{mod.title}</h4>
+                        <h4 className="text-sm font-bold text-[#1d1d1f] flex items-center gap-2">
+                          {mod.title}
+                          {mod.isPublished === false && (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md bg-gray-200 text-gray-600 uppercase">
+                              <EyeOff size={10} /> Oculto
+                            </span>
+                          )}
+                        </h4>
                         <p className="text-[11px] text-gray-400">{mod.description || 'Sin descripción asignada'}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete('module', mod.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer"
-                      >
-                        <Trash2 size={14} /> Eliminar Módulo
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditModule(mod)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-100 text-gray-700 hover:bg-[#fff4ef] hover:text-[#e25822] transition-all cursor-pointer"
+                        >
+                          <Pencil size={14} /> Editar Módulo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete('module', mod.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer"
+                        >
+                          <Trash2 size={14} /> Eliminar Módulo
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-2 pl-2">
@@ -535,19 +690,36 @@ export default function AdminContentPage() {
                               <span className="font-bold text-gray-400 text-[11px]">#{lesson.order}</span>
                               <div>
                                 <p className="font-bold text-[#1d1d1f]">{lesson.title}</p>
-                                <span className="inline-block mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-md bg-orange-100 text-[#e25822] uppercase">
-                                  Acceso: {lesson.allowedRole === 'MENTORIA' ? 'MENTORIA (Mentoría + Club)' : 'CLUB (Solo Club)'}
-                                </span>
+                                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                  <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-md bg-orange-100 text-[#e25822] uppercase">
+                                    Acceso: {lesson.allowedRole === 'MENTORIA' ? 'MENTORIA (Mentoría + Club)' : 'CLUB (Solo Club)'}
+                                  </span>
+                                  {lesson.isPublished === false && (
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md bg-gray-200 text-gray-600 uppercase">
+                                      <EyeOff size={10} /> Oculta
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete('lesson', lesson.id)}
-                              className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-all cursor-pointer"
-                              title="Eliminar clase"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => openEditLesson(lesson.id, mod.id)}
+                                className="p-2 rounded-xl text-gray-500 hover:bg-[#fff4ef] hover:text-[#e25822] transition-all cursor-pointer"
+                                title="Editar clase"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete('lesson', lesson.id)}
+                                className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-all cursor-pointer"
+                                title="Eliminar clase"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
                         ))
                       )}
@@ -564,6 +736,205 @@ export default function AdminContentPage() {
           <p className="text-xs text-gray-400">
             Pestaña para gestionar PDFs y enlaces complementarios. ({resources.length} recursos cargados)
           </p>
+        </div>
+      )}
+
+      {/* ===== Modal: editar clase ===== */}
+      {editLesson && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="text-sm font-bold text-[#1d1d1f]">Editar clase</h3>
+              <button type="button" onClick={() => setEditLesson(null)} className="rounded-xl p-1.5 text-gray-500 hover:bg-gray-100 cursor-pointer">
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveLesson} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Título</label>
+                <input
+                  type="text"
+                  value={editLesson.title}
+                  onChange={(e) => setEditLesson({ ...editLesson, title: e.target.value })}
+                  className={inputCls}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Descripción</label>
+                <input
+                  type="text"
+                  value={editLesson.description}
+                  onChange={(e) => setEditLesson({ ...editLesson, description: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Enlace del video</label>
+                <input
+                  type="text"
+                  value={editLesson.videoUrl}
+                  onChange={(e) => setEditLesson({ ...editLesson, videoUrl: e.target.value })}
+                  className={inputCls}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Módulo</label>
+                  <select
+                    value={editLesson.moduleId}
+                    onChange={(e) => setEditLesson({ ...editLesson, moduleId: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs font-bold bg-gray-50/50 focus:outline-none focus:border-[#e25822]"
+                  >
+                    {modules.map((m) => (
+                      <option key={m.id} value={m.id}>{m.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <ShieldCheck size={14} className="text-[#e25822]" /> Acceso de Rol
+                  </label>
+                  <select
+                    value={editLesson.allowedRole}
+                    onChange={(e) => setEditLesson({ ...editLesson, allowedRole: e.target.value as 'CLUB' | 'MENTORIA' })}
+                    className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs font-bold text-[#e25822] bg-orange-50/40 focus:outline-none focus:border-[#e25822]"
+                  >
+                    <option value="CLUB">CLUB (Solo Club)</option>
+                    <option value="MENTORIA">MENTORIA (Mentoría + Club)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Orden</label>
+                  <input
+                    type="number"
+                    value={editLesson.order}
+                    onChange={(e) => setEditLesson({ ...editLesson, order: e.target.value })}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Duración (segundos)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={editLesson.duration}
+                    onChange={(e) => setEditLesson({ ...editLesson, duration: e.target.value })}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editLesson.isPublished}
+                  onChange={(e) => setEditLesson({ ...editLesson, isPublished: e.target.checked })}
+                  className="h-4 w-4 accent-[#e25822]"
+                />
+                Clase visible para los alumnos
+              </label>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditLesson(null)}
+                  className="flex-1 rounded-2xl bg-gray-100 py-3 text-xs font-bold text-gray-700 hover:bg-gray-200 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#e25822] disabled:opacity-50 cursor-pointer"
+                >
+                  <Save size={14} /> {savingEdit ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Modal: editar módulo ===== */}
+      {editModule && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="text-sm font-bold text-[#1d1d1f]">Editar módulo</h3>
+              <button type="button" onClick={() => setEditModule(null)} className="rounded-xl p-1.5 text-gray-500 hover:bg-gray-100 cursor-pointer">
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveModule} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Título</label>
+                <input
+                  type="text"
+                  value={editModule.title}
+                  onChange={(e) => setEditModule({ ...editModule, title: e.target.value })}
+                  className={inputCls}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Descripción</label>
+                <input
+                  type="text"
+                  value={editModule.description}
+                  onChange={(e) => setEditModule({ ...editModule, description: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Orden</label>
+                <input
+                  type="number"
+                  value={editModule.order}
+                  onChange={(e) => setEditModule({ ...editModule, order: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editModule.isPublished}
+                  onChange={(e) => setEditModule({ ...editModule, isPublished: e.target.checked })}
+                  className="h-4 w-4 accent-[#e25822]"
+                />
+                Módulo visible para los alumnos
+              </label>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditModule(null)}
+                  className="flex-1 rounded-2xl bg-gray-100 py-3 text-xs font-bold text-gray-700 hover:bg-gray-200 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#e25822] disabled:opacity-50 cursor-pointer"
+                >
+                  <Save size={14} /> {savingEdit ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
