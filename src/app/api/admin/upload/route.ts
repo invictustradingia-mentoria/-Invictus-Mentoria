@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 const BUCKET = 'videos'
 
@@ -20,16 +21,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Falta el nombre del archivo' }, { status: 400 })
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!supabaseUrl || !serviceKey) {
+    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
+    const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
+
+    const missing: string[] = []
+    if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL')
+    if (!serviceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (missing.length > 0) {
       return NextResponse.json(
-        { error: 'Faltan las variables de Supabase en el servidor' },
+        {
+          error: `El servidor no ve estas variables: ${missing.join(', ')}. Revisa el nombre, que tengan alcance Functions/Runtime en Netlify y haz un redeploy.`,
+        },
         { status: 500 }
       )
     }
 
-    const supabase = createClient(supabaseUrl, serviceKey)
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false },
+    })
 
     const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
     const path = `${Date.now()}-${safeName}`
