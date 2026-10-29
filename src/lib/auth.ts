@@ -1,72 +1,75 @@
-import { NextAuthOptions } from 'next-auth'
+import type { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma'
+import { prismaDash } from '@/lib/prisma-dashboard'
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
+  session: { strategy: 'jwt', maxAge: 60 * 60 * 24 * 7 },
+  pages: { signIn: '/login' },
+
   providers: [
     CredentialsProvider({
-      name: 'Credentials',
+      name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
+        password: { label: 'Contraseña', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Credenciales incompletas')
-        }
+        const email = credentials?.email?.trim().toLowerCase()
+        const password = credentials?.password
+        if (!email || !password) throw new Error('INVALID')
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() },
-        })
+        const user = await prismaDash.user.findUnique({ where: { email } })
+        if (!user) throw new Error('INVALID')
 
-        if (!user) {
-          throw new Error('Usuario no encontrado')
-        }
+        const ok = await bcrypt.compare(password, user.password)
+        if (!ok) throw new Error('INVALID')
 
-        if (user.isBanned) {
-          throw new Error('Cuenta suspendida')
-        }
+        // Se comprueba después de validar la contraseña para no revelar qué correos existen
+        if (user.isBanned) throw new Error('BANNED')
+        if (user.status === 'PENDING') throw new Error('PENDING')
+        if (user.status === 'REJECTED') throw new Error('REJECTED')
 
-        const isValidPassword = await bcrypt.compare(credentials.password, user.password)
-
-        if (!isValidPassword) {
-          throw new Error('Contraseña incorrecta')
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          status: user.status,
-        }
+        return { id: user.id, name: user.name, email: user.email, role: user.role } as any
       },
     }),
   ],
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
+        token.id = (user as any).id
         token.role = (user as any).role
-        token.status = (user as any).status
+      }
+
+      // Revalida contra la base en cada petición
+      if (token.id) {
+        const db = await prismaDash.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, status: true, isBanned: true },
+        })
+
+        if (!db || db.isBanned || db.status !== 'APPROVED') {
+          token.blocked = true
+        } else {
+          token.blocked = false
+          token.role = db.role
+        }
       }
       return token
     },
+
     async session({ session, token }) {
+      // Usuario bloqueado: la sesión queda sin usuario y las páginas lo mandan a /login
+      if (token.blocked) {
+        return { expires: session.expires } as any
+      }
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
-        (session.user as any).status = token.status;
+        ;(session.user as any).id = token.id
+        ;(session.user as any).role = token.role
       }
       return session
     },
   },
-  pages: {
-    signIn: '/login',
-  },
-  session: {
-    strategy: 'jwt',
-  },
-  secret: process.env.NEXTAUTH_SECRET || 'fallback_secret_invictus_2026',
 }
