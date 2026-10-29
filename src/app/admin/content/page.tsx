@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import { Video, Trash2, Layers, Upload, Link as LinkIcon, CheckCircle2, AlertCircle, ShieldCheck, Sparkles } from 'lucide-react'
+
+const BUCKET = 'videos'
 
 interface Lesson {
   id: string
@@ -49,6 +52,7 @@ export default function AdminContentPage() {
   const [lessonRole, setLessonRole] = useState<'CLUB' | 'MENTORIA'>('CLUB')
   const [duration, setDuration] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState('')
 
   // Recursos
   const [resources, setResources] = useState<any[]>([])
@@ -81,7 +85,7 @@ export default function AdminContentPage() {
 
   const showNotification = (text: string, type: 'success' | 'error') => {
     setMessage({ text, type })
-    setTimeout(() => setMessage(null), 5000)
+    setTimeout(() => setMessage(null), 6000)
   }
 
   const handleCreateModule = async (e: React.FormEvent) => {
@@ -106,7 +110,6 @@ export default function AdminContentPage() {
           setModules((prev) => [...prev, { ...created, lessons: created.lessons ?? [] }])
           setSelectedModuleId(created.id)
         } else {
-          // Si la API no devuelve el módulo, recargamos la lista
           await loadData()
         }
         setModTitle('')
@@ -121,6 +124,49 @@ export default function AdminContentPage() {
     } finally {
       setLoadingMod(false)
     }
+  }
+
+  // Sube el video directo a Supabase Storage y devuelve la URL pública
+  const uploadVideoToStorage = async (file: File): Promise<string | null> => {
+    setUploadStatus('Preparando subida...')
+
+    const signRes = await fetch('/api/admin/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileName: file.name }),
+    })
+    const signData = await safeJson(signRes)
+
+    if (!signRes.ok || !signData.token || !signData.path) {
+      showNotification(
+        signData.error || `No se pudo preparar la subida (HTTP ${signRes.status})`,
+        'error'
+      )
+      return null
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !supabaseAnon) {
+      showNotification('Faltan NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY en Netlify', 'error')
+      return null
+    }
+
+    setUploadStatus(`Subiendo video (${(file.size / 1024 / 1024).toFixed(1)} MB)... no cierres la página`)
+
+    const supabase = createClient(supabaseUrl, supabaseAnon)
+    const { error } = await supabase.storage
+      .from(BUCKET)
+      .uploadToSignedUrl(signData.path, signData.token, file, {
+        contentType: file.type || 'video/mp4',
+      })
+
+    if (error) {
+      showNotification(`Error al subir el video: ${error.message}`, 'error')
+      return null
+    }
+
+    return signData.url as string
   }
 
   const handleCreateLesson = async (e: React.FormEvent) => {
@@ -140,30 +186,17 @@ export default function AdminContentPage() {
     }
 
     setUploading(true)
+    setUploadStatus('')
     let finalVideoUrl = lessonUrl.trim()
 
     try {
       if (videoSourceType === 'upload' && videoFile) {
-        const formData = new FormData()
-        formData.append('file', videoFile)
-
-        const uploadRes = await fetch('/api/admin/upload', {
-          method: 'POST',
-          body: formData,
-        })
-        const uploadData = await safeJson(uploadRes)
-        const uploadedUrl = uploadData.url ?? uploadData.fileUrl ?? uploadData.path
-
-        if (uploadRes.ok && uploadedUrl) {
-          finalVideoUrl = uploadedUrl
-        } else {
-          showNotification(
-            uploadData.error || `Error al subir el archivo (HTTP ${uploadRes.status})`,
-            'error'
-          )
-          return
-        }
+        const uploadedUrl = await uploadVideoToStorage(videoFile)
+        if (!uploadedUrl) return
+        finalVideoUrl = uploadedUrl
       }
+
+      setUploadStatus('Guardando la clase...')
 
       const res = await fetch('/api/admin/lessons', {
         method: 'POST',
@@ -196,6 +229,7 @@ export default function AdminContentPage() {
       showNotification('Error de red al guardar la lección', 'error')
     } finally {
       setUploading(false)
+      setUploadStatus('')
     }
   }
 
@@ -446,6 +480,10 @@ export default function AdminContentPage() {
                     </div>
                   )}
                 </div>
+
+                {uploading && uploadStatus && (
+                  <p className="text-[11px] font-bold text-[#e25822] animate-pulse">{uploadStatus}</p>
+                )}
 
                 <button
                   type="submit"
