@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Circle, PlayCircle, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft, Check, Crown, Star, ShieldCheck, Sparkles, Clock, BookOpen, AlertCircle } from 'lucide-react'
-import LessonVideo from '@/components/dashboard/LessonVideo'
+import SecurePlayer from '@/components/dashboard/SecurePlayer'
 import { getMembership } from '@/lib/membership'
 
 interface Lesson {
-  id: string; title: string; description: string | null; videoUrl: string
+  id: string; title: string; description: string | null
   duration: number | null; order: number; allowedRole: string
 }
 interface Mod { id: string; title: string; description: string | null; lessons: Lesson[] }
@@ -255,7 +255,7 @@ export default function ClasesPage() {
                   <h1 className="mt-1 text-xl font-black tracking-tight text-slate-900">{current.title}</h1>
                 </div>
 
-                <LessonVideo key={current.id} url={current.videoUrl} title={current.title} />
+                <SecurePlayer key={current.id} lessonId={current.id} title={current.title} />
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <button type="button" onClick={toggleComplete}

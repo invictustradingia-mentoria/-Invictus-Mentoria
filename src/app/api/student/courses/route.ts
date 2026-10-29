@@ -23,7 +23,8 @@ export async function GET() {
         lessons: {
           where: { isPublished: true, ...(levels ? { allowedRole: { in: levels } } : {}) },
           orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-          select: { id: true, title: true, description: true, videoUrl: true, duration: true, order: true, allowedRole: true },
+          // videoUrl NO se envía al navegador: el reproductor lo pide por /api/student/video
+          select: { id: true, title: true, description: true, duration: true, order: true, allowedRole: true },
         },
       },
     })
