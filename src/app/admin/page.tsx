@@ -1,221 +1,454 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Users, Shield, CheckCircle, RefreshCw, Trash2, Clock, XCircle, Search } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import {
+  RefreshCw, Search, Clock, CheckCircle2, Users, AlertCircle, Check, X, Ban,
+  ShieldOff, Pencil, Trash2, Save,
+} from 'lucide-react'
 
-interface User {
+interface Student {
   id: string
   name: string | null
   email: string
   role: string
   status: string
+  isBanned: boolean
+  phone: string | null
   registeredIp: string | null
   createdAt: string
 }
 
-export default function AdminDashboardPage() {
-  const [users, setUsers] = useState<User[]>([])
-  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
+type Filter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'BANNED'
+
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text()
+  if (!text) return {}
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { error: `Respuesta no válida del servidor (HTTP ${res.status})` }
+  }
+}
+
+const statusLabel: Record<string, string> = {
+  PENDING: 'Pendiente',
+  APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado',
+}
+
+const statusStyle: Record<string, string> = {
+  PENDING: 'bg-orange-100 text-orange-700',
+  APPROVED: 'bg-emerald-100 text-emerald-700',
+  REJECTED: 'bg-rose-100 text-rose-700',
+}
+
+export default function AdminStudentsPage() {
+  const [users, setUsers] = useState<Student[]>([])
+  const [currentEmail, setCurrentEmail] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+  const [filter, setFilter] = useState<Filter>('ALL')
   const [search, setSearch] = useState('')
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [edit, setEdit] = useState<{ id: string; name: string; phone: string; email: string } | null>(null)
+
+  const loadUsers = async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const res = await fetch('/api/admin/students', { cache: 'no-store' })
+      const data = await safeJson(res)
+      if (res.ok && Array.isArray(data.users)) {
+        setUsers(data.users)
+        setCurrentEmail(data.currentEmail ?? null)
+      } else {
+        setLoadError(data.error || `No se pudo cargar la lista (HTTP ${res.status})`)
+      }
+    } catch (err: any) {
+      setLoadError('Error de conexión al cargar los usuarios')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    fetchUsers()
+    loadUsers()
   }, [])
 
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch('/api/admin/users')
-      const data = await res.json()
-      if (data.users) setUsers(data.users)
-    } catch (err) {
-      console.error(err)
-    }
+  const notify = (text: string, type: 'success' | 'error') => {
+    setMessage({ text, type })
+    setTimeout(() => setMessage(null), 5000)
   }
 
-  const handleUpdateStatus = async (userId: string, status: string) => {
+  const patchUser = async (id: string, changes: Record<string, any>, okText: string) => {
+    setBusyId(id)
     try {
-      const res = await fetch('/api/admin/users/status', {
+      const res = await fetch('/api/admin/students', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, status }),
+        body: JSON.stringify({ id, ...changes }),
       })
-      if (res.ok) fetchUsers()
-    } catch (err) {
-      console.error(err)
+      const data = await safeJson(res)
+      if (res.ok && data.success && data.user) {
+        setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data.user } : u)))
+        notify(okText, 'success')
+        return true
+      }
+      notify(data.error || `Error al guardar (HTTP ${res.status})`, 'error')
+      return false
+    } catch {
+      notify('Error de conexión', 'error')
+      return false
+    } finally {
+      setBusyId(null)
     }
   }
 
-  const handleUpdateRole = async (userId: string, role: string) => {
+  const handleDelete = async (u: Student) => {
+    if (!confirm(`¿Eliminar a ${u.name || u.email}? Se borrará también su progreso y sus sesiones. Esta acción no se puede deshacer.`)) return
+    setBusyId(u.id)
     try {
-      const res = await fetch('/api/admin/users/role', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role }),
-      })
-      if (res.ok) fetchUsers()
-    } catch (err) {
-      console.error(err)
+      const res = await fetch(`/api/admin/students?id=${u.id}`, { method: 'DELETE' })
+      const data = await safeJson(res)
+      if (res.ok && data.success) {
+        setUsers((prev) => prev.filter((x) => x.id !== u.id))
+        notify('Usuario eliminado', 'success')
+      } else {
+        notify(data.error || `Error al eliminar (HTTP ${res.status})`, 'error')
+      }
+    } catch {
+      notify('Error de conexión', 'error')
+    } finally {
+      setBusyId(null)
     }
   }
 
-  const pendingCount = users.filter((u) => u.status === 'PENDING').length
-  const approvedCount = users.filter((u) => u.status === 'APPROVED').length
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!edit) return
+    const ok = await patchUser(edit.id, { name: edit.name, phone: edit.phone }, 'Datos actualizados')
+    if (ok) setEdit(null)
+  }
 
-  const filteredUsers = users.filter((u) => {
-    const matchesFilter = filter === 'ALL' || u.status === filter
-    const matchesSearch =
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      (u.name && u.name.toLowerCase().includes(search.toLowerCase()))
-    return matchesFilter && matchesSearch
-  })
+  const counts = useMemo(
+    () => ({
+      total: users.length,
+      pending: users.filter((u) => u.status === 'PENDING').length,
+      approved: users.filter((u) => u.status === 'APPROVED').length,
+      rejected: users.filter((u) => u.status === 'REJECTED').length,
+      banned: users.filter((u) => u.isBanned).length,
+    }),
+    [users]
+  )
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return users.filter((u) => {
+      if (filter === 'PENDING' && u.status !== 'PENDING') return false
+      if (filter === 'APPROVED' && u.status !== 'APPROVED') return false
+      if (filter === 'REJECTED' && u.status !== 'REJECTED') return false
+      if (filter === 'BANNED' && !u.isBanned) return false
+      if (q && !(u.email.toLowerCase().includes(q) || (u.name ?? '').toLowerCase().includes(q))) return false
+      return true
+    })
+  }, [users, filter, search])
+
+  const tabs: { key: Filter; label: string; n: number }[] = [
+    { key: 'ALL', label: 'Todos', n: counts.total },
+    { key: 'PENDING', label: 'Pendientes', n: counts.pending },
+    { key: 'APPROVED', label: 'Aprobados', n: counts.approved },
+    { key: 'REJECTED', label: 'Rechazados', n: counts.rejected },
+    { key: 'BANNED', label: 'Baneados', n: counts.banned },
+  ]
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6 bg-[#fdfdfd] min-h-screen">
+      {/* Encabezado */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1d1d1f]">Aprobación y Gestión de Alumnos</h1>
-          <p className="text-sm text-[#86868b]">Controla el acceso de nuevos usuarios y asigna sus roles institucionales.</p>
+          <h1 className="text-2xl font-black tracking-tight text-[#1d1d1f]">Aprobación y Gestión de Alumnos</h1>
+          <p className="text-xs text-gray-500 mt-1">Controla el acceso de nuevos usuarios y asigna sus roles institucionales.</p>
         </div>
         <button
-          onClick={fetchUsers}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white border border-[#ededf0] hover:bg-gray-50 cursor-pointer shadow-sm"
+          type="button"
+          onClick={loadUsers}
+          disabled={loading}
+          className="flex items-center gap-2 self-start rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-[#1d1d1f] shadow-sm hover:border-[#e25822] disabled:opacity-50 cursor-pointer"
         >
-          <RefreshCw size={14} />
-          Actualizar Lista
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Actualizar Lista
         </button>
       </div>
 
-      {/* Tarjetas de métricas superiores */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-[#ededf0] shadow-sm flex items-center justify-between">
+      {/* Errores */}
+      {loadError && (
+        <div className="flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-700">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <div>
-            <p className="text-xs font-semibold text-gray-500">Pendientes de Aprobación</p>
-            <p className="text-2xl font-bold text-orange-600 mt-1">{pendingCount}</p>
+            <p>No se pudo cargar la lista de usuarios:</p>
+            <p className="mt-1 font-normal break-all">{loadError}</p>
           </div>
-          <Clock size={28} className="text-orange-500 opacity-80" />
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-[#ededf0] shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-gray-500">Alumnos Aprobados</p>
-            <p className="text-2xl font-bold text-green-600 mt-1">{approvedCount}</p>
-          </div>
-          <CheckCircle size={28} className="text-green-500 opacity-80" />
+      )}
+
+      {message && (
+        <div
+          className={`flex items-center gap-2 rounded-2xl border p-4 text-xs font-bold ${
+            message.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-rose-200 bg-rose-50 text-rose-700'
+          }`}
+        >
+          {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          {message.text}
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-[#ededf0] shadow-sm flex items-center justify-between">
+      )}
+
+      {/* Tarjetas */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="flex items-center justify-between rounded-3xl border border-[#ededf0] bg-white p-5 shadow-sm">
           <div>
-            <p className="text-xs font-semibold text-gray-500">Total Solicitudes</p>
-            <p className="text-2xl font-bold text-gray-800 mt-1">{users.length}</p>
+            <p className="text-xs font-bold text-gray-500">Pendientes de Aprobación</p>
+            <p className="mt-1 text-3xl font-black text-orange-500">{counts.pending}</p>
           </div>
-          <Users size={28} className="text-gray-400" />
+          <Clock size={26} className="text-orange-400" />
+        </div>
+        <div className="flex items-center justify-between rounded-3xl border border-[#ededf0] bg-white p-5 shadow-sm">
+          <div>
+            <p className="text-xs font-bold text-gray-500">Alumnos Aprobados</p>
+            <p className="mt-1 text-3xl font-black text-emerald-600">{counts.approved}</p>
+          </div>
+          <CheckCircle2 size={26} className="text-emerald-400" />
+        </div>
+        <div className="flex items-center justify-between rounded-3xl border border-[#ededf0] bg-white p-5 shadow-sm">
+          <div>
+            <p className="text-xs font-bold text-gray-500">Total Solicitudes</p>
+            <p className="mt-1 text-3xl font-black text-[#1d1d1f]">{counts.total}</p>
+          </div>
+          <Users size={26} className="text-gray-400" />
         </div>
       </div>
 
       {/* Filtros y buscador */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-[#ededf0] shadow-sm">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={() => setFilter('ALL')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${filter === 'ALL' ? 'bg-[#1d1d1f] text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            Todos ({users.length})
-          </button>
-          <button
-            onClick={() => setFilter('PENDING')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${filter === 'PENDING' ? 'bg-[#1d1d1f] text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            Pendientes ({pendingCount})
-          </button>
-          <button
-            onClick={() => setFilter('APPROVED')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${filter === 'APPROVED' ? 'bg-[#1d1d1f] text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            Aprobados ({approvedCount})
-          </button>
+      <div className="flex flex-col gap-3 rounded-3xl border border-[#ededf0] bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setFilter(t.key)}
+              className={`rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+                filter === t.key ? 'bg-[#1d1d1f] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {t.label} ({t.n})
+            </button>
+          ))}
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+        <div className="relative md:w-72">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar por email o nombre..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#e25822]"
+            placeholder="Buscar por email o nombre..."
+            className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 py-2.5 pl-9 pr-3 text-xs focus:border-[#e25822] focus:outline-none"
           />
         </div>
       </div>
 
-      {/* Tabla de alumnos */}
-      <div className="bg-white rounded-2xl border border-[#ededf0] overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-[#ededf0] bg-[#fafafc] text-[11px] font-bold text-[#86868b] uppercase tracking-wider">
-                <th className="p-4">Alumno / Solicitante</th>
-                <th className="p-4">Estado Aprobación</th>
-                <th className="p-4">Rol Institucional</th>
-                <th className="p-4">IP de Registro</th>
-                <th className="p-4">Acciones</th>
+      {/* Tabla */}
+      <div className="overflow-x-auto rounded-3xl border border-[#ededf0] bg-white shadow-sm">
+        <table className="w-full min-w-[860px] text-left text-xs">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50/60 text-[10px] uppercase tracking-wider text-gray-500">
+              <th className="px-5 py-3 font-bold">Alumno / Solicitante</th>
+              <th className="px-5 py-3 font-bold">Estado aprobación</th>
+              <th className="px-5 py-3 font-bold">Rol institucional</th>
+              <th className="px-5 py-3 font-bold">IP de registro</th>
+              <th className="px-5 py-3 font-bold text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="px-5 py-10 text-center text-gray-400">Cargando usuarios...</td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-[#ededf0] text-xs">
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-400">
-                    No se encontraron usuarios.
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-[#fafafc] transition-colors">
-                    <td className="p-4">
-                      <p className="font-bold text-[#1d1d1f]">{user.name || 'Sin nombre'}</p>
-                      <p className="text-[11px] text-[#86868b]">{user.email}</p>
+            ) : visible.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-5 py-10 text-center text-gray-400">
+                  {loadError ? 'No se pudo cargar la lista.' : 'No se encontraron usuarios.'}
+                </td>
+              </tr>
+            ) : (
+              visible.map((u) => {
+                const isSelf = !!currentEmail && u.email === currentEmail
+                const busy = busyId === u.id
+                return (
+                  <tr key={u.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40">
+                    <td className="px-5 py-3">
+                      <p className="font-bold text-[#1d1d1f]">
+                        {u.name || 'Sin nombre'}
+                        {isSelf && <span className="ml-2 rounded-md bg-gray-200 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-600">Tú</span>}
+                      </p>
+                      <p className="text-[11px] text-gray-500">{u.email}</p>
+                      {u.phone && <p className="text-[11px] text-gray-400">{u.phone}</p>}
                     </td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        user.status === 'APPROVED' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
-                      }`}>
-                        {user.status}
-                      </span>
+
+                    <td className="px-5 py-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${statusStyle[u.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {statusLabel[u.status] ?? u.status}
+                        </span>
+                        {u.isBanned && (
+                          <span className="rounded-md bg-black px-2 py-0.5 text-[10px] font-bold uppercase text-white">Baneado</span>
+                        )}
+                      </div>
                     </td>
-                    <td className="p-4">
+
+                    <td className="px-5 py-3">
                       <select
-                        value={user.role}
-                        onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                        className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold bg-white text-[#e25822] focus:outline-none focus:border-[#e25822] cursor-pointer"
+                        value={u.role}
+                        disabled={busy || isSelf}
+                        onChange={(e) => patchUser(u.id, { role: e.target.value }, `Rol cambiado a ${e.target.value}`)}
+                        className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-1.5 text-xs font-bold text-[#e25822] focus:border-[#e25822] focus:outline-none disabled:opacity-50"
                       >
                         <option value="CLUB">CLUB</option>
                         <option value="MENTORIA">MENTORIA</option>
                         <option value="ADMIN">ADMIN</option>
                       </select>
                     </td>
-                    <td className="p-4 font-mono text-[11px] text-gray-500">{user.registeredIp || 'N/A'}</td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        {user.status !== 'APPROVED' ? (
+
+                    <td className="px-5 py-3 text-gray-500">{u.registeredIp || '—'}</td>
+
+                    <td className="px-5 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        {u.status !== 'APPROVED' && (
                           <button
-                            onClick={() => handleUpdateStatus(user.id, 'APPROVED')}
-                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-green-500 text-white hover:bg-green-600 transition-all cursor-pointer"
+                            type="button"
+                            disabled={busy}
+                            onClick={() => patchUser(u.id, { status: 'APPROVED' }, 'Usuario aprobado')}
+                            className="flex items-center gap-1 rounded-xl bg-emerald-50 px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 cursor-pointer"
+                            title="Aprobar"
                           >
-                            Aprobar
+                            <Check size={13} /> Aprobar
                           </button>
-                        ) : (
+                        )}
+                        {u.status !== 'REJECTED' && !isSelf && (
                           <button
-                            onClick={() => handleUpdateStatus(user.id, 'PENDING')}
-                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-orange-100 text-orange-700 hover:bg-orange-200 transition-all cursor-pointer"
+                            type="button"
+                            disabled={busy}
+                            onClick={() => patchUser(u.id, { status: 'REJECTED' }, 'Usuario rechazado')}
+                            className="flex items-center gap-1 rounded-xl bg-orange-50 px-2.5 py-1.5 text-[11px] font-bold text-orange-700 hover:bg-orange-100 disabled:opacity-50 cursor-pointer"
+                            title="Rechazar"
                           >
-                            Rechazar
+                            <X size={13} /> Rechazar
+                          </button>
+                        )}
+                        {!isSelf && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              patchUser(u.id, { isBanned: !u.isBanned }, u.isBanned ? 'Usuario desbaneado' : 'Usuario baneado')
+                            }
+                            className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold disabled:opacity-50 cursor-pointer ${
+                              u.isBanned ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-black'
+                            }`}
+                            title={u.isBanned ? 'Quitar baneo' : 'Banear'}
+                          >
+                            {u.isBanned ? <ShieldOff size={13} /> : <Ban size={13} />}
+                            {u.isBanned ? 'Desbanear' : 'Banear'}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setEdit({ id: u.id, name: u.name ?? '', phone: u.phone ?? '', email: u.email })}
+                          className="rounded-xl p-2 text-gray-500 hover:bg-[#fff4ef] hover:text-[#e25822] disabled:opacity-50 cursor-pointer"
+                          title="Editar datos"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        {!isSelf && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => handleDelete(u)}
+                            className="rounded-xl p-2 text-rose-500 hover:bg-rose-50 disabled:opacity-50 cursor-pointer"
+                            title="Eliminar usuario"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         )}
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                )
+              })
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {/* Modal editar */}
+      {edit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="text-sm font-bold text-[#1d1d1f]">Editar usuario</h3>
+              <button type="button" onClick={() => setEdit(null)} className="rounded-xl p-1.5 text-gray-500 hover:bg-gray-100 cursor-pointer">
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-gray-700">Email</label>
+                <input
+                  type="text"
+                  value={edit.email}
+                  disabled
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-100 px-4 py-2.5 text-xs text-gray-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-gray-700">Nombre</label>
+                <input
+                  type="text"
+                  value={edit.name}
+                  onChange={(e) => setEdit({ ...edit, name: e.target.value })}
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-xs focus:border-[#e25822] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-gray-700">Teléfono</label>
+                <input
+                  type="text"
+                  value={edit.phone}
+                  onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-xs focus:border-[#e25822] focus:outline-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEdit(null)}
+                  className="flex-1 rounded-2xl bg-gray-100 py-3 text-xs font-bold text-gray-700 hover:bg-gray-200 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={busyId === edit.id}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#e25822] disabled:opacity-50 cursor-pointer"
+                >
+                  <Save size={14} /> Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
