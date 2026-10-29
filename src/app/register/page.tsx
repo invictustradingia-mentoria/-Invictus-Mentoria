@@ -3,8 +3,8 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { signIn } from 'next-auth/react'
+import { User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 export default function RegisterPage() {
   const [name, setName] = useState('')
@@ -14,9 +14,8 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
@@ -31,13 +30,23 @@ export default function RegisterPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'Error al registrar usuario')
+        setError(data.error || 'Ocurrió un error al registrar la cuenta')
         setLoading(false)
+        return
+      }
+
+      setSuccess(true)
+
+      const signInResult = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (signInResult?.error) {
+        window.location.href = '/login'
       } else {
-        setSuccess(true)
-        setTimeout(() => {
-          router.push('/login')
-        }, 2000)
+        window.location.href = '/dashboard'
       }
     } catch (err) {
       setError('Error de conexión con el servidor')
@@ -46,14 +55,19 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fdfdfd] text-[#1d1d1f] flex flex-col justify-center items-center px-6 py-12">
+    <div className="min-h-screen bg-[#fdfdfd] text-[#1d1d1f] flex flex-col justify-center items-center px-6 py-12 selection:bg-[#0284c7] selection:text-white">
       <div className="w-full max-w-md bg-white p-8 rounded-3xl border border-[#ededf0] shadow-sm space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex w-12 h-12 rounded-2xl bg-[#e25822] text-white items-center justify-center font-black tracking-wider text-base shadow-md mx-auto">
+          <div className="inline-flex w-12 h-12 rounded-2xl bg-[#1d1d1f] text-white items-center justify-center font-black tracking-wider text-base shadow-md shadow-black/5 mx-auto">
             IT
           </div>
-          <h1 className="text-xl font-black tracking-tight text-[#1d1d1f]">INVICTUS MENTORIA</h1>
+          <h1 className="text-xl font-black tracking-tight text-[#1d1d1f]">INVICTUS TRADING</h1>
           <p className="text-xs text-gray-500">Solicitud de Registro de Alumno</p>
+        </div>
+
+        <div className="space-y-1">
+          <h2 className="text-sm font-bold text-[#1d1d1f]">Crear Cuenta</h2>
+          <p className="text-xs text-gray-400">Ingresa tus datos para registrarte en el club</p>
         </div>
 
         {error && (
@@ -64,13 +78,13 @@ export default function RegisterPage() {
         )}
 
         {success && (
-          <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 size={16} className="shrink-0" />
-            <span>¡Registro exitoso! Tu cuenta está pendiente de aprobación por administración. Redirigiendo...</span>
+          <div className="p-3 rounded-2xl bg-sky-50 border border-sky-200 text-[#0369a1] text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 size={16} className="shrink-0 text-[#0284c7]" />
+            <span>Cuenta creada con éxito. Redirigiendo...</span>
           </div>
         )}
 
-        <form onSubmit={handleRegister} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-600">Nombre Completo</label>
             <div className="relative">
@@ -81,7 +95,7 @@ export default function RegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Tu nombre y apellido"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#e25822] font-medium text-[#1d1d1f]"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
               />
             </div>
           </div>
@@ -96,7 +110,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ejemplo@invictus.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#e25822] font-medium text-[#1d1d1f]"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
               />
             </div>
           </div>
@@ -108,10 +122,11 @@ export default function RegisterPage() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#e25822] font-medium text-[#1d1d1f]"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
               />
               <button
                 type="button"
@@ -126,16 +141,16 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading || success}
-            className="w-full py-3 rounded-xl text-xs font-bold bg-[#e25822] text-white hover:bg-[#c9491b] transition-all shadow-sm cursor-pointer disabled:opacity-50"
+            className="w-full py-3 rounded-xl text-xs font-bold bg-[#0284c7] text-white hover:bg-[#0369a1] transition-all shadow-md shadow-sky-500/10 cursor-pointer disabled:opacity-50"
           >
-            {loading ? 'Registrando...' : 'Solicitar Acceso'}
+            {loading ? 'Procesando registro...' : 'Solicitar Acceso'}
           </button>
         </form>
 
         <div className="text-center pt-2">
           <p className="text-xs text-gray-500">
             ¿Ya tienes una cuenta?{' '}
-            <a href="/login" className="font-bold text-[#e25822] hover:underline">
+            <a href="/login" className="font-bold text-[#0284c7] hover:underline">
               Iniciar Sesión
             </a>
           </p>

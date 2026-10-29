@@ -19,7 +19,6 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      // Usamos el sistema oficial de NextAuth para generar la cookie de sesión segura
       const result = await signIn('credentials', {
         email,
         password,
@@ -30,7 +29,6 @@ export default function LoginPage() {
         setError(result.error || 'Credenciales incorrectas')
         setLoading(false)
       } else {
-        // Consultamos la sesión recién creada para verificar el rol y redirigir correctamente
         const sessionRes = await fetch('/api/auth/session')
         const session = await sessionRes.json()
         
@@ -49,13 +47,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fdfdfd] text-[#1d1d1f] flex flex-col justify-center items-center px-6 py-12">
+    <div className="min-h-screen bg-[#fdfdfd] text-[#1d1d1f] flex flex-col justify-center items-center px-6 py-12 selection:bg-[#0284c7] selection:text-white">
       <div className="w-full max-w-md bg-white p-8 rounded-3xl border border-[#ededf0] shadow-sm space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex w-12 h-12 rounded-2xl bg-[#e25822] text-white items-center justify-center font-black tracking-wider text-base shadow-md mx-auto">
+          <div className="inline-flex w-12 h-12 rounded-2xl bg-[#1d1d1f] text-white items-center justify-center font-black tracking-wider text-base shadow-md shadow-black/5 mx-auto">
             IT
           </div>
-          <h1 className="text-xl font-black tracking-tight text-[#1d1d1f]">INVICTUS MENTORIA</h1>
+          <h1 className="text-xl font-black tracking-tight text-[#1d1d1f]">INVICTUS TRADING</h1>
           <p className="text-xs text-gray-500">Plataforma Institucional de Trading</p>
         </div>
 
@@ -82,7 +80,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ejemplo@invictus.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#e25822] font-medium text-[#1d1d1f]"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
               />
             </div>
           </div>
@@ -97,7 +95,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#e25822] font-medium text-[#1d1d1f]"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
               />
               <button
                 type="button"
@@ -112,7 +110,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl text-xs font-bold bg-[#e25822] text-white hover:bg-[#c9491b] transition-all shadow-sm cursor-pointer disabled:opacity-50"
+            className="w-full py-3 rounded-xl text-xs font-bold bg-[#0284c7] text-white hover:bg-[#0369a1] transition-all shadow-md shadow-sky-500/10 cursor-pointer disabled:opacity-50"
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
@@ -121,7 +119,7 @@ export default function LoginPage() {
         <div className="text-center pt-2">
           <p className="text-xs text-gray-500">
             ¿No tienes cuenta?{' '}
-            <a href="/register" className="font-bold text-[#e25822] hover:underline">
+            <a href="/register" className="font-bold text-[#0284c7] hover:underline">
               Solicitar Registro
             </a>
           </p>
