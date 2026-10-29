@@ -1,356 +1,236 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import {
-  Radio,
-  Play,
-  Eye,
-  Globe,
-  Clock,
-  Layers,
-  Flame,
-  Activity,
-  ShieldAlert,
-} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Radio, Globe2, Monitor, Smartphone, Tablet, Activity, ShieldAlert, Users, AlertCircle, MapPin, PlayCircle, LogIn, CheckCircle2, Eye } from 'lucide-react'
+import WorldMap from '@/components/admin/WorldMap'
 
-interface ActiveSession {
-  id: string
-  userId: string
-  currentPage: string | null
-  currentLesson: string | null
-  lastSeen: string
-  ip: string | null
-  userAgent: string | null
-  user: {
-    id: string
-    name: string
-    email: string
-    role: string
-    isBanned: boolean
-    registeredIp: string | null
-  }
+interface Sess {
+  id: string; online: boolean; lastSeen: string; page: string | null; lesson: string | null
+  browser: string; os: string; device: string
+  country: string | null; countryCode: string | null; city: string | null; lat: number | null; lon: number | null
+  user: { id: string; name: string | null; email: string; role: string; avatarUrl: string | null }
+}
+interface Ev { id: string; action: string; page: string | null; createdAt: string; user: { name: string | null; email: string; role: string }; lesson: string | null }
+interface Sec { id: string; action: string; email: string | null; details: string | null; ip: string | null; createdAt: string }
+interface Count { name: string; value: number }
+interface Data {
+  stats: { onlineUsers: number; uniqueUsers24: number; events: number; alerts: number }
+  sessions: Sess[]; events: Ev[]; security: Sec[]
+  browsers: Count[]; systems: Count[]; devices: Count[]; countries: Count[]
 }
 
-interface ActivityLogItem {
-  id: string
-  action: string
-  page: string | null
-  createdAt: string
-  ip: string | null
-  user: {
-    id: string
-    name: string
-    email: string
-    role: string
-    phone?: string | null
-    isBanned?: boolean
-    registeredIp?: string | null
-  }
-  lesson: {
-    id: string
-    title: string
-  } | null
+const pageLabel = (p: string | null) => {
+  if (!p) return 'Sin datos'
+  if (p.startsWith('/dashboard/clases')) return 'Clases'
+  if (p.startsWith('/dashboard/perfil')) return 'Su perfil'
+  if (p.startsWith('/dashboard')) return 'Panel del alumno'
+  if (p.startsWith('/admin')) return 'Administración'
+  return p
 }
 
-export default function LiveActivityPage() {
-  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([])
-  const [logs, setLogs] = useState<ActivityLogItem[]>([])
-  const [securityAlerts, setSecurityAlerts] = useState<ActivityLogItem[]>([])
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const [activeTab, setActiveTab] = useState<'live' | 'security'>('live')
+const ACTIONS: Record<string, { label: string; icon: any; color: string }> = {
+  LOGIN: { label: 'Inició sesión', icon: LogIn, color: 'bg-violet-100 text-violet-700' },
+  PAGE_VIEW: { label: 'Visitó', icon: Eye, color: 'bg-sky-100 text-sky-700' },
+  LESSON_VIEW: { label: 'Abrió clase', icon: PlayCircle, color: 'bg-amber-100 text-amber-700' },
+  LESSON_COMPLETE: { label: 'Completó clase', icon: CheckCircle2, color: 'bg-emerald-100 text-emerald-700' },
+}
 
-  const fetchLiveMetrics = async () => {
-    try {
-      const res = await fetch('/api/admin/live')
-      if (res.ok) {
-        const data = await res.json()
-        setActiveSessions(data.activeUsers || [])
-        setLogs(data.recentLogs || [])
-        setSecurityAlerts(data.securityAlerts || [])
-      }
-    } catch (err) {
-      console.error(err)
-    }
-  }
+const ago = (iso: string) => {
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000))
+  if (s < 60) return `hace ${s}s`
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`
+  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`
+  return `hace ${Math.floor(s / 86400)} d`
+}
 
-  useEffect(() => {
-    fetchLiveMetrics()
-    if (!autoRefresh) return
-    const interval = setInterval(fetchLiveMetrics, 3500)
-    return () => clearInterval(interval)
-  }, [autoRefresh])
+const flag = (cc: string | null) =>
+  cc && cc.length === 2 ? String.fromCodePoint(...cc.toUpperCase().split('').map((c) => 127397 + c.charCodeAt(0))) : '🌐'
 
-  const actionBadge = (action: string) => {
-    if (action.startsWith('SECURITY_'))
-      return 'bg-red-50 text-red-600 border border-red-200'
-    if (action === 'VIDEO_PLAY')
-      return 'bg-[#fff4ef] text-[#e25822] border border-[#fcd5c3]'
-    if (action === 'LOGIN')
-      return 'bg-purple-50 text-purple-700 border border-purple-200'
-    if (action === 'VIDEO_COMPLETE')
-      return 'bg-green-50 text-green-700 border border-green-200'
-    return 'bg-blue-50 text-blue-700 border border-blue-200'
-  }
+const DeviceIcon = ({ d }: { d: string }) => (d === 'Celular' ? <Smartphone size={14} /> : d === 'Tablet' ? <Tablet size={14} /> : <Monitor size={14} />)
 
+function Bars({ title, items, color }: { title: string; items: Count[]; color: string }) {
+  const max = Math.max(1, ...items.map((i) => i.value))
   return (
-    <div className="p-6 md:p-10 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <span className="text-[11px] font-bold text-[#e25822] tracking-wider uppercase block">
-            TELEMETRÍA EN DIRECTO
-          </span>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="flex h-3 w-3 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#e25822] opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#e25822]" />
-            </span>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1d1d1f]">
-              Live Activity Monitor
-            </h1>
-          </div>
-          <p className="text-[#86868b] text-[13px] mt-1">
-            Rastreo en tiempo real: alumnos conectados, páginas activas, videos en reproducción y alertas de seguridad.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setAutoRefresh(!autoRefresh)}
-          className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-2 shadow-sm ${
-            autoRefresh
-              ? 'bg-[#fffaf8] border-[#fcd5c3] text-[#e25822]'
-              : 'bg-white border-[#e5e5ea] text-[#86868b]'
-          }`}
-        >
-          <Radio size={14} className={autoRefresh ? 'animate-pulse' : ''} />
-          {autoRefresh ? 'En vivo (3.5s)' : 'Pausado'}
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="inline-flex p-1 bg-[#f0f0f4] rounded-xl">
-        <button
-          onClick={() => setActiveTab('live')}
-          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-            activeTab === 'live' ? 'bg-white text-[#e25822] shadow-sm' : 'text-[#6e6e73] hover:text-[#111]'
-          }`}
-        >
-          <Activity size={12} />
-          Actividad en Vivo
-        </button>
-        <button
-          onClick={() => setActiveTab('security')}
-          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-            activeTab === 'security'
-              ? 'bg-white text-red-600 shadow-sm'
-              : 'text-[#6e6e73] hover:text-[#111]'
-          }`}
-        >
-          <ShieldAlert size={12} />
-          Alertas de Seguridad
-          {securityAlerts.length > 0 && (
-            <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center">
-              {securityAlerts.length > 9 ? '9+' : securityAlerts.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {activeTab === 'live' && (
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Connected Sessions (2 cols) */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-[14px] font-bold text-[#1d1d1f] flex items-center gap-2">
-                <Flame size={17} className="text-[#e25822]" />
-                Alumnos Conectados ({activeSessions.length})
-              </h2>
-              <span className="text-[11px] text-[#86868b]">Ping últimos 3 min</span>
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <h3 className="mb-3 text-xs font-black uppercase tracking-wide text-gray-500">{title}</h3>
+      {items.length === 0 ? <p className="text-xs text-gray-400">Sin datos aún</p> : (
+        <div className="space-y-2">
+          {items.slice(0, 6).map((i) => (
+            <div key={i.name}>
+              <div className="flex justify-between text-[11px] font-bold text-gray-700"><span className="truncate">{i.name}</span><span>{i.value}</span></div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100"><div className={`h-full rounded-full ${color}`} style={{ width: `${(i.value / max) * 100}%` }} /></div>
             </div>
-
-            {activeSessions.length === 0 ? (
-              <div className="bg-white rounded-2xl p-12 border border-[#ededf0] text-center text-[#86868b] space-y-3 shadow-sm">
-                <Activity size={32} className="mx-auto text-[#ccc]" />
-                <p className="text-[13px]">No hay alumnos activos en este momento.</p>
-                <p className="text-[11px] text-[#999]">
-                  Abre otra pestaña con una cuenta de alumno para ver el monitoreo instantáneo.
-                </p>
-              </div>
-            ) : (
-              <div className="grid sm:grid-cols-2 gap-4">
-                {activeSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className="bg-white rounded-2xl p-5 border border-[#ededf0] shadow-sm space-y-3.5 hover:border-[#fcd5c3] transition-all"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#fff4ef] border border-[#fcd5c3] text-[#e25822] font-bold text-xs flex items-center justify-center shrink-0">
-                          {session.user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold text-[#1d1d1f] text-[13px] leading-tight">
-                            {session.user.name}
-                          </p>
-                          <p className="text-[11px] text-[#86868b] font-mono truncate max-w-[140px]">
-                            {session.user.email}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
-                        ONLINE
-                      </span>
-                    </div>
-
-                    {session.currentLesson ? (
-                      <div className="bg-[#fffaf8] border border-[#fcd5c3] rounded-xl p-3 space-y-1">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#e25822]">
-                          <Play size={11} className="fill-[#e25822] animate-pulse" />
-                          <span>REPRODUCIENDO VIDEO</span>
-                        </div>
-                        <p className="text-xs text-[#1d1d1f] font-semibold line-clamp-1">
-                          {session.currentLesson}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="bg-[#fbfbfd] border border-[#ededf0] rounded-xl p-3">
-                        <div className="flex items-center gap-1.5 text-[11px] text-[#86868b]">
-                          <Eye size={12} className="text-[#007aff]" />
-                          <span>Navegando en plataforma</span>
-                        </div>
-                        <p className="text-xs text-[#333] font-mono mt-0.5">
-                          {session.currentPage || '/dashboard'}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="pt-2 border-t border-[#f4f4f7] flex items-center justify-between text-[11px] text-[#86868b]">
-                      <span className="flex items-center gap-1 font-mono">
-                        <Globe size={11} className="text-[#e25822]" />
-                        {session.ip || '127.0.0.1'}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock size={11} />
-                        Activo ahora
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Live Feed (1 col) */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-[14px] font-bold text-[#1d1d1f] flex items-center gap-2">
-                <Layers size={17} className="text-[#e25822]" />
-                Feed de Eventos
-              </h2>
-              <span className="text-[11px] text-[#86868b]">Últimos 25</span>
-            </div>
-
-            <div className="bg-white rounded-2xl p-4 border border-[#ededf0] shadow-sm space-y-2.5 max-h-[600px] overflow-y-auto">
-              {logs.length === 0 ? (
-                <p className="text-xs text-[#86868b] text-center py-8">Sin registros recientes.</p>
-              ) : (
-                logs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="p-3 rounded-xl bg-[#fbfbfd] border border-[#f0f0f4] space-y-1.5 text-xs hover:border-[#fcd5c3] transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#1d1d1f] truncate max-w-[150px]">{log.user.name}</span>
-                      <span className="text-[10px] text-[#999]">
-                        {new Date(log.createdAt).toLocaleTimeString('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${actionBadge(log.action)}`}>
-                        {log.action}
-                      </span>
-                      <span className="text-[#666] truncate text-[11px]">
-                        {log.lesson ? log.lesson.title : log.page || 'Plataforma'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] text-[#999] pt-1 border-t border-[#f0f0f4] font-mono">
-                      <span>IP: {log.ip || '127.0.0.1'}</span>
-                      <span>{log.user.role}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          ))}
         </div>
       )}
+    </div>
+  )
+}
 
-      {activeTab === 'security' && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
-            <ShieldAlert size={20} className="text-red-600 shrink-0" />
-            <div>
-              <p className="text-sm font-bold text-red-700">Alertas de Seguridad</p>
-              <p className="text-xs text-red-500">
-                Intentos de grabación, captura de pantalla, DevTools o acciones sospechosas detectadas.
-              </p>
+export default function LivePage() {
+  const [data, setData] = useState<Data | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [tab, setTab] = useState<'live' | 'alerts'>('live')
+  const [, setTick] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      try {
+        const r = await fetch('/api/admin/live-data', { cache: 'no-store' })
+        const d = await r.json()
+        if (!alive) return
+        if (!r.ok) setError(d.error || `HTTP ${r.status}`)
+        else { setData(d); setError(null) }
+      } catch { if (alive) setError('No se pudo conectar con el servidor') }
+    }
+    load()
+    const t = setInterval(load, 5000)
+    const c = setInterval(() => setTick((x) => x + 1), 15000)
+    return () => { alive = false; clearInterval(t); clearInterval(c) }
+  }, [])
+
+  const online = useMemo(() => data?.sessions.filter((s) => s.online) ?? [], [data])
+  const points = useMemo(
+    () => (data?.sessions ?? []).filter((s) => s.lat != null && s.lon != null).map((s) => ({
+      lat: s.lat as number, lon: s.lon as number, online: s.online,
+      label: `${s.user.name || s.user.email} · ${s.city ? s.city + ', ' : ''}${s.country ?? ''}`,
+    })),
+    [data]
+  )
+
+  const name = (u: { name: string | null; email: string }) => u.name || u.email
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-[#e25822]"><Radio size={13} /> Telemetría en directo</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-[#1d1d1f]">Live Activity Monitor</h1>
+          <p className="mt-1 text-xs text-gray-500">Quién está conectado, desde dónde y qué está haciendo.</p>
+        </div>
+        <span className="flex items-center gap-2 rounded-full border border-[#e25822]/30 bg-[#fff4ef] px-3 py-1.5 text-[11px] font-bold text-[#e25822]">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[#e25822]" /> En vivo · se actualiza cada 5 s
+        </span>
+      </div>
+
+      {error && <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700"><AlertCircle size={16} /> {error}</div>}
+
+      <div className="inline-flex rounded-2xl bg-gray-100 p-1">
+        <button type="button" onClick={() => setTab('live')} className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${tab === 'live' ? 'bg-white text-[#e25822] shadow-sm' : 'text-gray-500'}`}><Activity size={14} /> Actividad en vivo</button>
+        <button type="button" onClick={() => setTab('alerts')} className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${tab === 'alerts' ? 'bg-white text-[#e25822] shadow-sm' : 'text-gray-500'}`}>
+          <ShieldAlert size={14} /> Alertas {data && data.security.length > 0 && <span className="rounded-full bg-rose-500 px-1.5 text-[10px] text-white">{data.security.length}</span>}
+        </button>
+      </div>
+
+      {!data ? (
+        <div className="rounded-3xl border border-gray-100 bg-white p-10 text-center text-xs text-gray-400">Cargando telemetría...</div>
+      ) : tab === 'alerts' ? (
+        <div className="space-y-2">
+          {data.security.length === 0 ? <div className="rounded-3xl border border-gray-100 bg-white p-10 text-center text-xs text-gray-400">No hay alertas de seguridad.</div> :
+            data.security.map((a) => (
+              <div key={a.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3.5 text-xs shadow-sm">
+                <ShieldAlert size={18} className="shrink-0 text-rose-500" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-[#1d1d1f]">{a.action}{a.email ? ` · ${a.email}` : ''}</p>
+                  {a.details && <p className="break-words text-gray-500">{a.details}</p>}
+                </div>
+                <div className="text-right text-[11px] text-gray-400"><p>{ago(a.createdAt)}</p>{a.ip && <p className="font-mono">{a.ip}</p>}</div>
+              </div>
+            ))}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              { l: 'Conectados ahora', v: data.stats.onlineUsers, i: Users, c: 'bg-emerald-50 text-emerald-600' },
+              { l: 'Usuarios 24 h', v: data.stats.uniqueUsers24, i: Globe2, c: 'bg-sky-50 text-sky-600' },
+              { l: 'Países', v: data.countries.filter((c) => c.name !== 'Desconocido').length, i: MapPin, c: 'bg-amber-50 text-amber-600' },
+              { l: 'Alertas', v: data.stats.alerts, i: ShieldAlert, c: 'bg-rose-50 text-rose-600' },
+            ].map((s) => (
+              <div key={s.l} className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm">
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${s.c}`}><s.i size={19} /></span>
+                <div><p className="text-xl font-black leading-none">{s.v}</p><p className="mt-1 text-[11px] font-bold text-gray-500">{s.l}</p></div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-2">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-sm font-black"><Globe2 size={16} className="text-[#e25822]" /> Mapa de conexiones</h2>
+                <div className="flex gap-3 text-[11px] font-bold text-gray-500">
+                  <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Ahora</span>
+                  <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-sky-500" /> Últimas 24 h</span>
+                </div>
+              </div>
+              <WorldMap points={points} />
+              {points.length === 0 && <p className="mt-1 text-center text-[11px] text-gray-400">Aún no hay conexiones con ubicación. Aparecerán cuando un alumno navegue.</p>}
+            </div>
+            <div className="space-y-4">
+              <Bars title="Países" items={data.countries} color="bg-[#e25822]" />
+              <Bars title="Navegadores" items={data.browsers} color="bg-sky-500" />
             </div>
           </div>
 
-          {securityAlerts.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 border border-[#ededf0] text-center text-[#86868b] shadow-sm">
-              <ShieldAlert size={32} className="mx-auto text-[#ccc] mb-3" />
-              <p className="text-sm">No se han detectado alertas de seguridad.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Bars title="Sistemas operativos" items={data.systems} color="bg-violet-500" />
+            <Bars title="Dispositivos" items={data.devices} color="bg-emerald-500" />
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-5">
+            <div className="space-y-3 xl:col-span-3">
+              <h2 className="flex items-center gap-2 text-sm font-black"><Users size={16} className="text-[#e25822]" /> Alumnos conectados ({online.length})</h2>
+              {online.length === 0 ? (
+                <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center text-xs text-gray-400">No hay alumnos activos ahora.</div>
+              ) : online.map((s) => (
+                <div key={s.id} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-400 text-xs font-black text-white">
+                      {(name(s.user)[0] || '?').toUpperCase()}
+                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-[#1d1d1f]">{name(s.user)} <span className="ml-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-[9px] font-black text-gray-500">{s.user.role}</span></p>
+                      <p className="flex items-center gap-1 text-[11px] text-gray-500"><span>{flag(s.countryCode)}</span> {s.city ? `${s.city}, ` : ''}{s.country ?? 'Ubicación desconocida'}</p>
+                    </div>
+                    <span className="shrink-0 text-[10px] text-gray-400">{ago(s.lastSeen)}</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-bold">
+                    <span className="flex items-center gap-1 rounded-lg bg-gray-100 px-2 py-1 text-gray-600"><DeviceIcon d={s.device} /> {s.device}</span>
+                    <span className="rounded-lg bg-sky-50 px-2 py-1 text-sky-700">{s.browser}</span>
+                    <span className="rounded-lg bg-violet-50 px-2 py-1 text-violet-700">{s.os}</span>
+                    <span className="rounded-lg bg-[#fff4ef] px-2 py-1 text-[#e25822]">{pageLabel(s.page)}</span>
+                    {s.lesson && <span className="flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-amber-700"><PlayCircle size={12} /> {s.lesson}</span>}
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-[#ededf0] overflow-hidden shadow-sm">
-              <table className="w-full text-left text-[12px]">
-                <thead className="bg-red-50 border-b border-red-100 text-[10px] text-red-500 uppercase tracking-wider font-bold">
-                  <tr>
-                    <th className="px-5 py-3">Alumno</th>
-                    <th className="px-5 py-3">Alerta</th>
-                    <th className="px-5 py-3">Clase</th>
-                    <th className="px-5 py-3">IP</th>
-                    <th className="px-5 py-3">Fecha</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#f4f4f7]">
-                  {securityAlerts.map((alert) => (
-                    <tr key={alert.id} className="hover:bg-red-50 transition-colors">
-                      <td className="px-5 py-3">
-                        <p className="font-bold text-[#1d1d1f]">{alert.user.name}</p>
-                        <p className="text-[11px] text-[#86868b] font-mono">{alert.user.email}</p>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${actionBadge(alert.action)}`}>
-                          {alert.action}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-[#555]">
-                        {alert.lesson?.title || alert.page || '–'}
-                      </td>
-                      <td className="px-5 py-3 font-mono text-[#555]">
-                        {alert.ip || '–'}
-                      </td>
-                      <td className="px-5 py-3 text-[#86868b]">
-                        {new Date(alert.createdAt).toLocaleString('es-ES', {
-                          day: '2-digit',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            <div className="xl:col-span-2">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-black"><Activity size={16} className="text-[#e25822]" /> Feed de eventos</h2>
+              <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
+                {data.events.length === 0 ? <div className="rounded-2xl border border-gray-100 bg-white p-6 text-center text-xs text-gray-400">Sin eventos todavía.</div> :
+                  data.events.map((e) => {
+                    const a = ACTIONS[e.action] ?? { label: e.action, icon: Activity, color: 'bg-gray-100 text-gray-600' }
+                    const Icon = a.icon
+                    return (
+                      <div key={e.id} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-xs font-bold text-[#1d1d1f]">{name(e.user)}</p>
+                          <span className="shrink-0 text-[10px] text-gray-400">{ago(e.createdAt)}</span>
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                          <span className={`flex items-center gap-1 rounded-md px-2 py-0.5 font-bold ${a.color}`}><Icon size={11} /> {a.label}</span>
+                          {e.lesson ? <span className="truncate text-gray-600">{e.lesson}</span> : e.page ? <span className="truncate text-gray-500">{pageLabel(e.page)}</span> : null}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   )

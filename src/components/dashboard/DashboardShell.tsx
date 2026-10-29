@@ -1,5 +1,5 @@
 'use client'
-
+import ActivityTracker from '@/components/dashboard/ActivityTracker'
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -89,7 +89,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   )
 
   return (
-    <div className="min-h-screen bg-slate-50/70 text-slate-800">
+    <div className="min-h-screen bg-slate-50/70 text-slate-800">      <ActivityTracker />
       {/* Barra móvil */}
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
         <span className="text-sm font-black text-slate-900">INVICTUS <span className="text-sky-500">CAMPUS</span></span>

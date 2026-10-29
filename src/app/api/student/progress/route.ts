@@ -33,7 +33,11 @@ export async function POST(req: Request) {
       update: { completed },
       create: { userId, lessonId, completed },
     })
-
+    if (completed) {
+      await prismaDash.activityLog.create({
+        data: { userId, lessonId, action: 'LESSON_COMPLETE', page: '/dashboard/clases' },
+      })
+    }
     return NextResponse.json({ success: true })
   } catch (err: any) {
     console.error('POST student/progress:', err)

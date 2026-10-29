@@ -13,18 +13,22 @@
     "@prisma/client": "5.18.0",
     "@supabase/supabase-js": "^2.118.0",
     "bcryptjs": "^2.4.3",
+    "d3-geo": "^3.1.1",
     "lucide-react": "^0.300.0",
     "next": "14.1.0",
     "next-auth": "4.24.5",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "topojson-client": "^3.1.0"
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "^5.16.3",
     "@types/bcryptjs": "^2.4.6",
+    "@types/d3-geo": "^3.1.1",
     "@types/node": "^20.11.0",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
+    "@types/topojson-client": "^3.1.5",
     "autoprefixer": "^10.4.17",
     "eslint": "^8.56.0",
     "eslint-config-next": "14.1.0",

@@ -155,7 +155,7 @@ export default function ClasesPage() {
   const openLesson = (id: string) => {
     setCurrentId(id)
     setView('lesson')
-    try { localStorage.setItem(STORE_KEY, id) } catch {}
+    try { localStorage.setItem(STORE_KEY, id) } catch {}    try { sessionStorage.setItem('invictus:viewing', id) } catch {}
     const mod = modules.find((x) => x.lessons.some((l) => l.id === id))
     if (mod) setOpenMods((prev) => new Set(prev).add(mod.id))
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -244,7 +244,7 @@ export default function ClasesPage() {
       ) : (
         current && (
           <>
-            <button type="button" onClick={() => setView('list')} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-sky-600 cursor-pointer">
+            <button type="button" onClick={() => { setView('list'); try { sessionStorage.removeItem('invictus:viewing') } catch {} }} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-sky-600 cursor-pointer">
               <ArrowLeft size={15} /> Volver a las lecciones
             </button>
 
