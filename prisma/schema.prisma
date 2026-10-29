@@ -16,7 +16,7 @@ model User {
   email        String       @unique
   password     String
   role         String       @default("CLUB") // ADMIN, CLUB, MENTORIA
-  status       String       @default("APPROVED") // PENDING, APPROVED, REJECTED
+  status       String       @default("PENDING") // PENDING, APPROVED, REJECTED
   isBanned     Boolean      @default(false)
   phone        String?
   avatarUrl    String?
