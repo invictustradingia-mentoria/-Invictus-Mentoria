@@ -28,6 +28,9 @@ export default function LoginPage() {
     if (params.get('registered')) {
       setInfo('Cuenta creada. Tu solicitud quedó pendiente de aprobación; podrás ingresar cuando el equipo la active.')
     }
+    if (params.get('reset')) {
+      setInfo('¡Contraseña actualizada! Ya puedes iniciar sesión con tu nueva contraseña.')
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,6 +138,11 @@ export default function LoginPage() {
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
+            </div>
+            <div className="flex justify-end pt-1">
+              <a href="/forgot-password" className="text-[11px] font-bold text-[#0284c7] hover:underline">
+                ¿Olvidaste tu contraseña?
+              </a>
             </div>
           </div>
 

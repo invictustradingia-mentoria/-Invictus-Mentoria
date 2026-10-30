@@ -265,3 +265,16 @@ model VideoIncident {
   @@index([createdAt])
   @@map("video_incidents")
 }
+
+// ---------- Recuperar contraseña y bienvenida ----------
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  purpose   String    @default("RESET") // RESET | WELCOME
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  @@index([userId])
+  @@map("password_resets")
+}
