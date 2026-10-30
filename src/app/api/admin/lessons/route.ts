@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { ACCESS_LEVELS } from '@/lib/access'
+import { cleanVideoInput } from '@/lib/video-source'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,13 +17,14 @@ export async function POST(req: Request) {
 
     const body = await req.json()
     const title = typeof body.title === 'string' ? body.title.trim() : ''
-    const videoUrl = typeof body.videoUrl === 'string' ? body.videoUrl.trim() : ''
+    // Acepta un enlace o un código <iframe> pegado completo
+    const videoUrl = cleanVideoInput(body.videoUrl)
     const moduleId = typeof body.moduleId === 'string' ? body.moduleId : ''
     const description = typeof body.description === 'string' ? body.description.trim() : ''
     const allowedRole = typeof body.allowedRole === 'string' ? body.allowedRole : 'ALL'
 
     if (!title) return NextResponse.json({ error: 'Falta el título de la clase' }, { status: 400 })
-    if (!/^https?:\/\//i.test(videoUrl)) return NextResponse.json({ error: 'El enlace del video debe empezar con http:// o https://' }, { status: 400 })
+    if (!videoUrl) return NextResponse.json({ error: 'Pega un enlace que empiece con http:// o https://, o un código <iframe> válido.' }, { status: 400 })
     if (!ACCESS_LEVELS.includes(allowedRole)) return NextResponse.json({ error: 'Nivel de acceso no válido' }, { status: 400 })
 
     const mod = await prismaDash.module.findUnique({ where: { id: moduleId } })

@@ -1,0 +1,2269 @@
+﻿
+===== prisma\schema.prisma =====
+// Invictus Mentoria - Prisma Schema
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String?
+  email        String       @unique
+  password     String
+  role         String       @default("CLUB") // ADMIN, CLUB, MENTORIA
+  status       String       @default("PENDING") // PENDING, APPROVED, REJECTED
+  isBanned     Boolean      @default(false)
+  phone        String?
+  avatarUrl    String?
+  registeredIp String?
+  userAgent    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  sessions     Session[]
+  activityLogs ActivityLog[]
+  progress     LessonProgress[]
+  securityLogs SecurityLog[]
+
+  @@map("users")
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lessons     Lesson[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  videoUrl    String
+  duration    Int?     // in seconds
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  allowedRole String   @default("CLUB") // CLUB, MENTORIA
+  moduleId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  module       Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  activityLogs ActivityLog[]
+  progress     LessonProgress[]
+
+  @@map("lessons")
+}
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  completed   Boolean  @default(false)
+  watchedSecs Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  fileUrl     String
+  description String?
+  allowedRole String   @default("CLUB") // CLUB, MENTORIA
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("resources")
+}
+
+model SecurityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  email       String?
+  action      String
+  details     String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("security_logs")
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  token         String   @unique
+  ip            String?
+  userAgent     String?
+  currentPage   String?
+  currentLesson String?
+  isActive      Boolean  @default(true)
+  lastSeen      DateTime @default(now())
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String?
+  action      String
+  page        String?
+  metadata    String?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@map("activity_logs")
+}
+// ---------- Soporte en vivo y avisos del asistente ----------
+
+model SupportThread {
+  id            String           @id @default(cuid())
+  token         String           @unique
+  name          String
+  email         String?
+  status        String           @default("OPEN") // OPEN | CLOSED
+  ipHash        String
+  unreadAdmin   Int              @default(0)
+  lastMessageAt DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+  messages      SupportMessage[]
+
+  @@index([lastMessageAt])
+  @@index([ipHash, createdAt])
+  @@map("support_threads")
+}
+
+model SupportMessage {
+  id        String        @id @default(cuid())
+  threadId  String
+  from      String // VISITOR | STAFF
+  content   String
+  createdAt DateTime      @default(now())
+  thread    SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@map("support_messages")
+}
+
+model BotNotice {
+  id        String   @id @default(cuid())
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("bot_notices")
+}
+
+// ---------- Comunidad y llamadas ----------
+
+model ChatMessage {
+  id        String    @id @default(cuid())
+  userId    String
+  userName  String
+  userRole  String
+  content   String
+  pinned    Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("chat_messages")
+}
+
+model ChatSanction {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  kind      String // MUTE | BAN
+  reason    String?
+  until     DateTime? // null = permanente
+  createdBy String
+  createdAt DateTime  @default(now())
+
+  @@map("chat_sanctions")
+}
+
+model ZoomCall {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  startsAt     DateTime
+  durationMin  Int      @default(60)
+  joinUrl      String
+  meetingId    String?
+  passcode     String?
+  allowedRole  String   @default("ALL")
+  recordingUrl String?
+  isPublished  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([startsAt])
+  @@map("zoom_calls")
+}
+
+===== src\components\dashboard\SecurePlayer.tsx =====
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Loader2, AlertCircle } from 'lucide-react'
+
+declare global {
+  interface Window { YT?: any; onYouTubeIframeAPIReady?: () => void }
+}
+
+type Source =
+  | { type: 'youtube'; id: string; watermark: string }
+  | { type: 'file'; url: string; watermark: string }
+  | { type: 'embed'; src: string; watermark: string }
+
+let ytPromise: Promise<any> | null = null
+function loadYT(): Promise<any> {
+  if (typeof window === 'undefined') return Promise.reject()
+  if (window.YT?.Player) return Promise.resolve(window.YT)
+  if (!ytPromise) {
+    ytPromise = new Promise((resolve) => {
+      const prev = window.onYouTubeIframeAPIReady
+      window.onYouTubeIframeAPIReady = () => { prev?.(); resolve(window.YT) }
+      const s = document.createElement('script')
+      s.src = 'https://www.youtube.com/iframe_api'
+      document.head.appendChild(s)
+    })
+  }
+  return ytPromise
+}
+
+const fmt = (s: number) => {
+  if (!isFinite(s) || s < 0) s = 0
+  const m = Math.floor(s / 60)
+  return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+}
+
+const RATES = [0.75, 1, 1.25, 1.5, 2]
+
+export default function SecurePlayer({ lessonId, title }: { lessonId: string; title: string }) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const ytHost = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const ytPlayer = useRef<any>(null)
+  const tick = useRef<any>(null)
+
+  const [src, setSrc] = useState<Source | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [ready, setReady] = useState(false)
+  const [started, setStarted] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const [cur, setCur] = useState(0)
+  const [dur, setDur] = useState(0)
+  const [muted, setMuted] = useState(false)
+  const [rate, setRate] = useState(1)
+  const [full, setFull] = useState(false)
+  const [wm, setWm] = useState({ top: 12, left: 12 })
+
+  // 1. Pedir el video al servidor (valida sesión y nivel)
+  useEffect(() => {
+    let alive = true
+    setSrc(null); setError(null); setReady(false); setStarted(false); setPlaying(false); setCur(0); setDur(0)
+    fetch(`/api/student/video?lessonId=${encodeURIComponent(lessonId)}`, { cache: 'no-store' })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}))
+        if (!alive) return
+        if (!r.ok) setError(d.error || `No se pudo cargar el video (HTTP ${r.status})`)
+        else setSrc(d)
+      })
+      .catch(() => alive && setError('No se pudo conectar con el servidor.'))
+    return () => { alive = false }
+  }, [lessonId])
+
+  // 2. YouTube con controles propios
+  useEffect(() => {
+    if (!src || src.type !== 'youtube') return
+    let destroyed = false
+    loadYT().then((YT) => {
+      if (destroyed || !ytHost.current) return
+      const mount = document.createElement('div')
+      ytHost.current.innerHTML = ''
+      ytHost.current.appendChild(mount)
+      ytPlayer.current = new YT.Player(mount, {
+        videoId: src.id,
+        host: 'https://www.youtube-nocookie.com',
+        width: '100%',
+        height: '100%',
+        playerVars: {
+          controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, iv_load_policy: 3,
+          playsinline: 1, cc_load_policy: 0, origin: window.location.origin,
+        },
+        events: {
+          onReady: (e: any) => { setDur(e.target.getDuration()); setReady(true) },
+          onStateChange: (e: any) => {
+            setPlaying(e.data === 1)
+            if (e.data === 1) setStarted(true)
+            if (e.data === 1 || e.data === 2) setDur(e.target.getDuration())
+          },
+          onError: (e: any) => {
+            const map: Record<number, string> = {
+              2: 'El enlace del video no es válido.',
+              5: 'Error de reproducción en tu navegador.',
+              100: 'El video fue eliminado o está privado en su origen.',
+              101: 'El dueño del video no permite reproducirlo en otras páginas.',
+              150: 'El dueño del video no permite reproducirlo en otras páginas.',
+              153: 'El video no permite reproducirse aquí (configuración de inserción).',
+            }
+            setError(map[e.data] || 'No se pudo reproducir el video.')
+          },
+        },
+      })
+      tick.current = setInterval(() => {
+        const p = ytPlayer.current
+        if (p?.getCurrentTime) setCur(p.getCurrentTime())
+      }, 400)
+    }).catch(() => setError('No se pudo cargar el reproductor.'))
+
+    return () => {
+      destroyed = true
+      clearInterval(tick.current)
+      try { ytPlayer.current?.destroy() } catch {}
+      ytPlayer.current = null
+    }
+  }, [src])
+
+  // Marca de agua: cambia de lugar
+  useEffect(() => {
+    const t = setInterval(() => setWm({ top: 8 + Math.random() * 72, left: 4 + Math.random() * 58 }), 7000)
+    return () => clearInterval(t)
+  }, [])
+
+  // Pausar al cambiar de pestaña
+  useEffect(() => {
+    const onHide = () => { if (document.hidden) pause() }
+    document.addEventListener('visibilitychange', onHide)
+    return () => document.removeEventListener('visibilitychange', onHide)
+  })
+
+  useEffect(() => {
+    const onFs = () => setFull(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onFs)
+    return () => document.removeEventListener('fullscreenchange', onFs)
+  }, [])
+
+  // Intento de bloquear capturas por teclado (disuasivo)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'PrintScreen') {
+        pause()
+        try { navigator.clipboard.writeText('') } catch {}
+      }
+    }
+    window.addEventListener('keyup', onKey)
+    return () => window.removeEventListener('keyup', onKey)
+  })
+
+  const play = useCallback(() => {
+    if (src?.type === 'youtube') ytPlayer.current?.playVideo?.()
+    else videoRef.current?.play()
+  }, [src])
+
+  function pause() {
+    if (src?.type === 'youtube') ytPlayer.current?.pauseVideo?.()
+    else videoRef.current?.pause()
+  }
+
+  const toggle = () => (playing ? pause() : play())
+
+  const seek = (t: number) => {
+    setCur(t)
+    if (src?.type === 'youtube') ytPlayer.current?.seekTo?.(t, true)
+    else if (videoRef.current) videoRef.current.currentTime = t
+  }
+
+  const toggleMute = () => {
+    const next = !muted
+    setMuted(next)
+    if (src?.type === 'youtube') next ? ytPlayer.current?.mute?.() : ytPlayer.current?.unMute?.()
+    else if (videoRef.current) videoRef.current.muted = next
+  }
+
+  const cycleRate = () => {
+    const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length]
+    setRate(next)
+    if (src?.type === 'youtube') ytPlayer.current?.setPlaybackRate?.(next)
+    else if (videoRef.current) videoRef.current.playbackRate = next
+  }
+
+  const toggleFull = () => {
+    if (document.fullscreenElement) document.exitFullscreen()
+    else boxRef.current?.requestFullscreen?.()
+  }
+
+  const watermark = src?.watermark || ''
+
+  return (
+    <div
+      ref={boxRef}
+      onContextMenu={(e) => e.preventDefault()}
+      className="relative aspect-video w-full select-none overflow-hidden rounded-2xl bg-black"
+    >
+      {error ? (
+        <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-white">
+          <AlertCircle size={30} className="text-rose-400" />
+          <p className="text-sm font-bold">{error}</p>
+        </div>
+      ) : !src ? (
+        <div className="flex h-full items-center justify-center text-white/70"><Loader2 className="animate-spin" /></div>
+      ) : src.type === 'embed' ? (
+        <iframe src={src.src} title={title} className="h-full w-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+      ) : (
+        <>
+          {src.type === 'youtube' ? (
+            <div ref={ytHost} className="absolute inset-0 [&_iframe]:h-full [&_iframe]:w-full" />
+          ) : (
+            <video
+              ref={videoRef}
+              src={src.url}
+              className="absolute inset-0 h-full w-full"
+              controlsList="nodownload noplaybackrate noremoteplayback"
+              disablePictureInPicture
+              disableRemotePlayback
+              playsInline
+              preload="metadata"
+              onLoadedMetadata={(e) => { setDur(e.currentTarget.duration); setReady(true) }}
+              onTimeUpdate={(e) => setCur(e.currentTarget.currentTime)}
+              onPlay={() => { setPlaying(true); setStarted(true) }}
+              onPause={() => setPlaying(false)}
+              onError={() => setError('No se pudo cargar el video. Es posible que el enlace haya vencido: recarga la página.')}
+            />
+          )}
+
+          {/* Capa que bloquea cualquier clic sobre el reproductor original */}
+          <div className="absolute inset-0 z-10" onClick={toggle} onDoubleClick={toggleFull} />
+
+          {/* Portada: tapa el título y las sugerencias de YouTube mientras no se reproduce */}
+          {!playing && (
+            <div className="absolute inset-0 z-20 flex cursor-pointer flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-700 text-white" onClick={toggle}>
+              {!ready ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <>
+                  <span className="flex h-20 w-20 items-center justify-center rounded-full bg-sky-500 shadow-xl shadow-sky-500/40 transition-transform hover:scale-110">
+                    <Play size={34} fill="white" className="ml-1" />
+                  </span>
+                  <p className="mt-4 max-w-md px-6 text-center text-sm font-bold">{started ? 'En pausa' : title}</p>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Marca de agua con el correo del alumno */}
+          <div
+            className="pointer-events-none absolute z-30 whitespace-nowrap text-[11px] font-bold text-white/30 transition-all duration-[2000ms]"
+            style={{ top: `${wm.top}%`, left: `${wm.left}%`, textShadow: '0 0 4px rgba(0,0,0,.6)' }}
+          >
+            {watermark}
+          </div>
+
+          {/* Controles propios */}
+          <div className="absolute inset-x-0 bottom-0 z-40 bg-gradient-to-t from-black/85 to-transparent px-3 pb-2 pt-8" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="range" min={0} max={dur || 0} step={0.5} value={Math.min(cur, dur || 0)}
+              onChange={(e) => seek(Number(e.target.value))}
+              aria-label="Progreso"
+              className="h-1 w-full cursor-pointer accent-sky-400"
+            />
+            <div className="mt-1.5 flex items-center gap-3 text-white">
+              <button type="button" onClick={toggle} aria-label={playing ? 'Pausar' : 'Reproducir'} className="cursor-pointer">
+                {playing ? <Pause size={20} fill="white" /> : <Play size={20} fill="white" />}
+              </button>
+              <span className="text-[11px] font-bold tabular-nums">{fmt(cur)} / {fmt(dur)}</span>
+              <div className="ml-auto flex items-center gap-3">
+                <button type="button" onClick={cycleRate} className="rounded-md bg-white/15 px-2 py-0.5 text-[11px] font-black cursor-pointer">{rate}x</button>
+                <button type="button" onClick={toggleMute} aria-label="Sonido" className="cursor-pointer">
+                  {muted ? <VolumeX size={19} /> : <Volume2 size={19} />}
+                </button>
+                <button type="button" onClick={toggleFull} aria-label="Pantalla completa" className="cursor-pointer">
+                  {full ? <Minimize size={19} /> : <Maximize size={19} />}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+===== src\components\dashboard\StudentPlayer.tsx =====
+NO EXISTE
+
+===== src\app\api\student\video\route.ts =====
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prismaDash } from '@/lib/prisma-dashboard'
+import { visibleLevels } from '@/lib/access'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+function youtubeId(url: string): string | null {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.replace(/^www\./, '')
+    if (host === 'youtu.be') return u.pathname.split('/').filter(Boolean)[0] || null
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+      if (u.pathname === '/watch') return u.searchParams.get('v')
+      const parts = u.pathname.split('/')
+      if (['embed', 'shorts', 'live'].includes(parts[1])) return parts[2] || null
+    }
+  } catch {}
+  return null
+}
+
+function vimeoEmbed(url: string): string | null {
+  try {
+    const u = new URL(url)
+    if (u.hostname.replace(/^www\./, '') !== 'vimeo.com') return null
+    const id = u.pathname.split('/').filter(Boolean)[0]
+    return id && /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}?title=0&byline=0&portrait=0` : null
+  } catch {
+    return null
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const session: any = await getServerSession(authOptions)
+    if (!session?.user?.id) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    const lessonId = new URL(req.url).searchParams.get('lessonId') || ''
+    if (!lessonId) return NextResponse.json({ error: 'Falta la lección' }, { status: 400 })
+
+    const lesson = await prismaDash.lesson.findUnique({ where: { id: lessonId }, include: { module: true } })
+    if (!lesson || !lesson.isPublished || !lesson.module.isPublished) {
+      return NextResponse.json({ error: 'La lección no existe' }, { status: 404 })
+    }
+
+    const levels = visibleLevels(session.user.role)
+    if (levels && !levels.includes(lesson.allowedRole)) {
+      return NextResponse.json({ error: 'No tienes acceso a esta lección' }, { status: 403 })
+    }
+
+    const watermark = session.user.email || session.user.name || 'Alumno'
+    const url = lesson.videoUrl
+
+    const yt = youtubeId(url)
+    if (yt) return NextResponse.json({ type: 'youtube', id: yt, watermark })
+
+    const vm = vimeoEmbed(url)
+    if (vm) return NextResponse.json({ type: 'embed', src: vm, watermark })
+
+    // Video subido a Supabase: enlace firmado de corta duración
+    const marker = '/storage/v1/object/public/videos/'
+    const idx = url.indexOf(marker)
+    if (idx !== -1) {
+      const path = decodeURIComponent(url.slice(idx + marker.length).split('?')[0])
+      const supabaseUrl = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
+      const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
+      if (supabaseUrl && key) {
+        const supabase = createClient(supabaseUrl, key, { auth: { persistSession: false } })
+        const { data } = await supabase.storage.from('videos').createSignedUrl(path, 3600)
+        if (data?.signedUrl) return NextResponse.json({ type: 'file', url: data.signedUrl, watermark })
+      }
+    }
+
+    return NextResponse.json({ type: 'file', url, watermark })
+  } catch (err: any) {
+    console.error('GET student/video:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+
+===== src\app\api\student\courses\route.ts =====
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prismaDash } from '@/lib/prisma-dashboard'
+import { visibleLevels } from '@/lib/access'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export async function GET() {
+  try {
+    const session: any = await getServerSession(authOptions)
+    const userId = session?.user?.id
+    if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    const role: string = session.user.role ?? 'CLUB'
+    const levels = visibleLevels(role)
+
+    const modules = await prismaDash.module.findMany({
+      where: { isPublished: true },
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      include: {
+        lessons: {
+          where: { isPublished: true, ...(levels ? { allowedRole: { in: levels } } : {}) },
+          orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+          // videoUrl NO se envía al navegador: el reproductor lo pide por /api/student/video
+          select: { id: true, title: true, description: true, duration: true, order: true, allowedRole: true },
+        },
+      },
+    })
+
+    const visible = modules
+      .filter((m) => m.lessons.length > 0)
+      .map((m) => ({ id: m.id, title: m.title, description: m.description, lessons: m.lessons }))
+
+    const ids = visible.flatMap((m) => m.lessons.map((l) => l.id))
+    const rows = ids.length
+      ? await prismaDash.lessonProgress.findMany({ where: { userId, lessonId: { in: ids } } })
+      : []
+
+    const progress: Record<string, { completed: boolean }> = {}
+    rows.forEach((r) => { progress[r.lessonId] = { completed: r.completed } })
+
+    return NextResponse.json({ role, modules: visible, progress })
+  } catch (err: any) {
+    console.error('GET student/courses:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+
+===== src\app\api\admin\lessons\route.ts =====
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prismaDash } from '@/lib/prisma-dashboard'
+import { ACCESS_LEVELS } from '@/lib/access'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export async function POST(req: Request) {
+  try {
+    const session: any = await getServerSession(authOptions)
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const title = typeof body.title === 'string' ? body.title.trim() : ''
+    const videoUrl = typeof body.videoUrl === 'string' ? body.videoUrl.trim() : ''
+    const moduleId = typeof body.moduleId === 'string' ? body.moduleId : ''
+    const description = typeof body.description === 'string' ? body.description.trim() : ''
+    const allowedRole = typeof body.allowedRole === 'string' ? body.allowedRole : 'ALL'
+
+    if (!title) return NextResponse.json({ error: 'Falta el título de la clase' }, { status: 400 })
+    if (!/^https?:\/\//i.test(videoUrl)) return NextResponse.json({ error: 'El enlace del video debe empezar con http:// o https://' }, { status: 400 })
+    if (!ACCESS_LEVELS.includes(allowedRole)) return NextResponse.json({ error: 'Nivel de acceso no válido' }, { status: 400 })
+
+    const mod = await prismaDash.module.findUnique({ where: { id: moduleId } })
+    if (!mod) return NextResponse.json({ error: 'El módulo seleccionado no existe' }, { status: 400 })
+
+    const count = await prismaDash.lesson.count({ where: { moduleId } })
+    const d = parseInt(String(body.duration), 10)
+
+    const lesson = await prismaDash.lesson.create({
+      data: {
+        title,
+        description: description || null,
+        videoUrl,
+        duration: Number.isFinite(d) && d > 0 ? d : null,
+        allowedRole,
+        moduleId,
+        order: count + 1,
+        isPublished: true,
+      },
+    })
+
+    return NextResponse.json({ success: true, lesson })
+  } catch (err: any) {
+    console.error('POST lessons:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+
+===== src\app\api\admin\lessons\[id]\route.ts =====
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prismaDash } from '@/lib/prisma-dashboard'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+const ROLES = ['ALL', 'CLUB', 'MENTORIA']
+
+async function isAdmin() {
+  const session: any = await getServerSession(authOptions)
+  return !!session?.user && session.user.role === 'ADMIN'
+}
+
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  try {
+    if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    const lesson = await prismaDash.lesson.findUnique({ where: { id: params.id } })
+    if (!lesson) return NextResponse.json({ error: 'Clase no encontrada' }, { status: 404 })
+
+    return NextResponse.json({ lesson })
+  } catch (err: any) {
+    console.error('GET lesson:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  try {
+    if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    const body = await req.json()
+    const data: Record<string, any> = {}
+
+    if (typeof body.title === 'string') {
+      if (!body.title.trim()) return NextResponse.json({ error: 'El título no puede estar vacío' }, { status: 400 })
+      data.title = body.title.trim()
+    }
+    if (typeof body.description === 'string') data.description = body.description.trim() || null
+    if (typeof body.videoUrl === 'string') {
+      if (!body.videoUrl.trim()) return NextResponse.json({ error: 'El enlace del video no puede estar vacío' }, { status: 400 })
+      data.videoUrl = body.videoUrl.trim()
+    }
+    if (body.duration !== undefined) {
+      const d = parseInt(String(body.duration), 10)
+      data.duration = Number.isFinite(d) && d > 0 ? d : null
+    }
+    if (body.order !== undefined) {
+      const o = parseInt(String(body.order), 10)
+      if (Number.isFinite(o)) data.order = o
+    }
+    if (typeof body.isPublished === 'boolean') data.isPublished = body.isPublished
+    if (typeof body.allowedRole === 'string') {
+      if (!ROLES.includes(body.allowedRole)) return NextResponse.json({ error: 'Rol no válido' }, { status: 400 })
+      data.allowedRole = body.allowedRole
+    }
+    if (typeof body.moduleId === 'string' && body.moduleId) {
+      const mod = await prismaDash.module.findUnique({ where: { id: body.moduleId } })
+      if (!mod) return NextResponse.json({ error: 'El módulo destino no existe' }, { status: 400 })
+      data.moduleId = body.moduleId
+    }
+
+    const lesson = await prismaDash.lesson.update({ where: { id: params.id }, data })
+    return NextResponse.json({ success: true, lesson })
+  } catch (err: any) {
+    console.error('PATCH lesson:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+  try {
+    if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    await prismaDash.lesson.delete({ where: { id: params.id } })
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error('DELETE lesson:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+
+===== src\app\api\admin\content\route.ts =====
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prismaDash } from '@/lib/prisma-dashboard'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export async function GET() {
+  try {
+    const session: any = await getServerSession(authOptions)
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const modules = await prismaDash.module.findMany({
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      include: { lessons: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] } },
+    })
+
+    return NextResponse.json({ modules })
+  } catch (err: any) {
+    console.error('GET content:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+
+===== src\app\api\track\route.ts =====
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
+    const userId = (session.user as any).id
+    if (!userId) {
+      return NextResponse.json({ error: 'ID de usuario no encontrado' }, { status: 400 })
+    }
+
+    const body = await req.json()
+    const { action, page, lessonId, lessonTitle, metadata } = body
+
+    const forwardedFor = req.headers.get('x-forwarded-for')
+    const realIp = req.headers.get('x-real-ip')
+    const clientIp = forwardedFor ? forwardedFor.split(',')[0].trim() : (realIp || '127.0.0.1')
+    const ua = req.headers.get('user-agent') || 'Unknown'
+
+    // Update active session snapshot
+    await prisma.session.upsert({
+      where: { token: userId },
+      update: {
+        currentPage: page || '/dashboard',
+        currentLesson: lessonTitle || null,
+        lastSeen: new Date(),
+        isActive: true,
+        ip: clientIp,
+        userAgent: ua,
+      },
+      create: {
+        userId,
+        token: userId,
+        currentPage: page || '/dashboard',
+        currentLesson: lessonTitle || null,
+        lastSeen: new Date(),
+        isActive: true,
+        ip: clientIp,
+        userAgent: ua,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    })
+
+    // Log Activity record if action specified
+    if (action) {
+      await prisma.activityLog.create({
+        data: {
+          userId,
+          action,
+          page: page || null,
+          lessonId: lessonId || null,
+          metadata: metadata ? JSON.stringify(metadata) : null,
+          ip: clientIp,
+          userAgent: ua,
+        },
+      })
+    }
+
+    return NextResponse.json({ success: true, timestamp: new Date() })
+  } catch (error: any) {
+    console.error('Tracking error:', error)
+    return NextResponse.json({ error: 'Error al registrar actividad' }, { status: 500 })
+  }
+}
+
+
+===== src\app\api\admin\live-data\route.ts =====
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prismaDash } from '@/lib/prisma-dashboard'
+import { parseUA } from '@/lib/useragent'
+import { lookupGeo } from '@/lib/geo'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export async function GET() {
+  try {
+    const s: any = await getServerSession(authOptions)
+    if (!s?.user || s.user.role !== 'ADMIN') return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    const now = Date.now()
+    const onlineSince = new Date(now - 3 * 60 * 1000)
+    const daySince = new Date(now - 24 * 3600 * 1000)
+
+    const sessions = await prismaDash.session.findMany({
+      where: { lastSeen: { gte: daySince }, token: { startsWith: 'web-' } },
+      orderBy: { lastSeen: 'desc' },
+      take: 300,
+      include: { user: { select: { id: true, name: true, email: true, role: true, avatarUrl: true } } },
+    })
+
+    const ips = Array.from(new Set(sessions.map((x) => x.ip).filter(Boolean) as string[])).slice(0, 60)
+    const geoMap = new Map<string, Awaited<ReturnType<typeof lookupGeo>>>()
+    await Promise.all(ips.map(async (ip) => geoMap.set(ip, await lookupGeo(ip))))
+
+    const lessonIds = Array.from(new Set(sessions.map((x) => x.currentLesson).filter(Boolean) as string[]))
+    const events = await prismaDash.activityLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: { user: { select: { name: true, email: true, role: true } }, lesson: { select: { title: true } } },
+    })
+    const lessons = lessonIds.length
+      ? await prismaDash.lesson.findMany({ where: { id: { in: lessonIds } }, select: { id: true, title: true } })
+      : []
+    const lessonTitle = new Map(lessons.map((l) => [l.id, l.title]))
+
+    const rows = sessions.map((x) => {
+      const ua = parseUA(x.userAgent)
+      const g = x.ip ? geoMap.get(x.ip) ?? null : null
+      return {
+        id: x.id,
+        online: x.lastSeen >= onlineSince,
+        lastSeen: x.lastSeen,
+        page: x.currentPage,
+        lesson: x.currentLesson ? lessonTitle.get(x.currentLesson) ?? null : null,
+        ip: x.ip,
+        ...ua,
+        country: g?.country ?? null,
+        countryCode: g?.countryCode ?? null,
+        city: g?.city ?? null,
+        lat: g?.lat ?? null,
+        lon: g?.lon ?? null,
+        user: x.user,
+      }
+    })
+
+    const count = (arr: (string | null)[]) => {
+      const m = new Map<string, number>()
+      arr.forEach((k) => { const key = k || 'Desconocido'; m.set(key, (m.get(key) || 0) + 1) })
+      return Array.from(m, ([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+    }
+
+    const security = await prismaDash.securityLog.findMany({ orderBy: { createdAt: 'desc' }, take: 40 })
+    const uniqueUsers24 = new Set(sessions.map((x) => x.userId)).size
+    const onlineUsers = new Set(rows.filter((r) => r.online).map((r) => r.user.id)).size
+
+    return NextResponse.json({
+      stats: { onlineUsers, uniqueUsers24, events: events.length, alerts: security.length },
+      sessions: rows,
+      browsers: count(rows.map((r) => r.browser)),
+      systems: count(rows.map((r) => r.os)),
+      devices: count(rows.map((r) => r.device)),
+      countries: count(rows.map((r) => r.country)),
+      events: events.map((e) => ({
+        id: e.id, action: e.action, page: e.page, createdAt: e.createdAt, ip: e.ip,
+        user: e.user, lesson: e.lesson?.title ?? null,
+      })),
+      security: security.map((x) => ({ id: x.id, action: x.action, email: x.email, details: x.details, ip: x.ipAddress, createdAt: x.createdAt })),
+    })
+  } catch (err: any) {
+    console.error('live-data:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+
+===== src\app\admin\live\page.tsx =====
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { Radio, Globe2, Monitor, Smartphone, Tablet, Activity, ShieldAlert, Users, AlertCircle, MapPin, PlayCircle, LogIn, CheckCircle2, Eye } from 'lucide-react'
+import WorldMap from '@/components/admin/WorldMap'
+
+interface Sess {
+  id: string; online: boolean; lastSeen: string; page: string | null; lesson: string | null
+  browser: string; os: string; device: string
+  country: string | null; countryCode: string | null; city: string | null; lat: number | null; lon: number | null
+  user: { id: string; name: string | null; email: string; role: string; avatarUrl: string | null }
+}
+interface Ev { id: string; action: string; page: string | null; createdAt: string; user: { name: string | null; email: string; role: string }; lesson: string | null }
+interface Sec { id: string; action: string; email: string | null; details: string | null; ip: string | null; createdAt: string }
+interface Count { name: string; value: number }
+interface Data {
+  stats: { onlineUsers: number; uniqueUsers24: number; events: number; alerts: number }
+  sessions: Sess[]; events: Ev[]; security: Sec[]
+  browsers: Count[]; systems: Count[]; devices: Count[]; countries: Count[]
+}
+
+const pageLabel = (p: string | null) => {
+  if (!p) return 'Sin datos'
+  if (p.startsWith('/dashboard/clases')) return 'Clases'
+  if (p.startsWith('/dashboard/perfil')) return 'Su perfil'
+  if (p.startsWith('/dashboard')) return 'Panel del alumno'
+  if (p.startsWith('/admin')) return 'Administración'
+  return p
+}
+
+const ACTIONS: Record<string, { label: string; icon: any; color: string }> = {
+  LOGIN: { label: 'Inició sesión', icon: LogIn, color: 'bg-violet-100 text-violet-700' },
+  PAGE_VIEW: { label: 'Visitó', icon: Eye, color: 'bg-sky-100 text-sky-700' },
+  LESSON_VIEW: { label: 'Abrió clase', icon: PlayCircle, color: 'bg-amber-100 text-amber-700' },
+  LESSON_COMPLETE: { label: 'Completó clase', icon: CheckCircle2, color: 'bg-emerald-100 text-emerald-700' },
+}
+
+const ago = (iso: string) => {
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000))
+  if (s < 60) return `hace ${s}s`
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`
+  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`
+  return `hace ${Math.floor(s / 86400)} d`
+}
+
+const flag = (cc: string | null) =>
+  cc && cc.length === 2 ? String.fromCodePoint(...cc.toUpperCase().split('').map((c) => 127397 + c.charCodeAt(0))) : '🌐'
+
+const DeviceIcon = ({ d }: { d: string }) => (d === 'Celular' ? <Smartphone size={14} /> : d === 'Tablet' ? <Tablet size={14} /> : <Monitor size={14} />)
+
+function Bars({ title, items, color }: { title: string; items: Count[]; color: string }) {
+  const max = Math.max(1, ...items.map((i) => i.value))
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <h3 className="mb-3 text-xs font-black uppercase tracking-wide text-gray-500">{title}</h3>
+      {items.length === 0 ? <p className="text-xs text-gray-400">Sin datos aún</p> : (
+        <div className="space-y-2">
+          {items.slice(0, 6).map((i) => (
+            <div key={i.name}>
+              <div className="flex justify-between text-[11px] font-bold text-gray-700"><span className="truncate">{i.name}</span><span>{i.value}</span></div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100"><div className={`h-full rounded-full ${color}`} style={{ width: `${(i.value / max) * 100}%` }} /></div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function LivePage() {
+  const [data, setData] = useState<Data | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [tab, setTab] = useState<'live' | 'alerts'>('live')
+  const [, setTick] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      try {
+        const r = await fetch('/api/admin/live-data', { cache: 'no-store' })
+        const d = await r.json()
+        if (!alive) return
+        if (!r.ok) setError(d.error || `HTTP ${r.status}`)
+        else { setData(d); setError(null) }
+      } catch { if (alive) setError('No se pudo conectar con el servidor') }
+    }
+    load()
+    const t = setInterval(load, 5000)
+    const c = setInterval(() => setTick((x) => x + 1), 15000)
+    return () => { alive = false; clearInterval(t); clearInterval(c) }
+  }, [])
+
+  const online = useMemo(() => data?.sessions.filter((s) => s.online) ?? [], [data])
+  const points = useMemo(
+    () => (data?.sessions ?? []).filter((s) => s.lat != null && s.lon != null).map((s) => ({
+      lat: s.lat as number, lon: s.lon as number, online: s.online,
+      label: `${s.user.name || s.user.email} · ${s.city ? s.city + ', ' : ''}${s.country ?? ''}`,
+    })),
+    [data]
+  )
+
+  const name = (u: { name: string | null; email: string }) => u.name || u.email
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-[#0284c7]"><Radio size={13} /> Telemetría en directo</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-[#1d1d1f]">Live Activity Monitor</h1>
+          <p className="mt-1 text-xs text-gray-500">Quién está conectado, desde dónde y qué está haciendo.</p>
+        </div>
+        <span className="flex items-center gap-2 rounded-full border border-[#0284c7]/30 bg-[#f0f9ff] px-3 py-1.5 text-[11px] font-bold text-[#0284c7]">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[#0284c7]" /> En vivo · se actualiza cada 5 s
+        </span>
+      </div>
+
+      {error && <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700"><AlertCircle size={16} /> {error}</div>}
+
+      <div className="inline-flex rounded-2xl bg-gray-100 p-1">
+        <button type="button" onClick={() => setTab('live')} className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${tab === 'live' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-gray-500'}`}><Activity size={14} /> Actividad en vivo</button>
+        <button type="button" onClick={() => setTab('alerts')} className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${tab === 'alerts' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-gray-500'}`}>
+          <ShieldAlert size={14} /> Alertas {data && data.security.length > 0 && <span className="rounded-full bg-rose-500 px-1.5 text-[10px] text-white">{data.security.length}</span>}
+        </button>
+      </div>
+
+      {!data ? (
+        <div className="rounded-3xl border border-gray-100 bg-white p-10 text-center text-xs text-gray-400">Cargando telemetría...</div>
+      ) : tab === 'alerts' ? (
+        <div className="space-y-2">
+          {data.security.length === 0 ? <div className="rounded-3xl border border-gray-100 bg-white p-10 text-center text-xs text-gray-400">No hay alertas de seguridad.</div> :
+            data.security.map((a) => (
+              <div key={a.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3.5 text-xs shadow-sm">
+                <ShieldAlert size={18} className="shrink-0 text-rose-500" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-[#1d1d1f]">{a.action}{a.email ? ` · ${a.email}` : ''}</p>
+                  {a.details && <p className="break-words text-gray-500">{a.details}</p>}
+                </div>
+                <div className="text-right text-[11px] text-gray-400"><p>{ago(a.createdAt)}</p>{a.ip && <p className="font-mono">{a.ip}</p>}</div>
+              </div>
+            ))}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              { l: 'Conectados ahora', v: data.stats.onlineUsers, i: Users, c: 'bg-emerald-50 text-emerald-600' },
+              { l: 'Usuarios 24 h', v: data.stats.uniqueUsers24, i: Globe2, c: 'bg-sky-50 text-sky-600' },
+              { l: 'Países', v: data.countries.filter((c) => c.name !== 'Desconocido').length, i: MapPin, c: 'bg-amber-50 text-amber-600' },
+              { l: 'Alertas', v: data.stats.alerts, i: ShieldAlert, c: 'bg-rose-50 text-rose-600' },
+            ].map((s) => (
+              <div key={s.l} className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm">
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${s.c}`}><s.i size={19} /></span>
+                <div><p className="text-xl font-black leading-none">{s.v}</p><p className="mt-1 text-[11px] font-bold text-gray-500">{s.l}</p></div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-2">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-sm font-black"><Globe2 size={16} className="text-[#0284c7]" /> Mapa de conexiones</h2>
+                <div className="flex gap-3 text-[11px] font-bold text-gray-500">
+                  <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Ahora</span>
+                  <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-sky-500" /> Últimas 24 h</span>
+                </div>
+              </div>
+              <WorldMap points={points} />
+              {points.length === 0 && <p className="mt-1 text-center text-[11px] text-gray-400">Aún no hay conexiones con ubicación. Aparecerán cuando un alumno navegue.</p>}
+            </div>
+            <div className="space-y-4">
+              <Bars title="Países" items={data.countries} color="bg-[#0284c7]" />
+              <Bars title="Navegadores" items={data.browsers} color="bg-sky-500" />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Bars title="Sistemas operativos" items={data.systems} color="bg-violet-500" />
+            <Bars title="Dispositivos" items={data.devices} color="bg-emerald-500" />
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-5">
+            <div className="space-y-3 xl:col-span-3">
+              <h2 className="flex items-center gap-2 text-sm font-black"><Users size={16} className="text-[#0284c7]" /> Alumnos conectados ({online.length})</h2>
+              {online.length === 0 ? (
+                <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center text-xs text-gray-400">No hay alumnos activos ahora.</div>
+              ) : online.map((s) => (
+                <div key={s.id} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-400 text-xs font-black text-white">
+                      {(name(s.user)[0] || '?').toUpperCase()}
+                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-[#1d1d1f]">{name(s.user)} <span className="ml-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-[9px] font-black text-gray-500">{s.user.role}</span></p>
+                      <p className="flex items-center gap-1 text-[11px] text-gray-500"><span>{flag(s.countryCode)}</span> {s.city ? `${s.city}, ` : ''}{s.country ?? 'Ubicación desconocida'}</p>
+                    </div>
+                    <span className="shrink-0 text-[10px] text-gray-400">{ago(s.lastSeen)}</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-bold">
+                    <span className="flex items-center gap-1 rounded-lg bg-gray-100 px-2 py-1 text-gray-600"><DeviceIcon d={s.device} /> {s.device}</span>
+                    <span className="rounded-lg bg-sky-50 px-2 py-1 text-sky-700">{s.browser}</span>
+                    <span className="rounded-lg bg-violet-50 px-2 py-1 text-violet-700">{s.os}</span>
+                    <span className="rounded-lg bg-[#f0f9ff] px-2 py-1 text-[#0284c7]">{pageLabel(s.page)}</span>
+                    {s.lesson && <span className="flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-amber-700"><PlayCircle size={12} /> {s.lesson}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="xl:col-span-2">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-black"><Activity size={16} className="text-[#0284c7]" /> Feed de eventos</h2>
+              <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
+                {data.events.length === 0 ? <div className="rounded-2xl border border-gray-100 bg-white p-6 text-center text-xs text-gray-400">Sin eventos todavía.</div> :
+                  data.events.map((e) => {
+                    const a = ACTIONS[e.action] ?? { label: e.action, icon: Activity, color: 'bg-gray-100 text-gray-600' }
+                    const Icon = a.icon
+                    return (
+                      <div key={e.id} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-xs font-bold text-[#1d1d1f]">{name(e.user)}</p>
+                          <span className="shrink-0 text-[10px] text-gray-400">{ago(e.createdAt)}</span>
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                          <span className={`flex items-center gap-1 rounded-md px-2 py-0.5 font-bold ${a.color}`}><Icon size={11} /> {a.label}</span>
+                          {e.lesson ? <span className="truncate text-gray-600">{e.lesson}</span> : e.page ? <span className="truncate text-gray-500">{pageLabel(e.page)}</span> : null}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+===== src\app\admin\content\page.tsx =====
+'use client'
+
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import {
+  Video, Trash2, Layers, Upload, Link as LinkIcon, CheckCircle2, AlertCircle, Sparkles,
+  Pencil, X, Save, EyeOff, Globe, Users, GraduationCap, ChevronDown, Plus, Film, XCircle,
+} from 'lucide-react'
+
+const BUCKET = 'videos'
+const MAX_MB = 50
+const VIDEO_EXT = ['mp4', 'webm', 'mkv', 'mov']
+
+type Access = 'ALL' | 'CLUB' | 'MENTORIA'
+
+interface Lesson {
+  id: string
+  title: string
+  videoUrl: string
+  allowedRole: string
+  order: number
+  isPublished?: boolean
+}
+interface Module {
+  id: string
+  title: string
+  description: string | null
+  order?: number
+  isPublished?: boolean
+  lessons?: Lesson[]
+}
+interface EditLessonState {
+  id: string; title: string; description: string; videoUrl: string
+  duration: string; order: string; isPublished: boolean; allowedRole: Access; moduleId: string
+}
+interface EditModuleState { id: string; title: string; description: string; order: string; isPublished: boolean }
+
+const ACCESS: Record<Access, { label: string; desc: string; icon: any; badge: string; card: string }> = {
+  ALL: {
+    label: 'Para todos', desc: 'Club y Mentoría', icon: Globe,
+    badge: 'bg-emerald-100 text-emerald-700', card: 'border-emerald-400 bg-emerald-50 text-emerald-700',
+  },
+  CLUB: {
+    label: 'Solo Club', desc: 'Solo alumnos del Club', icon: Users,
+    badge: 'bg-sky-100 text-sky-700', card: 'border-sky-400 bg-sky-50 text-sky-700',
+  },
+  MENTORIA: {
+    label: 'Solo Mentoría', desc: 'Solo alumnos de Mentoría', icon: GraduationCap,
+    badge: 'bg-sky-100 text-[#0284c7]', card: 'border-[#0284c7] bg-[#f0f9ff] text-[#0284c7]',
+  },
+}
+
+const normalizeAccess = (v?: string): Access => (v === 'CLUB' || v === 'MENTORIA' ? v : 'ALL')
+
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text()
+  if (!text) return {}
+  try { return JSON.parse(text) } catch { return { error: `El servidor devolvió una respuesta no válida (HTTP ${res.status}).` } }
+}
+
+// Traduce errores técnicos de la subida a un motivo y una solución
+function explainUploadError(raw: string, file: File): { title: string; detail: string } {
+  const m = raw.toLowerCase()
+  const mb = (file.size / 1024 / 1024).toFixed(1)
+  if (m.includes('exceeded') || m.includes('maximum allowed size') || m.includes('too large') || m.includes('413')) {
+    return {
+      title: 'El video es demasiado pesado',
+      detail: `Tu archivo pesa ${mb} MB y Supabase solo admite hasta ${MAX_MB} MB en este plan. Comprímelo (por ejemplo con HandBrake), o súbelo a YouTube/Vimeo y pega el enlace.`,
+    }
+  }
+  if (m.includes('bucket') && m.includes('not found')) {
+    return { title: 'No existe el bucket "videos"', detail: 'En Supabase → Storage crea un bucket llamado exactamente "videos" y márcalo como público.' }
+  }
+  if (m.includes('mime') || m.includes('not supported') || m.includes('invalid file')) {
+    return { title: 'Formato de video no admitido', detail: 'Usa MP4, WebM, MKV o MOV. Lo más compatible es MP4 (H.264).' }
+  }
+  if (m.includes('failed to fetch') || m.includes('network') || m.includes('load failed')) {
+    return { title: 'Se cortó la conexión durante la subida', detail: 'Revisa tu internet y vuelve a intentarlo. Con videos grandes, una conexión inestable suele cortar la subida.' }
+  }
+  if (m.includes('invalid') && (m.includes('jwt') || m.includes('key') || m.includes('signature') || m.includes('token'))) {
+    return { title: 'Clave de Supabase incorrecta o vencida', detail: 'Revisa NEXT_PUBLIC_SUPABASE_ANON_KEY y SUPABASE_SERVICE_ROLE_KEY en Netlify y haz un redeploy.' }
+  }
+  if (m.includes('row-level security') || m.includes('policy') || m.includes('unauthorized')) {
+    return { title: 'Supabase rechazó la subida por permisos', detail: 'La URL de subida venció o el bucket tiene políticas restrictivas. Vuelve a intentarlo; si persiste, revisa las políticas del bucket "videos".' }
+  }
+  return { title: 'No se pudo subir el video', detail: raw }
+}
+
+const inputCls =
+  'w-full rounded-xl border border-gray-200 bg-gray-50/60 px-3.5 py-2.5 text-xs text-[#1d1d1f] placeholder:text-gray-400 focus:border-[#0284c7] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]/10'
+const labelCls = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-gray-500'
+
+function AccessPicker({ value, onChange }: { value: Access; onChange: (v: Access) => void }) {
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      {(Object.keys(ACCESS) as Access[]).map((k) => {
+        const a = ACCESS[k]
+        const active = value === k
+        const Icon = a.icon
+        return (
+          <button
+            key={k}
+            type="button"
+            onClick={() => onChange(k)}
+            className={`flex items-center gap-2.5 rounded-xl border-2 px-3 py-2.5 text-left transition-all cursor-pointer ${
+              active ? a.card : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            <Icon size={18} className="shrink-0" />
+            <span>
+              <span className="block text-xs font-bold leading-tight">{a.label}</span>
+              <span className="block text-[10px] opacity-70">{a.desc}</span>
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+export default function AdminContentPage() {
+  const [modules, setModules] = useState<Module[]>([])
+  const [loadingData, setLoadingData] = useState(true)
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+  const [closed, setClosed] = useState<Set<string>>(new Set())
+  const lessonFormRef = useRef<HTMLDivElement>(null)
+
+  // Módulo
+  const [modTitle, setModTitle] = useState('')
+  const [modDesc, setModDesc] = useState('')
+  const [loadingMod, setLoadingMod] = useState(false)
+
+  // Clase
+  const [selectedModuleId, setSelectedModuleId] = useState('')
+  const [lessonTitle, setLessonTitle] = useState('')
+  const [lessonDesc, setLessonDesc] = useState('')
+  const [videoSource, setVideoSource] = useState<'url' | 'upload'>('url')
+  const [lessonUrl, setLessonUrl] = useState('')
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [access, setAccess] = useState<Access>('ALL')
+  const [duration, setDuration] = useState('')
+  const [publishing, setPublishing] = useState(false)
+  const [status, setStatus] = useState('')
+  const [formError, setFormError] = useState<{ title: string; detail: string } | null>(null)
+
+  // Edición
+  const [editLesson, setEditLesson] = useState<EditLessonState | null>(null)
+  const [editModule, setEditModule] = useState<EditModuleState | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  const notify = (text: string, type: 'success' | 'error') => {
+    setToast({ text, type })
+    setTimeout(() => setToast(null), 6000)
+  }
+
+  const loadData = async () => {
+    try {
+      const res = await fetch('/api/admin/content', { cache: 'no-store' })
+      const data = await safeJson(res)
+      if (res.ok && Array.isArray(data.modules)) setModules(data.modules)
+      else notify(data.error || `No se pudo cargar el contenido (HTTP ${res.status})`, 'error')
+    } catch {
+      notify('No se pudo conectar con el servidor para cargar el contenido', 'error')
+    } finally {
+      setLoadingData(false)
+    }
+  }
+
+  useEffect(() => { loadData() }, [])
+
+  const totals = useMemo(() => {
+    const lessons = modules.reduce((n, m) => n + (m.lessons?.length ?? 0), 0)
+    return { modules: modules.length, lessons }
+  }, [modules])
+
+  // ---------- Crear módulo ----------
+  const handleCreateModule = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!modTitle.trim()) return notify('Escribe un título para el módulo', 'error')
+    setLoadingMod(true)
+    try {
+      const res = await fetch('/api/admin/modules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: modTitle.trim(), description: modDesc.trim() }),
+      })
+      const data = await safeJson(res)
+      if (res.ok && !data.error) {
+        const created = data.module ?? data.data ?? null
+        await loadData()
+        if (created?.id) setSelectedModuleId(created.id)
+        setModTitle(''); setModDesc('')
+        notify('Módulo creado. Ya puedes agregarle clases.', 'success')
+      } else {
+        notify(data.error || data.message || `No se pudo crear el módulo (HTTP ${res.status})`, 'error')
+      }
+    } catch {
+      notify('Error de conexión al crear el módulo', 'error')
+    } finally {
+      setLoadingMod(false)
+    }
+  }
+
+  // ---------- Subida de video ----------
+  const uploadVideo = async (file: File): Promise<string | null> => {
+    setStatus('Preparando la subida...')
+    const signRes = await fetch('/api/admin/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileName: file.name, fileSize: file.size }),
+    })
+    const sign = await safeJson(signRes)
+    if (!signRes.ok || !sign.token || !sign.path) {
+      setFormError(explainUploadError(sign.error || `El servidor rechazó la subida (HTTP ${signRes.status})`, file))
+      return null
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !anon) {
+      setFormError({
+        title: 'Falta configurar Supabase en el navegador',
+        detail: 'Agrega NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY en Netlify (Environment variables) y haz "Clear cache and deploy site".',
+      })
+      return null
+    }
+
+    setStatus(`Subiendo ${(file.size / 1024 / 1024).toFixed(1)} MB... no cierres esta página`)
+    try {
+      const supabase = createClient(supabaseUrl, anon)
+      const { error } = await supabase.storage
+        .from(BUCKET)
+        .uploadToSignedUrl(sign.path, sign.token, file, { contentType: file.type || 'video/mp4' })
+      if (error) {
+        setFormError(explainUploadError(error.message || String(error), file))
+        return null
+      }
+    } catch (err: any) {
+      setFormError(explainUploadError(err?.message || 'failed to fetch', file))
+      return null
+    }
+    return sign.url as string
+  }
+
+  const onPickFile = (file: File | null) => {
+    setFormError(null)
+    if (!file) return setVideoFile(null)
+    const ext = file.name.split('.').pop()?.toLowerCase() || ''
+    if (!VIDEO_EXT.includes(ext)) {
+      setVideoFile(null)
+      return setFormError({ title: 'Formato no admitido', detail: `El archivo es .${ext}. Usa MP4, WebM, MKV o MOV (lo más compatible es MP4).` })
+    }
+    if (file.size > MAX_MB * 1024 * 1024) {
+      setVideoFile(null)
+      return setFormError({
+        title: 'El video es demasiado pesado',
+        detail: `Pesa ${(file.size / 1024 / 1024).toFixed(1)} MB y el máximo es ${MAX_MB} MB. Comprímelo o súbelo a YouTube/Vimeo y usa "Enlace externo".`,
+      })
+    }
+    setVideoFile(file)
+  }
+
+  // ---------- Publicar clase ----------
+  const handleCreateLesson = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setFormError(null)
+
+    if (!selectedModuleId) return setFormError({ title: 'Falta el módulo', detail: 'Elige a qué módulo pertenece la clase. Si no hay ninguno, crea uno primero.' })
+    if (!lessonTitle.trim()) return setFormError({ title: 'Falta el título', detail: 'Escribe el título de la clase.' })
+    if (videoSource === 'url') {
+      if (!/^https?:\/\//i.test(lessonUrl.trim())) return setFormError({ title: 'Enlace no válido', detail: 'El enlace debe empezar con https:// (por ejemplo, un enlace de YouTube).' })
+    } else if (!videoFile) {
+      return setFormError({ title: 'No elegiste ningún video', detail: 'Selecciona un archivo de video de tu computadora.' })
+    }
+
+    setPublishing(true)
+    try {
+      let finalUrl = lessonUrl.trim()
+      if (videoSource === 'upload' && videoFile) {
+        const uploaded = await uploadVideo(videoFile)
+        if (!uploaded) return
+        finalUrl = uploaded
+      }
+
+      setStatus('Guardando la clase...')
+      const res = await fetch('/api/admin/lessons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          moduleId: selectedModuleId,
+          title: lessonTitle.trim(),
+          description: lessonDesc.trim(),
+          videoUrl: finalUrl,
+          duration: duration ? parseInt(duration, 10) : null,
+          allowedRole: access,
+        }),
+      })
+      const data = await safeJson(res)
+      if (res.ok && data.success) {
+        setLessonTitle(''); setLessonDesc(''); setLessonUrl(''); setVideoFile(null); setDuration('')
+        await loadData()
+        setClosed((prev) => { const n = new Set(prev); n.delete(selectedModuleId); return n })
+        notify(`Clase publicada (${ACCESS[access].label}).`, 'success')
+      } else {
+        setFormError({ title: 'No se pudo guardar la clase', detail: data.error || data.message || `Error del servidor (HTTP ${res.status})` })
+      }
+    } catch {
+      setFormError({ title: 'Error de conexión', detail: 'No se pudo comunicar con el servidor. Revisa tu internet e inténtalo de nuevo.' })
+    } finally {
+      setPublishing(false)
+      setStatus('')
+    }
+  }
+
+  // ---------- Eliminar ----------
+  const handleDelete = async (type: 'module' | 'lesson', id: string, name: string, lessonCount = 0) => {
+    const msg = type === 'module'
+      ? `¿Eliminar el módulo "${name}"?${lessonCount ? ` También se eliminarán sus ${lessonCount} clase(s).` : ''} Esta acción no se puede deshacer.`
+      : `¿Eliminar la clase "${name}"? Esta acción no se puede deshacer.`
+    if (!confirm(msg)) return
+    try {
+      const res = await fetch(`/api/admin/delete?type=${type}&id=${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        if (type === 'module' && selectedModuleId === id) setSelectedModuleId('')
+        await loadData()
+        notify(type === 'module' ? 'Módulo eliminado' : 'Clase eliminada', 'success')
+      } else {
+        const data = await safeJson(res)
+        notify(data.error || `No se pudo eliminar (HTTP ${res.status})`, 'error')
+      }
+    } catch {
+      notify('Error de conexión al eliminar', 'error')
+    }
+  }
+
+  // ---------- Editar clase ----------
+  const openEditLesson = async (lessonId: string, moduleId: string) => {
+    try {
+      const res = await fetch(`/api/admin/lessons/${lessonId}`, { cache: 'no-store' })
+      const data = await safeJson(res)
+      if (!res.ok || !data.lesson) return notify(data.error || `No se pudo cargar la clase (HTTP ${res.status})`, 'error')
+      const l = data.lesson
+      setEditLesson({
+        id: l.id, title: l.title ?? '', description: l.description ?? '', videoUrl: l.videoUrl ?? '',
+        duration: l.duration ? String(l.duration) : '', order: String(l.order ?? 0),
+        isPublished: l.isPublished !== false, allowedRole: normalizeAccess(l.allowedRole), moduleId: l.moduleId ?? moduleId,
+      })
+    } catch {
+      notify('Error de conexión al cargar la clase', 'error')
+    }
+  }
+
+  const handleSaveLesson = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editLesson) return
+    setSavingEdit(true)
+    try {
+      const res = await fetch(`/api/admin/lessons/${editLesson.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editLesson.title, description: editLesson.description, videoUrl: editLesson.videoUrl,
+          duration: editLesson.duration, order: editLesson.order, isPublished: editLesson.isPublished,
+          allowedRole: editLesson.allowedRole, moduleId: editLesson.moduleId,
+        }),
+      })
+      const data = await safeJson(res)
+      if (res.ok && data.success) {
+        setEditLesson(null); await loadData(); notify('Clase actualizada', 'success')
+      } else notify(data.error || `No se pudo guardar (HTTP ${res.status})`, 'error')
+    } catch {
+      notify('Error de conexión al guardar', 'error')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  // ---------- Editar módulo ----------
+  const handleSaveModule = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editModule) return
+    setSavingEdit(true)
+    try {
+      const res = await fetch(`/api/admin/modules/${editModule.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editModule.title, description: editModule.description,
+          order: editModule.order, isPublished: editModule.isPublished,
+        }),
+      })
+      const data = await safeJson(res)
+      if (res.ok && data.success) {
+        setEditModule(null); await loadData(); notify('Módulo actualizado', 'success')
+      } else notify(data.error || `No se pudo guardar (HTTP ${res.status})`, 'error')
+    } catch {
+      notify('Error de conexión al guardar', 'error')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  const addLessonTo = (moduleId: string) => {
+    setSelectedModuleId(moduleId)
+    lessonFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const toggleModule = (id: string) =>
+    setClosed((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 bg-[#fdfdfd] p-5 md:p-8">
+      {/* Encabezado */}
+      <div className="flex flex-col gap-4 rounded-3xl bg-gradient-to-r from-[#111111] via-[#1d1d1f] to-[#2d2d30] p-6 text-white shadow-lg md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="mb-1 flex items-center gap-2">
+            <Sparkles size={16} className="text-[#0284c7]" />
+            <span className="text-[11px] font-bold uppercase tracking-widest text-[#0284c7]">Panel de gestión</span>
+          </div>
+          <h1 className="text-2xl font-black tracking-tight">Contenido de cursos</h1>
+          <p className="mt-1 text-xs text-gray-400">Crea módulos, sube clases y decide quién puede verlas.</p>
+        </div>
+        <div className="flex gap-3">
+          <div className="rounded-2xl bg-white/10 px-5 py-3 text-center">
+            <p className="text-2xl font-black">{totals.modules}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-gray-300">Módulos</p>
+          </div>
+          <div className="rounded-2xl bg-white/10 px-5 py-3 text-center">
+            <p className="text-2xl font-black">{totals.lessons}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-gray-300">Clases</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Aviso */}
+      {toast && (
+        <div className={`flex items-start gap-2 rounded-2xl border p-4 text-xs font-bold ${
+          toast.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle2 size={16} className="mt-0.5 shrink-0" /> : <AlertCircle size={16} className="mt-0.5 shrink-0" />}
+          <span>{toast.text}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        {/* Paso 1: módulo */}
+        <div className="rounded-3xl border border-[#ededf0] bg-white p-6 shadow-sm lg:col-span-2 lg:self-start">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f0f9ff] text-[#0284c7]"><Layers size={20} /></span>
+            <div>
+              <h2 className="text-sm font-bold text-[#1d1d1f]">1. Nuevo módulo</h2>
+              <p className="text-[11px] text-gray-400">Una sección que agrupa varias clases</p>
+            </div>
+          </div>
+          <form onSubmit={handleCreateModule} className="space-y-4">
+            <div>
+              <label className={labelCls}>Título</label>
+              <input value={modTitle} onChange={(e) => setModTitle(e.target.value)} placeholder="Ej. Módulo 1: Introducción" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Descripción (opcional)</label>
+              <input value={modDesc} onChange={(e) => setModDesc(e.target.value)} placeholder="Qué se verá en este módulo" className={inputCls} />
+            </div>
+            <button type="submit" disabled={loadingMod}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1d1d1f] py-3 text-xs font-bold text-white transition-all hover:bg-[#0284c7] disabled:opacity-50 cursor-pointer">
+              <Plus size={15} /> {loadingMod ? 'Creando...' : 'Crear módulo'}
+            </button>
+          </form>
+        </div>
+
+        {/* Paso 2: clase */}
+        <div ref={lessonFormRef} className="scroll-mt-6 rounded-3xl border border-[#ededf0] bg-white p-6 shadow-sm lg:col-span-3">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f0f9ff] text-[#0284c7]"><Video size={20} /></span>
+            <div>
+              <h2 className="text-sm font-bold text-[#1d1d1f]">2. Publicar clase</h2>
+              <p className="text-[11px] text-gray-400">Elige el módulo, el video y quién puede verla</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleCreateLesson} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelCls}>Módulo</label>
+                <select value={selectedModuleId} onChange={(e) => setSelectedModuleId(e.target.value)} className={inputCls}>
+                  <option value="">{modules.length ? 'Selecciona un módulo' : 'Primero crea un módulo'}</option>
+                  {modules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Título de la clase</label>
+                <input value={lessonTitle} onChange={(e) => setLessonTitle(e.target.value)} placeholder="Ej. Lectura de order blocks" className={inputCls} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Descripción (opcional)</label>
+                <input value={lessonDesc} onChange={(e) => setLessonDesc(e.target.value)} placeholder="Breve resumen" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Duración (seg.)</label>
+                <input type="number" min={1} value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="1200 = 20 min" className={inputCls} />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelCls}>¿Quién puede ver esta clase?</label>
+              <AccessPicker value={access} onChange={setAccess} />
+            </div>
+
+            <div>
+              <label className={labelCls}>Video</label>
+              <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+                {([['url', LinkIcon, 'Enlace (YouTube / Vimeo)'], ['upload', Upload, 'Subir desde mi PC']] as const).map(([k, Icon, label]) => (
+                  <button key={k} type="button" onClick={() => { setVideoSource(k); setFormError(null) }}
+                    className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer ${
+                      videoSource === k ? 'bg-white text-[#0284c7] shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}>
+                    <Icon size={14} /> {label}
+                  </button>
+                ))}
+              </div>
+
+              {videoSource === 'url' ? (
+                <input value={lessonUrl} onChange={(e) => setLessonUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." className={inputCls} />
+              ) : (
+                <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/60 px-4 py-6 text-center transition-colors hover:border-[#0284c7] hover:bg-[#f0f9ff]/40">
+                  <Film size={26} className="text-gray-400" />
+                  {videoFile ? (
+                    <>
+                      <span className="text-xs font-bold text-[#1d1d1f]">{videoFile.name}</span>
+                      <span className="text-[11px] text-gray-500">{(videoFile.size / 1024 / 1024).toFixed(1)} MB · clic para cambiar</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xs font-bold text-gray-700">Haz clic para elegir un video</span>
+                      <span className="text-[11px] text-gray-400">MP4, WebM, MKV o MOV · máximo {MAX_MB} MB</span>
+                    </>
+                  )}
+                  <input type="file" accept="video/mp4,video/webm,video/x-matroska,video/quicktime,.mkv,.mov" className="hidden"
+                    onChange={(e) => onPickFile(e.target.files?.[0] || null)} />
+                </label>
+              )}
+            </div>
+
+            {formError && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-4">
+                <XCircle size={18} className="mt-0.5 shrink-0 text-rose-500" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-rose-700">{formError.title}</p>
+                  <p className="mt-1 break-words text-[11px] leading-relaxed text-rose-600">{formError.detail}</p>
+                </div>
+                <button type="button" onClick={() => setFormError(null)} className="text-rose-400 hover:text-rose-600 cursor-pointer"><X size={15} /></button>
+              </div>
+            )}
+
+            {publishing && status && (
+              <div className="rounded-xl border border-[#0284c7]/20 bg-[#f0f9ff] p-3">
+                <p className="mb-2 text-[11px] font-bold text-[#0284c7]">{status}</p>
+                <div className="h-1.5 overflow-hidden rounded-full bg-[#0284c7]/15">
+                  <div className="h-full w-1/3 animate-pulse rounded-full bg-[#0284c7]" />
+                </div>
+              </div>
+            )}
+
+            <button type="submit" disabled={publishing}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0284c7] py-3.5 text-xs font-bold text-white shadow-md shadow-[#0284c7]/20 transition-all hover:bg-[#c94a1a] disabled:opacity-50 cursor-pointer">
+              <Upload size={15} /> {publishing ? 'Publicando...' : 'Publicar clase'}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Listado */}
+      <div className="space-y-3">
+        <h3 className="flex items-center gap-2 text-sm font-bold text-[#1d1d1f]">
+          <Layers size={16} className="text-[#0284c7]" /> Módulos y clases publicados
+        </h3>
+
+        {loadingData ? (
+          <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center text-xs text-gray-400">Cargando contenido...</div>
+        ) : modules.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-gray-300 bg-white p-10 text-center">
+            <Layers size={28} className="mx-auto mb-2 text-gray-300" />
+            <p className="text-xs font-bold text-gray-600">Todavía no hay módulos</p>
+            <p className="mt-1 text-[11px] text-gray-400">Crea el primero con el formulario de arriba.</p>
+          </div>
+        ) : (
+          modules.map((mod) => {
+            const lessons = mod.lessons ?? []
+            const isClosed = closed.has(mod.id)
+            return (
+              <div key={mod.id} className="overflow-hidden rounded-3xl border border-[#ededf0] bg-white shadow-sm">
+                <div className="flex flex-wrap items-center gap-2 px-5 py-4">
+                  <button type="button" onClick={() => toggleModule(mod.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer">
+                    <ChevronDown size={18} className={`shrink-0 text-gray-400 transition-transform ${isClosed ? '-rotate-90' : ''}`} />
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-[#1d1d1f]">
+                        <span className="truncate">{mod.title}</span>
+                        <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-500">{lessons.length} clase{lessons.length === 1 ? '' : 's'}</span>
+                        {mod.isPublished === false && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase text-gray-600"><EyeOff size={10} /> Oculto</span>
+                        )}
+                      </p>
+                      {mod.description && <p className="truncate text-[11px] text-gray-400">{mod.description}</p>}
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button type="button" onClick={() => addLessonTo(mod.id)}
+                      className="flex items-center gap-1 rounded-lg bg-[#f0f9ff] px-3 py-1.5 text-[11px] font-bold text-[#0284c7] hover:bg-[#ffe6da] cursor-pointer">
+                      <Plus size={13} /> Agregar clase
+                    </button>
+                    <button type="button" title="Editar módulo"
+                      onClick={() => setEditModule({ id: mod.id, title: mod.title ?? '', description: mod.description ?? '', order: String(mod.order ?? 0), isPublished: mod.isPublished !== false })}
+                      className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-[#0284c7] cursor-pointer"><Pencil size={15} /></button>
+                    <button type="button" title="Eliminar módulo" onClick={() => handleDelete('module', mod.id, mod.title, lessons.length)}
+                      className="rounded-lg p-2 text-rose-500 hover:bg-rose-50 cursor-pointer"><Trash2 size={15} /></button>
+                  </div>
+                </div>
+
+                {!isClosed && (
+                  <div className="space-y-2 border-t border-gray-100 bg-gray-50/50 px-5 py-4">
+                    {lessons.length === 0 ? (
+                      <p className="text-xs italic text-gray-400">Este módulo aún no tiene clases.</p>
+                    ) : (
+                      lessons.map((lesson) => {
+                        const a = ACCESS[normalizeAccess(lesson.allowedRole)]
+                        const AIcon = a.icon
+                        return (
+                          <div key={lesson.id} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-[11px] font-black text-gray-500">{lesson.order}</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-bold text-[#1d1d1f]">{lesson.title}</p>
+                              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${a.badge}`}><AIcon size={11} /> {a.label}</span>
+                                {lesson.isPublished === false && (
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-gray-200 px-2 py-0.5 text-[10px] font-bold text-gray-600"><EyeOff size={10} /> Oculta</span>
+                                )}
+                              </div>
+                            </div>
+                            <button type="button" title="Editar clase" onClick={() => openEditLesson(lesson.id, mod.id)}
+                              className="rounded-lg p-2 text-gray-500 hover:bg-[#f0f9ff] hover:text-[#0284c7] cursor-pointer"><Pencil size={15} /></button>
+                            <button type="button" title="Eliminar clase" onClick={() => handleDelete('lesson', lesson.id, lesson.title)}
+                              className="rounded-lg p-2 text-rose-500 hover:bg-rose-50 cursor-pointer"><Trash2 size={15} /></button>
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {/* Modal: editar clase */}
+      {editLesson && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="text-sm font-bold text-[#1d1d1f]">Editar clase</h3>
+              <button type="button" onClick={() => setEditLesson(null)} className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 cursor-pointer"><X size={16} /></button>
+            </div>
+            <form onSubmit={handleSaveLesson} className="space-y-4">
+              <div><label className={labelCls}>Título</label>
+                <input value={editLesson.title} onChange={(e) => setEditLesson({ ...editLesson, title: e.target.value })} className={inputCls} required /></div>
+              <div><label className={labelCls}>Descripción</label>
+                <input value={editLesson.description} onChange={(e) => setEditLesson({ ...editLesson, description: e.target.value })} className={inputCls} /></div>
+              <div><label className={labelCls}>Enlace del video</label>
+                <input value={editLesson.videoUrl} onChange={(e) => setEditLesson({ ...editLesson, videoUrl: e.target.value })} className={inputCls} required /></div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-3 sm:col-span-1"><label className={labelCls}>Módulo</label>
+                  <select value={editLesson.moduleId} onChange={(e) => setEditLesson({ ...editLesson, moduleId: e.target.value })} className={inputCls}>
+                    {modules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
+                  </select></div>
+                <div><label className={labelCls}>Orden</label>
+                  <input type="number" value={editLesson.order} onChange={(e) => setEditLesson({ ...editLesson, order: e.target.value })} className={inputCls} /></div>
+                <div><label className={labelCls}>Duración (seg.)</label>
+                  <input type="number" min={1} value={editLesson.duration} onChange={(e) => setEditLesson({ ...editLesson, duration: e.target.value })} className={inputCls} /></div>
+              </div>
+              <div><label className={labelCls}>¿Quién puede verla?</label>
+                <AccessPicker value={editLesson.allowedRole} onChange={(v) => setEditLesson({ ...editLesson, allowedRole: v })} /></div>
+              <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={editLesson.isPublished} onChange={(e) => setEditLesson({ ...editLesson, isPublished: e.target.checked })} className="h-4 w-4 accent-[#0284c7]" />
+                Visible para los alumnos
+              </label>
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setEditLesson(null)} className="flex-1 rounded-xl bg-gray-100 py-3 text-xs font-bold text-gray-700 hover:bg-gray-200 cursor-pointer">Cancelar</button>
+                <button type="submit" disabled={savingEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#0284c7] disabled:opacity-50 cursor-pointer">
+                  <Save size={14} /> {savingEdit ? 'Guardando...' : 'Guardar'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: editar módulo */}
+      {editModule && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="text-sm font-bold text-[#1d1d1f]">Editar módulo</h3>
+              <button type="button" onClick={() => setEditModule(null)} className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 cursor-pointer"><X size={16} /></button>
+            </div>
+            <form onSubmit={handleSaveModule} className="space-y-4">
+              <div><label className={labelCls}>Título</label>
+                <input value={editModule.title} onChange={(e) => setEditModule({ ...editModule, title: e.target.value })} className={inputCls} required /></div>
+              <div><label className={labelCls}>Descripción</label>
+                <input value={editModule.description} onChange={(e) => setEditModule({ ...editModule, description: e.target.value })} className={inputCls} /></div>
+              <div><label className={labelCls}>Orden</label>
+                <input type="number" value={editModule.order} onChange={(e) => setEditModule({ ...editModule, order: e.target.value })} className={inputCls} /></div>
+              <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={editModule.isPublished} onChange={(e) => setEditModule({ ...editModule, isPublished: e.target.checked })} className="h-4 w-4 accent-[#0284c7]" />
+                Visible para los alumnos
+              </label>
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setEditModule(null)} className="flex-1 rounded-xl bg-gray-100 py-3 text-xs font-bold text-gray-700 hover:bg-gray-200 cursor-pointer">Cancelar</button>
+                <button type="submit" disabled={savingEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#0284c7] disabled:opacity-50 cursor-pointer">
+                  <Save size={14} /> {savingEdit ? 'Guardando...' : 'Guardar'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+===== src\app\dashboard\clases\page.tsx =====
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CheckCircle2, Circle, PlayCircle, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft, Check, Crown, Star, ShieldCheck, Sparkles, Clock, BookOpen, AlertCircle } from 'lucide-react'
+import SecurePlayer from '@/components/dashboard/SecurePlayer'
+import { getMembership } from '@/lib/membership'
+
+interface Lesson {
+  id: string; title: string; description: string | null
+  duration: number | null; order: number; allowedRole: string
+}
+interface Mod { id: string; title: string; description: string | null; lessons: Lesson[] }
+
+const STORE_KEY = 'invictus:lastLesson'
+
+function fmtDuration(s: number | null) {
+  if (!s) return null
+  const m = Math.round(s / 60)
+  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`
+}
+
+function CourseContent({
+  modules, progress, currentId, openMods, onToggle, onOpen,
+}: {
+  modules: Mod[]; progress: Record<string, boolean>; currentId: string | null
+  openMods: Set<string>; onToggle: (id: string) => void; onOpen: (id: string) => void
+}) {
+  return (
+    <div className="space-y-3">
+      {modules.map((mod, i) => {
+        const done = mod.lessons.filter((l) => progress[l.id]).length
+        const pct = Math.round((done / mod.lessons.length) * 100)
+        const open = openMods.has(mod.id)
+        return (
+          <div key={mod.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <button type="button" onClick={() => onToggle(mod.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left cursor-pointer">
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${pct === 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-sky-100 text-sky-600'}`}>
+                {pct === 100 ? <Check size={17} /> : i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-slate-900">{mod.title}</p>
+                <p className="text-[11px] text-slate-500">{done} de {mod.lessons.length} completadas</p>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-sky-500'}`} style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+              <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+
+            {open && (
+              <div className="space-y-1 border-t border-slate-100 bg-slate-50/60 p-2">
+                {mod.lessons.map((l) => {
+                  const completed = !!progress[l.id]
+                  const current = l.id === currentId
+                  const d = fmtDuration(l.duration)
+                  return (
+                    <button key={l.id} type="button" onClick={() => onOpen(l.id)}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all cursor-pointer ${current ? 'bg-sky-50 ring-1 ring-sky-300' : 'hover:bg-white'}`}>
+                      {completed ? <CheckCircle2 size={19} className="shrink-0 text-emerald-500" />
+                        : current ? <PlayCircle size={19} className="shrink-0 text-sky-500" />
+                        : <Circle size={19} className="shrink-0 text-slate-300" />}
+                      <div className="min-w-0 flex-1">
+                        <p className={`truncate text-xs font-bold ${completed ? 'text-slate-500' : 'text-slate-800'}`}>{l.title}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {completed ? 'Completada' : current ? 'Viendo ahora' : 'Pendiente'}{d ? ` · ${d}` : ''}
+                        </p>
+                      </div>
+                      {l.allowedRole === 'MENTORIA' && <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-700">Mentoría</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export default function ClasesPage() {
+  const [modules, setModules] = useState<Mod[]>([])
+  const [progress, setProgress] = useState<Record<string, boolean>>({})
+  const [role, setRole] = useState('CLUB')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [view, setView] = useState<'list' | 'lesson'>('list')
+  const [currentId, setCurrentId] = useState<string | null>(null)
+  const [openMods, setOpenMods] = useState<Set<string>>(new Set())
+  const [firstLoad, setFirstLoad] = useState(true)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/student/courses', { cache: 'no-store' })
+      if (res.status === 401) { window.location.href = '/login'; return }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+      setModules(data.modules)
+      setRole(data.role)
+      const p: Record<string, boolean> = {}
+      Object.entries<any>(data.progress).forEach(([k, v]) => { p[k] = !!v.completed })
+      setProgress(p)
+      setError(null)
+    } catch (e: any) {
+      setError(e?.message || 'No se pudo cargar el contenido')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Sincronización: cada 20 s y al volver a la pestaña
+  useEffect(() => {
+    load()
+    const t = setInterval(load, 20000)
+    const onVis = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis) }
+  }, [load])
+
+  const flat = useMemo(() => modules.flatMap((m) => m.lessons), [modules])
+
+  // Primera carga: abre el módulo de la última lección, o el primero
+  useEffect(() => {
+    if (!firstLoad || modules.length === 0) return
+    let last: string | null = null
+    try { last = localStorage.getItem(STORE_KEY) } catch {}
+    const target = flat.find((l) => l.id === last) ?? flat.find((l) => !progress[l.id]) ?? flat[0]
+    if (target) {
+      setCurrentId(target.id)
+      const mod = modules.find((m) => m.lessons.some((l) => l.id === target.id))
+      setOpenMods(new Set(mod ? [mod.id] : [modules[0].id]))
+    }
+    setFirstLoad(false)
+  }, [firstLoad, modules, flat, progress])
+
+  // Si la lección actual fue eliminada por el admin
+  useEffect(() => {
+    if (currentId && flat.length && !flat.some((l) => l.id === currentId)) {
+      setCurrentId(flat[0].id)
+    }
+    if (flat.length === 0 && view === 'lesson') setView('list')
+  }, [flat, currentId, view])
+
+  const current = flat.find((l) => l.id === currentId) ?? null
+  const idx = current ? flat.findIndex((l) => l.id === current.id) : -1
+  const currentModule = current ? modules.find((m) => m.lessons.some((l) => l.id === current.id)) : null
+  const total = flat.length
+  const done = flat.filter((l) => progress[l.id]).length
+  const pct = total ? Math.round((done / total) * 100) : 0
+  const m = getMembership(role)
+  const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : Star
+
+  const toggleModule = (id: string) => setOpenMods((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+
+  const openLesson = (id: string) => {
+    setCurrentId(id)
+    setView('lesson')
+    try { localStorage.setItem(STORE_KEY, id) } catch {}    try { sessionStorage.setItem('invictus:viewing', id) } catch {}
+    const mod = modules.find((x) => x.lessons.some((l) => l.id === id))
+    if (mod) setOpenMods((prev) => new Set(prev).add(mod.id))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const toggleComplete = async () => {
+    if (!current) return
+    const next = !progress[current.id]
+    setProgress((p) => ({ ...p, [current.id]: next }))
+    try {
+      const res = await fetch('/api/student/progress', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonId: current.id, completed: next }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setProgress((p) => ({ ...p, [current.id]: !next }))
+      setError('No se pudo guardar tu progreso. Revisa tu conexión e inténtalo de nuevo.')
+    }
+  }
+
+  if (loading) {
+    return <div className="flex min-h-[60vh] items-center justify-center text-xs font-bold text-slate-400">Cargando tus clases...</div>
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 p-5 md:p-8">
+      {error && (
+        <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-bold text-rose-700">
+          <AlertCircle size={16} className="shrink-0" /> {error}
+        </div>
+      )}
+
+      {total === 0 ? (
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center">
+          <BookOpen size={32} className="mx-auto mb-3 text-slate-300" />
+          <p className="text-sm font-bold text-slate-700">Aún no hay clases disponibles para tu membresía</p>
+          <p className="mt-1 text-xs text-slate-400">Cuando se publiquen, aparecerán aquí automáticamente.</p>
+        </div>
+      ) : view === 'list' ? (
+        <>
+          {/* Banner de membresía */}
+          <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${m.gradient} p-7 text-white shadow-xl ${m.glow}`}>
+            <MIcon size={150} className="absolute -right-6 -top-6 opacity-15" />
+            <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-black uppercase tracking-widest backdrop-blur">
+                  <MIcon size={13} /> {m.title}
+                </span>
+                <h1 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">Tus lecciones</h1>
+                <p className="mt-1 max-w-md text-sm text-white/85">{m.tagline}</p>
+              </div>
+              <button type="button" onClick={() => openLesson(currentId ?? flat[0].id)}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-black text-slate-900 shadow-lg transition-transform hover:scale-105 cursor-pointer">
+                <PlayCircle size={18} /> {done === 0 ? 'Empezar' : 'Continuar donde lo dejaste'}
+              </button>
+            </div>
+          </div>
+
+          {/* Resumen de progreso */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Progreso', value: `${pct}%`, icon: Sparkles, color: 'text-sky-600 bg-sky-50' },
+              { label: 'Completadas', value: done, icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
+              { label: 'Por ver', value: total - done, icon: Clock, color: 'text-amber-600 bg-amber-50' },
+              { label: 'Total', value: total, icon: BookOpen, color: 'text-slate-600 bg-slate-100' },
+            ].map((s) => (
+              <div key={s.label} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${s.color}`}><s.icon size={19} /></span>
+                <div>
+                  <p className="text-xl font-black leading-none text-slate-900">{s.value}</p>
+                  <p className="mt-1 text-[11px] font-bold text-slate-500">{s.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700" style={{ width: `${pct}%` }} />
+          </div>
+
+          <div>
+            <h2 className="mb-3 text-sm font-black text-slate-900">Contenido del curso</h2>
+            <CourseContent modules={modules} progress={progress} currentId={currentId} openMods={openMods} onToggle={toggleModule} onOpen={openLesson} />
+          </div>
+        </>
+      ) : (
+        current && (
+          <>
+            <button type="button" onClick={() => { setView('list'); try { sessionStorage.removeItem('invictus:viewing') } catch {} }} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-sky-600 cursor-pointer">
+              <ArrowLeft size={15} /> Volver a las lecciones
+            </button>
+
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+              <div className="space-y-4 xl:col-span-2">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-sky-500">{currentModule?.title}</p>
+                  <h1 className="mt-1 text-xl font-black tracking-tight text-slate-900">{current.title}</h1>
+                </div>
+
+                <SecurePlayer key={current.id} lessonId={current.id} title={current.title} />
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <button type="button" onClick={toggleComplete}
+                    className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-black transition-all cursor-pointer ${
+                      progress[current.id] ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-sky-600 text-white shadow-md shadow-sky-300/50 hover:bg-sky-700'
+                    }`}>
+                    <CheckCircle2 size={16} /> {progress[current.id] ? 'Completada · clic para desmarcar' : 'Marcar como completada'}
+                  </button>
+                  <div className="flex gap-2">
+                    <button type="button" disabled={idx <= 0} onClick={() => openLesson(flat[idx - 1].id)}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:border-sky-300 disabled:opacity-40 cursor-pointer">
+                      <ChevronLeft size={15} /> Anterior
+                    </button>
+                    <button type="button" disabled={idx >= flat.length - 1} onClick={() => openLesson(flat[idx + 1].id)}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:border-sky-300 disabled:opacity-40 cursor-pointer">
+                      Siguiente <ChevronRight size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h2 className="text-sm font-black text-slate-900">Sobre esta clase</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{current.description || 'Esta clase no tiene descripción.'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 xl:sticky xl:top-6 xl:self-start">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-black text-slate-700">
+                    <span>Tu progreso</span><span className="text-sky-600">{pct}%</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700" style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-slate-500">{done} de {total} clases completadas</p>
+                </div>
+                <CourseContent modules={modules} progress={progress} currentId={currentId} openMods={openMods} onToggle={toggleModule} onOpen={openLesson} />
+              </div>
+            </div>
+          </>
+        )
+      )}
+    </div>
+  )
+}

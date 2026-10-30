@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prismaDash } from '@/lib/prisma-dashboard'
+import { cleanVideoInput } from '@/lib/video-source'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -40,8 +41,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
     if (typeof body.description === 'string') data.description = body.description.trim() || null
     if (typeof body.videoUrl === 'string') {
-      if (!body.videoUrl.trim()) return NextResponse.json({ error: 'El enlace del video no puede estar vacío' }, { status: 400 })
-      data.videoUrl = body.videoUrl.trim()
+      const clean = cleanVideoInput(body.videoUrl)
+      if (!clean) return NextResponse.json({ error: 'Pega un enlace válido (http:// o https://) o un código <iframe>.' }, { status: 400 })
+      data.videoUrl = clean
     }
     if (body.duration !== undefined) {
       const d = parseInt(String(body.duration), 10)

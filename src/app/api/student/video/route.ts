@@ -4,34 +4,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { visibleLevels } from '@/lib/access'
+import { resolveVideo, cleanVideoInput } from '@/lib/video-source'
+import { activeLock } from '@/lib/video-security'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-function youtubeId(url: string): string | null {
-  try {
-    const u = new URL(url)
-    const host = u.hostname.replace(/^www\./, '')
-    if (host === 'youtu.be') return u.pathname.split('/').filter(Boolean)[0] || null
-    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
-      if (u.pathname === '/watch') return u.searchParams.get('v')
-      const parts = u.pathname.split('/')
-      if (['embed', 'shorts', 'live'].includes(parts[1])) return parts[2] || null
-    }
-  } catch {}
-  return null
-}
-
-function vimeoEmbed(url: string): string | null {
-  try {
-    const u = new URL(url)
-    if (u.hostname.replace(/^www\./, '') !== 'vimeo.com') return null
-    const id = u.pathname.split('/').filter(Boolean)[0]
-    return id && /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}?title=0&byline=0&portrait=0` : null
-  } catch {
-    return null
-  }
-}
 
 export async function GET(req: Request) {
   try {
@@ -40,6 +17,17 @@ export async function GET(req: Request) {
 
     const lessonId = new URL(req.url).searchParams.get('lessonId') || ''
     if (!lessonId) return NextResponse.json({ error: 'Falta la lección' }, { status: 400 })
+
+    // Alumno bloqueado por seguridad: no se entrega el video hasta que un administrador lo habilite
+    if (session.user.role !== 'ADMIN') {
+      const lock = await activeLock(session.user.id)
+      if (lock) {
+        return NextResponse.json(
+          { error: 'Acceso a videos suspendido por seguridad.', locked: true, reason: lock.reason },
+          { status: 403 }
+        )
+      }
+    }
 
     const lesson = await prismaDash.lesson.findUnique({ where: { id: lessonId }, include: { module: true } })
     if (!lesson || !lesson.isPublished || !lesson.module.isPublished) {
@@ -52,13 +40,7 @@ export async function GET(req: Request) {
     }
 
     const watermark = session.user.email || session.user.name || 'Alumno'
-    const url = lesson.videoUrl
-
-    const yt = youtubeId(url)
-    if (yt) return NextResponse.json({ type: 'youtube', id: yt, watermark })
-
-    const vm = vimeoEmbed(url)
-    if (vm) return NextResponse.json({ type: 'embed', src: vm, watermark })
+    const url = cleanVideoInput(lesson.videoUrl) || String(lesson.videoUrl || '').trim()
 
     // Video subido a Supabase: enlace firmado de corta duración
     const marker = '/storage/v1/object/public/videos/'
@@ -72,9 +54,16 @@ export async function GET(req: Request) {
         const { data } = await supabase.storage.from('videos').createSignedUrl(path, 3600)
         if (data?.signedUrl) return NextResponse.json({ type: 'file', url: data.signedUrl, watermark })
       }
+      return NextResponse.json({ type: 'file', url, watermark })
     }
 
-    return NextResponse.json({ type: 'file', url, watermark })
+    if (!/^https?:\/\//i.test(url)) return NextResponse.json({ error: 'El enlace del video no es válido.' }, { status: 422 })
+
+    const r = resolveVideo(url)
+    if (r.type === 'youtube') return NextResponse.json({ type: 'youtube', id: r.id, watermark })
+    if (r.type === 'hls') return NextResponse.json({ type: 'hls', url: r.url, watermark })
+    if (r.type === 'file') return NextResponse.json({ type: 'file', url: r.url, watermark })
+    return NextResponse.json({ type: 'embed', src: r.src, watermark })
   } catch (err: any) {
     console.error('GET student/video:', err)
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })

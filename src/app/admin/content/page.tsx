@@ -268,7 +268,7 @@ export default function AdminContentPage() {
     if (!selectedModuleId) return setFormError({ title: 'Falta el módulo', detail: 'Elige a qué módulo pertenece la clase. Si no hay ninguno, crea uno primero.' })
     if (!lessonTitle.trim()) return setFormError({ title: 'Falta el título', detail: 'Escribe el título de la clase.' })
     if (videoSource === 'url') {
-      if (!/^https?:\/\//i.test(lessonUrl.trim())) return setFormError({ title: 'Enlace no válido', detail: 'El enlace debe empezar con https:// (por ejemplo, un enlace de YouTube).' })
+      if (!/^https?:\/\//i.test(lessonUrl.trim()) && !/<iframe[\s\S]*src\s*=/i.test(lessonUrl)) return setFormError({ title: 'Enlace no válido', detail: 'El enlace debe empezar con https:// (por ejemplo, un enlace de YouTube).' })
     } else if (!videoFile) {
       return setFormError({ title: 'No elegiste ningún video', detail: 'Selecciona un archivo de video de tu computadora.' })
     }
@@ -512,7 +512,7 @@ export default function AdminContentPage() {
             <div>
               <label className={labelCls}>Video</label>
               <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
-                {([['url', LinkIcon, 'Enlace (YouTube / Vimeo)'], ['upload', Upload, 'Subir desde mi PC']] as const).map(([k, Icon, label]) => (
+                {([['url', LinkIcon, 'Enlace o embed'], ['upload', Upload, 'Subir desde mi PC']] as const).map(([k, Icon, label]) => (
                   <button key={k} type="button" onClick={() => { setVideoSource(k); setFormError(null) }}
                     className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer ${
                       videoSource === k ? 'bg-white text-[#0284c7] shadow-sm' : 'text-gray-500 hover:text-gray-700'
@@ -523,7 +523,7 @@ export default function AdminContentPage() {
               </div>
 
               {videoSource === 'url' ? (
-                <input value={lessonUrl} onChange={(e) => setLessonUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." className={inputCls} />
+                <input value={lessonUrl} onChange={(e) => setLessonUrl(e.target.value)} placeholder="Enlace (YouTube, Vimeo, Bunny, MP4, m3u8...) o codigo embed" className={inputCls} />
               ) : (
                 <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/60 px-4 py-6 text-center transition-colors hover:border-[#0284c7] hover:bg-[#f0f9ff]/40">
                   <Film size={26} className="text-gray-400" />

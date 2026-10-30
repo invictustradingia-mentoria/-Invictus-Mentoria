@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Radio, Globe2, Monitor, Smartphone, Tablet, Activity, ShieldAlert, Users, AlertCircle, MapPin, PlayCircle, LogIn, CheckCircle2, Eye } from 'lucide-react'
 import WorldMap from '@/components/admin/WorldMap'
+import SecurityPanel from '@/components/admin/SecurityPanel'
 
 interface Sess {
   id: string; online: boolean; lastSeen: string; page: string | null; lesson: string | null
@@ -115,6 +116,8 @@ export default function LivePage() {
       </div>
 
       {error && <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700"><AlertCircle size={16} /> {error}</div>}
+
+      <SecurityPanel />
 
       <div className="inline-flex rounded-2xl bg-gray-100 p-1">
         <button type="button" onClick={() => setTab('live')} className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${tab === 'live' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-gray-500'}`}><Activity size={14} /> Actividad en vivo</button>
