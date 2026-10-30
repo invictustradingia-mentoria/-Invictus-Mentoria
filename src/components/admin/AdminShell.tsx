@@ -4,17 +4,21 @@ import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { Users, Radio, BookOpen, ExternalLink, LogOut, Menu, X } from 'lucide-react'
+import { Users, Radio, BookOpen, ExternalLink, LogOut, Menu, X, MessageSquare, Video, LifeBuoy } from 'lucide-react'
 
 const NAV = [
   { href: '/admin', label: 'Gestión de Alumnos', icon: Users, exact: true },
   { href: '/admin/live', label: 'Live Activity', icon: Radio },
   { href: '/admin/content', label: 'Gestor de Contenido', icon: BookOpen },
+  { href: '/admin/chat', label: 'Chat de la Comunidad', icon: MessageSquare },
+  { href: '/admin/llamadas', label: 'Llamadas de Zoom', icon: Video },
+  { href: '/admin/soporte', label: 'Soporte', icon: LifeBuoy },
 ]
 
 export default function AdminShell({ name, children }: { name: string; children: ReactNode }) {
   const pathname = usePathname() || ''
   const [open, setOpen] = useState(false)
+  const padded = ['/admin/chat', '/admin/llamadas', '/admin/soporte'].some((p) => pathname.startsWith(p))
 
   const side = (
     <div className="flex h-full flex-col">
@@ -54,7 +58,9 @@ export default function AdminShell({ name, children }: { name: string; children:
         </div>
       )}
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-gray-200 bg-white lg:block">{side}</aside>
-      <main className="min-w-0 lg:pl-64">{children}</main>
+           <main className="min-w-0 lg:pl-64">
+        <div className={padded ? 'p-4 sm:p-6 lg:p-8' : ''}>{children}</div>
+      </main>
     </div>
   )
 }

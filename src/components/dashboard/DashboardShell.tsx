@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { PlayCircle, UserCircle2, ShieldCheck, LogOut, Menu, X, Crown, Star } from 'lucide-react'
+import { PlayCircle, UserCircle2, ShieldCheck, LogOut, Menu, X, Crown, Star, MessageSquare, Video } from 'lucide-react'
 import { getMembership } from '@/lib/membership'
 
 interface ShellUser {
@@ -35,8 +35,13 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
 
   const nav = [
     { href: '/dashboard/clases', label: 'Mis clases', icon: PlayCircle },
+    { href: '/dashboard/chat', label: 'Comunidad', icon: MessageSquare },
+    { href: '/dashboard/llamadas', label: 'Llamadas en vivo', icon: Video },
     { href: '/dashboard/perfil', label: 'Mi perfil', icon: UserCircle2 },
   ]
+
+  // Las páginas nuevas (chat y llamadas) llevan un margen alrededor.
+  const padded = !!pathname && (pathname.startsWith('/dashboard/chat') || pathname.startsWith('/dashboard/llamadas'))
 
   const sidebar = (
     <div className="flex h-full flex-col">
@@ -89,7 +94,8 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   )
 
   return (
-    <div className="min-h-screen bg-slate-50/70 text-slate-800">      <ActivityTracker />
+    <div className="min-h-screen bg-slate-50/70 text-slate-800">
+      <ActivityTracker />
       {/* Barra móvil */}
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
         <span className="text-sm font-black text-slate-900">INVICTUS <span className="text-sky-500">CAMPUS</span></span>
@@ -109,7 +115,9 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
       {/* Menú escritorio */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white lg:block">{sidebar}</aside>
 
-      <main className="lg:pl-64">{children}</main>
+      <main className="lg:pl-64">
+        <div className={padded ? 'p-3 sm:p-6' : ''}>{children}</div>
+      </main>
     </div>
   )
 }
