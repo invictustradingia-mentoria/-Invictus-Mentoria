@@ -142,3 +142,42 @@ model ActivityLog {
 
   @@map("activity_logs")
 }
+// ---------- Soporte en vivo y avisos del asistente ----------
+
+model SupportThread {
+  id            String           @id @default(cuid())
+  token         String           @unique
+  name          String
+  email         String?
+  status        String           @default("OPEN") // OPEN | CLOSED
+  ipHash        String
+  unreadAdmin   Int              @default(0)
+  lastMessageAt DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+  messages      SupportMessage[]
+
+  @@index([lastMessageAt])
+  @@index([ipHash, createdAt])
+  @@map("support_threads")
+}
+
+model SupportMessage {
+  id        String        @id @default(cuid())
+  threadId  String
+  from      String // VISITOR | STAFF
+  content   String
+  createdAt DateTime      @default(now())
+  thread    SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@map("support_messages")
+}
+
+model BotNotice {
+  id        String   @id @default(cuid())
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("bot_notices")
+}
