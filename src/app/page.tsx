@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Landing from '../components/landing/Landing'
+import LandingBot from '../components/landing/LandingBot'
 
 export const metadata: Metadata = {
   title: 'Invictus Campus',
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 }
 
 export default function Home() {
-  return <Landing />
+  return (
+    <>
+      <Landing />
+      <LandingBot />
+    </>
+  )
 }

@@ -181,3 +181,52 @@ model BotNotice {
 
   @@map("bot_notices")
 }
+
+// ---------- Comunidad y llamadas ----------
+
+model ChatMessage {
+  id        String    @id @default(cuid())
+  userId    String
+  userName  String
+  userRole  String
+  content   String
+  pinned    Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("chat_messages")
+}
+
+model ChatSanction {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  kind      String // MUTE | BAN
+  reason    String?
+  until     DateTime? // null = permanente
+  createdBy String
+  createdAt DateTime  @default(now())
+
+  @@map("chat_sanctions")
+}
+
+model ZoomCall {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  startsAt     DateTime
+  durationMin  Int      @default(60)
+  joinUrl      String
+  meetingId    String?
+  passcode     String?
+  allowedRole  String   @default("ALL")
+  recordingUrl String?
+  isPublished  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([startsAt])
+  @@map("zoom_calls")
+}
