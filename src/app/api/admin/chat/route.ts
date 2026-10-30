@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
+import { avatarIds } from '@/lib/chat-avatars'
 import { getAdmin, cleanText, MAX_LEN } from '@/lib/chat-utils'
 
 export const runtime = 'nodejs'
@@ -28,8 +29,11 @@ export async function GET() {
     const byId = new Map<string, any>(users.map((u: any) => [u.id, u]))
     const sanctionByUser = new Map<string, any>(sanctions.map((s: any) => [s.userId, s]))
 
+    const avatars = await avatarIds(ids)
+
     return NextResponse.json(
       {
+        avatars,
         messages: messages.reverse().map((m: any) => ({
           ...m,
           userEmail: byId.get(m.userId)?.email || null,

@@ -147,7 +147,7 @@ export default function SoportePage() {
     <div className="mx-auto max-w-6xl space-y-5">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-          <LifeBuoy className="text-[#e25822]" size={24} /> Soporte
+          <LifeBuoy className="text-[#0284c7]" size={24} /> Soporte
           {unreadOpen > 0 && <span className="rounded-full bg-red-500 px-2.5 py-0.5 text-xs font-bold text-white">{unreadOpen} nuevo{unreadOpen > 1 ? 's' : ''}</span>}
         </h1>
         <p className="text-sm text-slate-500">Responde a quienes piden hablar con soporte desde la página principal y administra los avisos fijos del asistente.</p>
@@ -155,7 +155,7 @@ export default function SoportePage() {
 
       <div className="flex gap-2">
         {([['chats', 'Conversaciones'], ['avisos', 'Avisos fijos del asistente']] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${tab === k ? 'bg-[#e25822] text-white shadow' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50'}`}>{l}</button>
+          <button key={k} onClick={() => setTab(k)} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${tab === k ? 'bg-[#0284c7] text-white shadow' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50'}`}>{l}</button>
         ))}
       </div>
 
@@ -167,12 +167,12 @@ export default function SoportePage() {
       )}
 
       {tab === 'chats' && (
-        <div className="grid h-[72vh] min-h-[480px] overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm lg:grid-cols-[320px_1fr]">
+        <div className="grid h-[72vh] min-h-[480px] overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm lg:grid-cols-[320px_1fr]">
           {/* Lista */}
-          <aside className={`flex min-h-0 flex-col border-r border-orange-100 ${sel ? 'hidden lg:flex' : 'flex'}`}>
-            <div className="flex gap-1 border-b border-orange-100 bg-[#fff4ef] p-2">
+          <aside className={`flex min-h-0 flex-col border-r border-sky-100 ${sel ? 'hidden lg:flex' : 'flex'}`}>
+            <div className="flex gap-1 border-b border-sky-100 bg-[#f0f9ff] p-2">
               {(['OPEN', 'CLOSED'] as const).map((s) => (
-                <button key={s} onClick={() => setFilter(s)} className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold ${filter === s ? 'bg-white text-[#e25822] shadow-sm' : 'text-slate-500'}`}>
+                <button key={s} onClick={() => setFilter(s)} className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold ${filter === s ? 'bg-white text-[#0284c7] shadow-sm' : 'text-slate-500'}`}>
                   {s === 'OPEN' ? 'Abiertas' : 'Cerradas'}
                 </button>
               ))}
@@ -180,7 +180,7 @@ export default function SoportePage() {
             <div className="flex-1 overflow-y-auto">
               {list.length === 0 && <p className="p-8 text-center text-sm text-slate-400">No hay conversaciones.</p>}
               {list.map((t) => (
-                <button key={t.id} onClick={() => setSel(t.id)} className={`block w-full border-b border-slate-50 px-4 py-3 text-left transition hover:bg-[#fffaf7] ${sel === t.id ? 'bg-[#fff4ef]' : ''}`}>
+                <button key={t.id} onClick={() => setSel(t.id)} className={`block w-full border-b border-slate-50 px-4 py-3 text-left transition hover:bg-[#f8fcff] ${sel === t.id ? 'bg-[#f0f9ff]' : ''}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className={`truncate text-sm ${t.unreadAdmin > 0 ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>{t.name}</span>
                     <span className="shrink-0 text-[11px] text-slate-400">{ago(t.lastMessageAt)}</span>
@@ -199,13 +199,13 @@ export default function SoportePage() {
             {!sel || !conv ? (
               <div className="grid flex-1 place-items-center p-8 text-center text-sm text-slate-400">
                 <div>
-                  <LifeBuoy size={36} className="mx-auto mb-2 text-orange-200" />
+                  <LifeBuoy size={36} className="mx-auto mb-2 text-sky-200" />
                   {sel ? 'Cargando…' : 'Elige una conversación para responder.'}
                 </div>
               </div>
             ) : (
               <>
-                <header className="flex items-center gap-3 border-b border-orange-100 px-4 py-3">
+                <header className="flex items-center gap-3 border-b border-sky-100 px-4 py-3">
                   <button onClick={() => setSel(null)} className="lg:hidden"><ArrowLeft size={20} className="text-slate-500" /></button>
                   <div className="min-w-0 flex-1">
                     <h2 className="truncate font-bold text-slate-900">{conv.thread.name}</h2>
@@ -219,23 +219,23 @@ export default function SoportePage() {
                   <button onClick={removeThread} title="Eliminar" className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"><Trash2 size={16} /></button>
                 </header>
 
-                <div ref={box} onScroll={() => { const el = box.current; if (el) stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }} className="flex-1 space-y-2 overflow-y-auto bg-[#fffaf7] p-4">
+                <div ref={box} onScroll={() => { const el = box.current; if (el) stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }} className="flex-1 space-y-2 overflow-y-auto bg-[#f8fcff] p-4">
                   {conv.messages.map((m) => (
                     <div key={m.id} className={`flex ${m.from === 'STAFF' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm shadow-sm ${m.from === 'STAFF' ? 'rounded-br-md bg-[#e25822] text-white' : 'rounded-bl-md border border-slate-100 bg-white text-slate-800'}`}>
+                      <div className={`max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm shadow-sm ${m.from === 'STAFF' ? 'rounded-br-md bg-[#0284c7] text-white' : 'rounded-bl-md border border-slate-100 bg-white text-slate-800'}`}>
                         {m.content}
-                        <div className={`mt-0.5 text-right text-[10px] ${m.from === 'STAFF' ? 'text-orange-100' : 'text-slate-400'}`}>{hm(m.createdAt)}</div>
+                        <div className={`mt-0.5 text-right text-[10px] ${m.from === 'STAFF' ? 'text-sky-100' : 'text-slate-400'}`}>{hm(m.createdAt)}</div>
                       </div>
                     </div>
                   ))}
                   {conv.thread.status === 'CLOSED' && <p className="py-2 text-center text-xs text-slate-400">Conversación cerrada. Si respondes, se reabre.</p>}
                 </div>
 
-                <div className="flex items-end gap-2 border-t border-orange-100 p-3">
+                <div className="flex items-end gap-2 border-t border-sky-100 p-3">
                   <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} maxLength={2000} placeholder="Escribe tu respuesta…"
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); reply() } }}
-                    className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus:border-[#e25822] focus:ring-2 focus:ring-orange-100 sm:text-sm" />
-                  <button onClick={reply} disabled={!text.trim() || busy} aria-label="Enviar" className="grid h-11 w-11 place-items-center rounded-xl bg-[#e25822] text-white shadow hover:bg-[#c94a18] disabled:opacity-40"><Send size={18} /></button>
+                    className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus:border-[#0284c7] focus:ring-2 focus:ring-sky-100 sm:text-sm" />
+                  <button onClick={reply} disabled={!text.trim() || busy} aria-label="Enviar" className="grid h-11 w-11 place-items-center rounded-xl bg-[#0284c7] text-white shadow hover:bg-[#0369a1] disabled:opacity-40"><Send size={18} /></button>
                 </div>
               </>
             )}
@@ -244,14 +244,14 @@ export default function SoportePage() {
       )}
 
       {tab === 'avisos' && (
-        <section className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm">
-          <h2 className="flex items-center gap-2 font-bold text-slate-900"><Pin size={18} className="text-[#e25822]" /> Avisos fijos del asistente</h2>
+        <section className="rounded-2xl border border-sky-100 bg-white p-5 shadow-sm">
+          <h2 className="flex items-center gap-2 font-bold text-slate-900"><Pin size={18} className="text-[#0284c7]" /> Avisos fijos del asistente</h2>
           <p className="mb-4 mt-1 text-sm text-slate-500">Se muestran arriba del asistente de la página principal (máximo 5 activos, 300 caracteres cada uno). Ideal para promociones, horarios o novedades.</p>
           <div className="mb-5 flex gap-2">
             <input value={newNotice} onChange={(e) => setNewNotice(e.target.value)} maxLength={300} placeholder="Ej: Esta semana abrimos nuevas plazas de la Mentoría."
               onKeyDown={(e) => e.key === 'Enter' && addNotice()}
-              className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-base outline-none focus:border-[#e25822] focus:ring-2 focus:ring-orange-100 sm:text-sm" />
-            <button onClick={addNotice} disabled={!newNotice.trim()} className="flex items-center gap-1.5 rounded-xl bg-[#e25822] px-4 text-sm font-semibold text-white hover:bg-[#c94a18] disabled:opacity-40"><Plus size={16} /> Publicar</button>
+              className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-base outline-none focus:border-[#0284c7] focus:ring-2 focus:ring-sky-100 sm:text-sm" />
+            <button onClick={addNotice} disabled={!newNotice.trim()} className="flex items-center gap-1.5 rounded-xl bg-[#0284c7] px-4 text-sm font-semibold text-white hover:bg-[#0369a1] disabled:opacity-40"><Plus size={16} /> Publicar</button>
           </div>
           <ul className="space-y-2">
             {notices.length === 0 && <li className="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-400">Aún no hay avisos.</li>}

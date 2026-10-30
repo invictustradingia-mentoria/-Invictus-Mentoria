@@ -171,7 +171,7 @@ export default function ProfilePage() {
     const styles: Record<string, string> = {
       ADMIN: 'bg-purple-50 text-purple-700 border-purple-200',
       VIP: 'bg-amber-50 text-amber-700 border-amber-200',
-      STUDENT: 'bg-[#fff4ef] text-[#e25822] border-[#fcd5c3]',
+      STUDENT: 'bg-[#f0f9ff] text-[#0284c7] border-[#fcd5c3]',
     }
     return `inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${styles[role] || styles.STUDENT}`
   }
@@ -179,7 +179,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 size={28} className="animate-spin text-[#e25822]" />
+        <Loader2 size={28} className="animate-spin text-[#0284c7]" />
       </div>
     )
   }
@@ -188,9 +188,9 @@ export default function ProfilePage() {
     <div className="max-w-2xl mx-auto space-y-6 p-4 md:p-6">
       {/* Header */}
       <div>
-        <span className="text-[11px] font-bold text-[#e25822] tracking-wider uppercase block">MI CUENTA</span>
+        <span className="text-[11px] font-bold text-[#0284c7] tracking-wider uppercase block">MI CUENTA</span>
         <h1 className="text-xl sm:text-2xl font-bold text-[#1d1d1f] mt-0.5 flex items-center gap-2">
-          <User size={22} className="text-[#e25822]" />
+          <User size={22} className="text-[#0284c7]" />
           Mi Perfil
         </h1>
         <p className="text-[#86868b] text-[13px] mt-1">
@@ -217,13 +217,13 @@ export default function ProfilePage() {
         {/* Avatar */}
         <div className="relative">
           <div
-            className="w-20 h-20 rounded-2xl bg-[#fff4ef] border-2 border-[#fcd5c3] flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+            className="w-20 h-20 rounded-2xl bg-[#f0f9ff] border-2 border-[#fcd5c3] flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => fileInputRef.current?.click()}
           >
             {avatarPreview ? (
               <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-3xl font-bold text-[#e25822]">
+              <span className="text-3xl font-bold text-[#0284c7]">
                 {profile?.name?.charAt(0).toUpperCase() || '?'}
               </span>
             )}
@@ -231,7 +231,7 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#e25822] text-white flex items-center justify-center shadow-sm hover:bg-[#d04c18] transition-colors cursor-pointer"
+            className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#0284c7] text-white flex items-center justify-center shadow-sm hover:bg-[#d04c18] transition-colors cursor-pointer"
             title="Cambiar foto"
           >
             <Camera size={13} />
@@ -272,7 +272,7 @@ export default function ProfilePage() {
         <button
           onClick={() => setActiveTab('info')}
           className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            activeTab === 'info' ? 'bg-white text-[#e25822] shadow-sm' : 'text-[#6e6e73] hover:text-[#111]'
+            activeTab === 'info' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-[#6e6e73] hover:text-[#111]'
           }`}
         >
           Información Personal
@@ -280,7 +280,7 @@ export default function ProfilePage() {
         <button
           onClick={() => setActiveTab('security')}
           className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-            activeTab === 'security' ? 'bg-white text-[#e25822] shadow-sm' : 'text-[#6e6e73] hover:text-[#111]'
+            activeTab === 'security' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-[#6e6e73] hover:text-[#111]'
           }`}
         >
           <Lock size={12} />
@@ -305,7 +305,7 @@ export default function ProfilePage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Tu nombre completo"
-              className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#e25822] transition-colors"
+              className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#0284c7] transition-colors"
               required
             />
           </div>
@@ -334,7 +334,7 @@ export default function ProfilePage() {
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               placeholder="+34 600 000 000"
-              className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#e25822] transition-colors"
+              className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#0284c7] transition-colors"
             />
           </div>
 
@@ -342,7 +342,7 @@ export default function ProfilePage() {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#e25822] hover:bg-[#d04c18] text-white text-xs font-bold shadow-sm transition-all disabled:opacity-60 cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#d04c18] text-white text-xs font-bold shadow-sm transition-all disabled:opacity-60 cursor-pointer"
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
               {saving ? 'Guardando...' : 'Guardar Cambios'}
@@ -355,7 +355,7 @@ export default function ProfilePage() {
       {activeTab === 'security' && (
         <form onSubmit={handleChangePassword} className="bg-white rounded-2xl border border-[#ededf0] shadow-sm p-6 space-y-4">
           <div className="flex items-center gap-2 border-b border-[#f0f0f4] pb-3">
-            <Shield size={16} className="text-[#e25822]" />
+            <Shield size={16} className="text-[#0284c7]" />
             <h3 className="font-bold text-[#1d1d1f] text-sm">Cambiar Contraseña</h3>
           </div>
 
@@ -368,7 +368,7 @@ export default function ProfilePage() {
               value={form.currentPassword}
               onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
               placeholder="Tu contraseña actual"
-              className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#e25822]"
+              className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#0284c7]"
               autoComplete="current-password"
             />
           </div>
@@ -382,7 +382,7 @@ export default function ProfilePage() {
               value={form.newPassword}
               onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
               placeholder="Mínimo 6 caracteres"
-              className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#e25822]"
+              className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#0284c7]"
               autoComplete="new-password"
             />
           </div>
@@ -396,7 +396,7 @@ export default function ProfilePage() {
               value={form.confirmPassword}
               onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
               placeholder="Repite la nueva contraseña"
-              className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#e25822]"
+              className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#0284c7]"
               autoComplete="new-password"
             />
             {form.newPassword && form.confirmPassword && form.newPassword !== form.confirmPassword && (
@@ -408,7 +408,7 @@ export default function ProfilePage() {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#e25822] hover:bg-[#d04c18] text-white text-xs font-bold shadow-sm transition-all disabled:opacity-60 cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#d04c18] text-white text-xs font-bold shadow-sm transition-all disabled:opacity-60 cursor-pointer"
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
               {saving ? 'Actualizando...' : 'Cambiar Contraseña'}

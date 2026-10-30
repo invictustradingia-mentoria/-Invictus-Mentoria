@@ -78,7 +78,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
           )
         })}
         {user.role === 'ADMIN' && (
-          <Link href="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-orange-600 hover:bg-orange-50">
+          <Link href="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-sky-600 hover:bg-sky-50">
             <ShieldCheck size={17} /> Panel de Administración
           </Link>
         )}

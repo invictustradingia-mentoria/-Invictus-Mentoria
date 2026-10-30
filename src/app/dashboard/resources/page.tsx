@@ -87,7 +87,7 @@ function ResourceDownloadCard({ item }: { item: any }) {
   return (
     <div className="bg-white rounded-2xl p-5 border border-[#ededf0] hover:border-[#fcd5c3] shadow-sm transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div className="flex items-start gap-3.5">
-        <div className="w-10 h-10 rounded-xl bg-[#fffaf8] border border-[#fcd5c3] text-[#e25822] flex items-center justify-center shrink-0 mt-0.5">
+        <div className="w-10 h-10 rounded-xl bg-[#fffaf8] border border-[#fcd5c3] text-[#0284c7] flex items-center justify-center shrink-0 mt-0.5">
           <Icon size={18} />
         </div>
         <div className="space-y-1">
@@ -113,7 +113,7 @@ function ResourceDownloadCard({ item }: { item: any }) {
       <button
         type="button"
         onClick={handleDownload}
-        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#fffaf8] hover:bg-[#fff0e8] border border-[#fcd5c3] text-[#e25822] text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-all shrink-0 active:scale-95"
+        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#fffaf8] hover:bg-[#fff0e8] border border-[#fcd5c3] text-[#0284c7] text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-all shrink-0 active:scale-95"
       >
         <Download size={14} />
         <span>Descargar</span>
@@ -127,11 +127,11 @@ export default function ResourcesPage() {
     <div className="p-6 md:p-10 max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div>
-        <span className="text-[11px] font-bold text-[#e25822] tracking-wider uppercase block">
+        <span className="text-[11px] font-bold text-[#0284c7] tracking-wider uppercase block">
           MATERIAL EXCLUSIVO
         </span>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1d1d1f] flex items-center gap-2.5 mt-0.5">
-          <FolderOpen size={22} className="text-[#e25822]" />
+          <FolderOpen size={22} className="text-[#0284c7]" />
           Recursos y Herramientas de Estudio
         </h1>
         <p className="text-[#86868b] text-[13px] mt-1">

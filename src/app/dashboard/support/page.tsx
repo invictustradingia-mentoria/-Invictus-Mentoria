@@ -32,11 +32,11 @@ export default function SupportPage() {
     <div className="p-6 md:p-10 max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div>
-        <span className="text-[11px] font-bold text-[#e25822] tracking-wider uppercase block">
+        <span className="text-[11px] font-bold text-[#0284c7] tracking-wider uppercase block">
           ATENCIÓN AL ALUMNO
         </span>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1d1d1f] flex items-center gap-2.5 mt-0.5">
-          <Headphones size={22} className="text-[#e25822]" />
+          <Headphones size={22} className="text-[#0284c7]" />
           Soporte y Asistencia
         </h1>
         <p className="text-[#86868b] text-[13px] mt-1">
@@ -72,7 +72,7 @@ export default function SupportPage() {
 
         {/* Email Support */}
         <div className="bg-white rounded-2xl p-6 border border-[#ededf0] shadow-sm hover:border-[#fcd5c3] transition-all space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-[#fff4ef] text-[#e25822] flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-[#f0f9ff] text-[#0284c7] flex items-center justify-center">
             <Mail size={20} />
           </div>
           <div>
@@ -97,7 +97,7 @@ export default function SupportPage() {
       <div className="bg-white rounded-2xl p-6 border border-[#ededf0] shadow-sm space-y-5">
         <div>
           <h2 className="text-[15px] font-bold text-[#1d1d1f] flex items-center gap-2">
-            <Send size={16} className="text-[#e25822]" />
+            <Send size={16} className="text-[#0284c7]" />
             Enviar Mensaje al Equipo de Mentoría
           </h2>
           <p className="text-[12px] text-[#86868b] mt-0.5">
@@ -126,7 +126,7 @@ export default function SupportPage() {
                 placeholder="Ej: Duda sobre el Módulo 2 o ejercicio práctico"
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
-                className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#e25822]"
+                className="w-full bg-white border border-[#e5e5ea] rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#0284c7]"
                 required
               />
             </div>
@@ -140,19 +140,19 @@ export default function SupportPage() {
                 placeholder="Describe tu consulta con el mayor detalle posible..."
                 value={message}
                 onChange={e => setMessage(e.target.value)}
-                className="w-full bg-white border border-[#e5e5ea] rounded-xl p-4 text-[13px] focus:outline-none focus:border-[#e25822] resize-none"
+                className="w-full bg-white border border-[#e5e5ea] rounded-xl p-4 text-[13px] focus:outline-none focus:border-[#0284c7] resize-none"
                 required
               />
             </div>
 
             <div className="flex items-center justify-between pt-1">
               <div className="flex items-center gap-1.5 text-[11px] text-[#86868b]">
-                <Clock size={13} className="text-[#e25822]" />
+                <Clock size={13} className="text-[#0284c7]" />
                 <span>Tiempo estimado de respuesta: menos de 24 hs</span>
               </div>
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-[#e25822] hover:bg-[#cf4c17] active:scale-95 text-white text-[13px] font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+                className="px-5 py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#cf4c17] active:scale-95 text-white text-[13px] font-semibold flex items-center gap-1.5 transition-all shadow-sm"
               >
                 <Send size={14} />
                 <span>Enviar Consulta</span>

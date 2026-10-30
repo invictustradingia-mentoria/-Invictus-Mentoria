@@ -20,9 +20,9 @@ export const MEMBERSHIPS: Record<MembershipKey, {
     label: 'Mentoría',
     title: 'Membresía Mentoría',
     tagline: 'Acceso al programa exclusivo de mentoría y a las clases para todos.',
-    gradient: 'from-amber-500 via-orange-500 to-rose-500',
+    gradient: 'from-sky-400 via-sky-500 to-blue-600',
     chip: 'bg-amber-100 text-amber-700',
-    glow: 'shadow-orange-300/60',
+    glow: 'shadow-sky-300/60',
   },
   ADMIN: {
     label: 'Administrador',

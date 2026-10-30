@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Send, Pin, Trash2, ShieldCheck, Ban, VolumeX, Users, X } from 'lucide-react'
+import { Send, Pin, Trash2, Ban, VolumeX, Users, X, Smile } from 'lucide-react'
+import ChatAvatar from '@/components/chat/ChatAvatar'
+import EmojiPicker from '@/components/chat/EmojiPicker'
 
 interface Msg {
   id: string
@@ -21,17 +23,7 @@ interface Me {
 }
 
 const MAX = 500
-const COLORS = ['#0ea5e9', '#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#22c55e', '#ef4444']
 
-function hue(id: string) {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  return COLORS[h % COLORS.length]
-}
-function initials(n: string) {
-  const p = n.trim().split(/\s+/)
-  return ((p[0]?.[0] || '?') + (p[1]?.[0] || '')).toUpperCase()
-}
 function hm(d: string) {
   return new Date(d).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
@@ -54,11 +46,13 @@ export default function ChatPage() {
   const [me, setMe] = useState<Me | null>(null)
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [pinned, setPinned] = useState<Msg[]>([])
+  const [avatars, setAvatars] = useState<Set<string>>(new Set())
   const [text, setText] = useState('')
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [fatal, setFatal] = useState('')
+  const [emoji, setEmoji] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -74,6 +68,7 @@ export default function ChatPage() {
       if (!r.ok) throw new Error(d.error)
       setMe(d.me)
       setPinned(d.pinned || [])
+      setAvatars(new Set<string>(d.avatars || []))
       setMsgs((prev) => {
         const pend = prev.filter((m) => m.pending)
         return [...d.messages, ...pend.filter((p) => !d.messages.some((m: Msg) => m.userId === p.userId && m.content === p.content))]
@@ -113,15 +108,39 @@ export default function ChatPage() {
     if (el) stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
   }
 
+  function autosize() {
+    const el = taRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  }
+
+  function insertEmoji(e: string) {
+    const el = taRef.current
+    const start = el?.selectionStart ?? text.length
+    const end = el?.selectionEnd ?? text.length
+    const next = (text.slice(0, start) + e + text.slice(end)).slice(0, MAX)
+    setText(next)
+    requestAnimationFrame(() => {
+      if (!el) return
+      el.focus()
+      const pos = Math.min(start + e.length, next.length)
+      el.setSelectionRange(pos, pos)
+      autosize()
+    })
+  }
+
   async function send() {
     const content = text.trim()
     if (!content || sending || !me) return
     setErr('')
     setSending(true)
+    setEmoji(false)
     const tmp: Msg = { id: 'tmp-' + Date.now(), userId: me.id, userName: me.name, userRole: me.role, content, pinned: false, createdAt: new Date().toISOString(), pending: true }
     stick.current = true
     setMsgs((m) => [...m, tmp])
     setText('')
+    requestAnimationFrame(autosize)
     try {
       const r = await fetch('/api/student/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) })
       const d = await r.json()
@@ -166,12 +185,12 @@ export default function ChatPage() {
       </header>
 
       {pinned.length > 0 && (
-        <div className="max-h-40 space-y-px overflow-y-auto border-b border-amber-200 bg-amber-200">
+        <div className="max-h-40 space-y-px overflow-y-auto border-b border-sky-200 bg-sky-200">
           {pinned.map((p) => (
-            <div key={p.id} className="flex items-start gap-2.5 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
-              <Pin size={15} className="mt-0.5 shrink-0 text-amber-600" />
+            <div key={p.id} className="flex items-start gap-2.5 bg-sky-50 px-4 py-2.5 text-sm text-sky-900">
+              <Pin size={15} className="mt-0.5 shrink-0 text-sky-600" />
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-600">Mensaje fijado</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-600">Mensaje fijado</p>
                 <p className="whitespace-pre-wrap break-words">{p.content}</p>
               </div>
             </div>
@@ -186,7 +205,7 @@ export default function ChatPage() {
           <div className="py-14 text-center">
             <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-sky-100 text-sky-600"><Users size={26} /></div>
             <p className="font-semibold text-slate-700">Aún no hay mensajes</p>
-            <p className="text-sm text-slate-400">Sé el primero en saludar a la comunidad.</p>
+            <p className="text-sm text-slate-400">Sé el primero en saludar a la comunidad. 👋</p>
           </div>
         )}
         {msgs.map((m, i) => {
@@ -203,15 +222,11 @@ export default function ChatPage() {
                 </div>
               )}
               <div className={`group flex items-end gap-2 ${mine ? 'flex-row-reverse' : ''} ${grouped ? 'mt-0.5' : 'mt-3'}`}>
-                <div className="w-8 shrink-0">
-                  {!grouped && (
-                    <div className="grid h-8 w-8 place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: staff ? 'linear-gradient(135deg,#0ea5e9,#0369a1)' : hue(m.userId) }}>
-                      {staff ? <ShieldCheck size={15} /> : initials(m.userName)}
-                    </div>
-                  )}
+                <div className="w-9 shrink-0">
+                  {!grouped && <ChatAvatar userId={m.userId} name={m.userName} hasPhoto={avatars.has(m.userId)} staff={staff} size={36} />}
                 </div>
                 <div className={`flex max-w-[82%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
-                  {!grouped && !mine && (
+                  {!grouped && (
                     <span className="mb-0.5 flex items-center gap-1.5 px-1 text-xs font-semibold text-slate-600">
                       {m.userName}
                       {staff && <span className="rounded bg-sky-600 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white">Equipo</span>}
@@ -252,14 +267,28 @@ export default function ChatPage() {
           </p>
         </div>
       ) : (
-        <div className="border-t border-slate-100 bg-white p-3">
+        <div className="relative border-t border-slate-100 bg-white p-3">
           {err && (
             <div className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
               <span>{err}</span>
               <button onClick={() => setErr('')}><X size={14} /></button>
             </div>
           )}
+          {emoji && (
+            <div className="relative">
+              <EmojiPicker onPick={insertEmoji} onClose={() => setEmoji(false)} />
+            </div>
+          )}
           <div className="flex items-end gap-2">
+            <button
+              type="button"
+              onClick={() => setEmoji((v) => !v)}
+              aria-label="Emojis"
+              title="Emojis"
+              className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border transition ${emoji ? 'border-sky-300 bg-sky-50 text-sky-600' : 'border-slate-200 text-slate-400 hover:bg-sky-50 hover:text-sky-600'}`}
+            >
+              <Smile size={20} />
+            </button>
             <textarea
               ref={taRef}
               value={text}
@@ -268,8 +297,7 @@ export default function ChatPage() {
               placeholder={isAdmin ? 'Escribe como equipo…' : 'Escribe un mensaje…'}
               onChange={(e) => {
                 setText(e.target.value)
-                e.target.style.height = 'auto'
-                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+                autosize()
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {

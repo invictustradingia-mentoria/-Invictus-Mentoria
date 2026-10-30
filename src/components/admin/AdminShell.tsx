@@ -23,7 +23,7 @@ export default function AdminShell({ name, children }: { name: string; children:
   const side = (
     <div className="flex h-full flex-col">
       <div className="px-6 py-6">
-        <p className="text-lg font-black tracking-tight text-[#1d1d1f]">INVICTUS <span className="text-[#e25822]">ADMIN</span></p>
+        <p className="text-lg font-black tracking-tight text-[#1d1d1f]">INVICTUS <span className="text-[#0284c7]">ADMIN</span></p>
         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Panel de administración</p>
       </div>
       <nav className="flex-1 space-y-1 px-3">
@@ -31,7 +31,7 @@ export default function AdminShell({ name, children }: { name: string; children:
           const active = n.exact ? pathname === n.href : pathname.startsWith(n.href)
           return (
             <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-xs font-bold transition-all ${active ? 'bg-[#fff4ef] text-[#e25822]' : 'text-gray-600 hover:bg-gray-50'}`}>
+              className={`flex items-center gap-3 rounded-xl px-3 py-3 text-xs font-bold transition-all ${active ? 'bg-[#f0f9ff] text-[#0284c7]' : 'text-gray-600 hover:bg-gray-50'}`}>
               <n.icon size={17} /> {n.label}
             </Link>
           )
@@ -48,7 +48,7 @@ export default function AdminShell({ name, children }: { name: string; children:
   return (
     <div className="min-h-screen bg-[#fdfdfd]">
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
-        <span className="text-sm font-black text-[#1d1d1f]">INVICTUS <span className="text-[#e25822]">ADMIN</span></span>
+        <span className="text-sm font-black text-[#1d1d1f]">INVICTUS <span className="text-[#0284c7]">ADMIN</span></span>
         <button type="button" onClick={() => setOpen(!open)} aria-label="Menú" className="rounded-lg p-1.5 cursor-pointer">{open ? <X size={22} /> : <Menu size={22} />}</button>
       </div>
       {open && (

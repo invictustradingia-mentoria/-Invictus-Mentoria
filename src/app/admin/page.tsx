@@ -37,7 +37,7 @@ const statusLabel: Record<string, string> = {
 }
 
 const statusStyle: Record<string, string> = {
-  PENDING: 'bg-orange-100 text-orange-700',
+  PENDING: 'bg-sky-100 text-sky-700',
   APPROVED: 'bg-emerald-100 text-emerald-700',
   REJECTED: 'bg-rose-100 text-rose-700',
 }
@@ -174,7 +174,7 @@ export default function AdminStudentsPage() {
           type="button"
           onClick={loadUsers}
           disabled={loading}
-          className="flex items-center gap-2 self-start rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-[#1d1d1f] shadow-sm hover:border-[#e25822] disabled:opacity-50 cursor-pointer"
+          className="flex items-center gap-2 self-start rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-[#1d1d1f] shadow-sm hover:border-[#0284c7] disabled:opacity-50 cursor-pointer"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Actualizar Lista
         </button>
@@ -209,9 +209,9 @@ export default function AdminStudentsPage() {
         <div className="flex items-center justify-between rounded-3xl border border-[#ededf0] bg-white p-5 shadow-sm">
           <div>
             <p className="text-xs font-bold text-gray-500">Pendientes de Aprobación</p>
-            <p className="mt-1 text-3xl font-black text-orange-500">{counts.pending}</p>
+            <p className="mt-1 text-3xl font-black text-sky-500">{counts.pending}</p>
           </div>
-          <Clock size={26} className="text-orange-400" />
+          <Clock size={26} className="text-sky-400" />
         </div>
         <div className="flex items-center justify-between rounded-3xl border border-[#ededf0] bg-white p-5 shadow-sm">
           <div>
@@ -252,7 +252,7 @@ export default function AdminStudentsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por email o nombre..."
-            className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 py-2.5 pl-9 pr-3 text-xs focus:border-[#e25822] focus:outline-none"
+            className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 py-2.5 pl-9 pr-3 text-xs focus:border-[#0284c7] focus:outline-none"
           />
         </div>
       </div>
@@ -311,7 +311,7 @@ export default function AdminStudentsPage() {
                         value={u.role}
                         disabled={busy || isSelf}
                         onChange={(e) => patchUser(u.id, { role: e.target.value }, `Rol cambiado a ${e.target.value}`)}
-                        className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-1.5 text-xs font-bold text-[#e25822] focus:border-[#e25822] focus:outline-none disabled:opacity-50"
+                        className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-1.5 text-xs font-bold text-[#0284c7] focus:border-[#0284c7] focus:outline-none disabled:opacity-50"
                       >
                         <option value="CLUB">CLUB</option>
                         <option value="MENTORIA">MENTORIA</option>
@@ -339,7 +339,7 @@ export default function AdminStudentsPage() {
                             type="button"
                             disabled={busy}
                             onClick={() => patchUser(u.id, { status: 'REJECTED' }, 'Usuario rechazado')}
-                            className="flex items-center gap-1 rounded-xl bg-orange-50 px-2.5 py-1.5 text-[11px] font-bold text-orange-700 hover:bg-orange-100 disabled:opacity-50 cursor-pointer"
+                            className="flex items-center gap-1 rounded-xl bg-sky-50 px-2.5 py-1.5 text-[11px] font-bold text-sky-700 hover:bg-sky-100 disabled:opacity-50 cursor-pointer"
                             title="Rechazar"
                           >
                             <X size={13} /> Rechazar
@@ -365,7 +365,7 @@ export default function AdminStudentsPage() {
                           type="button"
                           disabled={busy}
                           onClick={() => setEdit({ id: u.id, name: u.name ?? '', phone: u.phone ?? '', email: u.email })}
-                          className="rounded-xl p-2 text-gray-500 hover:bg-[#fff4ef] hover:text-[#e25822] disabled:opacity-50 cursor-pointer"
+                          className="rounded-xl p-2 text-gray-500 hover:bg-[#f0f9ff] hover:text-[#0284c7] disabled:opacity-50 cursor-pointer"
                           title="Editar datos"
                         >
                           <Pencil size={14} />
@@ -417,7 +417,7 @@ export default function AdminStudentsPage() {
                   type="text"
                   value={edit.name}
                   onChange={(e) => setEdit({ ...edit, name: e.target.value })}
-                  className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-xs focus:border-[#e25822] focus:outline-none"
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-xs focus:border-[#0284c7] focus:outline-none"
                 />
               </div>
               <div>
@@ -426,7 +426,7 @@ export default function AdminStudentsPage() {
                   type="text"
                   value={edit.phone}
                   onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
-                  className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-xs focus:border-[#e25822] focus:outline-none"
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-xs focus:border-[#0284c7] focus:outline-none"
                 />
               </div>
               <div className="flex gap-2 pt-2">
@@ -440,7 +440,7 @@ export default function AdminStudentsPage() {
                 <button
                   type="submit"
                   disabled={busyId === edit.id}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#e25822] disabled:opacity-50 cursor-pointer"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#0284c7] disabled:opacity-50 cursor-pointer"
                 >
                   <Save size={14} /> Guardar
                 </button>

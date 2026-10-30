@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
+import { avatarIds } from '@/lib/chat-avatars'
 import { getActor, activeSanction, cleanText, MAX_LEN, LINK_RE } from '@/lib/chat-utils'
 
 export const runtime = 'nodejs'
@@ -20,6 +21,8 @@ export async function GET() {
       activeSanction(me.id),
     ])
 
+    const avatars = await avatarIds([...rows.map((r: any) => r.userId), ...pinned.map((r: any) => r.userId)])
+
     return NextResponse.json(
       {
         me: {
@@ -30,6 +33,7 @@ export async function GET() {
         },
         messages: rows.reverse(),
         pinned,
+        avatars,
       },
       { headers: NO_STORE }
     )

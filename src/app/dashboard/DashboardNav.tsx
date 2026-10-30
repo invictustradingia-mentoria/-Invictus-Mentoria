@@ -58,13 +58,13 @@ export function DashboardNav({ role }: { role: string }) {
               href={item.href}
               className={`flex items-center gap-3 px-3.5 py-2.5 rounded-full font-medium transition-all ${
                 isActive
-                  ? 'text-[#e25822] bg-[#fffaf8] border border-[#fcd5c3] shadow-sm'
+                  ? 'text-[#0284c7] bg-[#fffaf8] border border-[#fcd5c3] shadow-sm'
                   : 'text-[#555] hover:text-[#1d1d1f] hover:bg-[#f8f8fa]'
               }`}
             >
               <Icon
                 size={16}
-                className={isActive ? 'text-[#e25822]' : 'text-[#888]'}
+                className={isActive ? 'text-[#0284c7]' : 'text-[#888]'}
               />
               <span>{item.label}</span>
             </Link>
@@ -90,7 +90,7 @@ export function DashboardNav({ role }: { role: string }) {
           href="/dashboard/profile"
           className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors ${
             pathname === '/dashboard/profile'
-              ? 'text-[#e25822] font-semibold bg-[#fffaf8]'
+              ? 'text-[#0284c7] font-semibold bg-[#fffaf8]'
               : 'hover:text-[#111] hover:bg-[#f8f8fa]'
           }`}
         >

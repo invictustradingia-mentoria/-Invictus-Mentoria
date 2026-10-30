@@ -237,7 +237,7 @@ export function StudentPlayer({
             setBlackoutReason('')
           }}
         >
-          <ShieldAlert size={56} className="text-[#e25822] mb-4" />
+          <ShieldAlert size={56} className="text-[#0284c7] mb-4" />
           <p className="text-white font-bold text-lg text-center max-w-md px-6">
             {blackoutReason || 'Contenido protegido'}
           </p>
@@ -249,7 +249,7 @@ export function StudentPlayer({
         {activeLesson ? (
           <>
             <div>
-              <span className="text-[11px] font-bold text-[#e25822] uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-[#0284c7] uppercase tracking-wider">
                 {activeModule?.title}
               </span>
               <h2 className="text-lg sm:text-xl font-bold text-[#1d1d1f] mt-0.5 leading-tight">
@@ -290,14 +290,14 @@ export function StudentPlayer({
                 <button
                   onClick={() => hasPrev && setActiveLesson(allLessons[currentIndex - 1])}
                   disabled={!hasPrev}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-[#e5e5ea] text-[#1d1d1f] hover:border-[#e25822] hover:text-[#e25822] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-[#e5e5ea] text-[#1d1d1f] hover:border-[#0284c7] hover:text-[#0284c7] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer"
                 >
                   ← Anterior
                 </button>
                 <button
                   onClick={() => hasNext && setActiveLesson(allLessons[currentIndex + 1])}
                   disabled={!hasNext}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-[#e5e5ea] text-[#1d1d1f] hover:border-[#e25822] hover:text-[#e25822] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-[#e5e5ea] text-[#1d1d1f] hover:border-[#0284c7] hover:text-[#0284c7] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer"
                 >
                   Siguiente →
                 </button>
@@ -319,13 +319,13 @@ export function StudentPlayer({
             <div className="bg-white rounded-2xl p-4 border border-[#ededf0] shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold text-[#1d1d1f]">Progreso del curso</span>
-                <span className="text-xs font-bold text-[#e25822]">
+                <span className="text-xs font-bold text-[#0284c7]">
                   {completedCount} / {totalLessons} clases · {progressPct}%
                 </span>
               </div>
               <div className="w-full bg-[#f0f0f4] rounded-full h-2">
                 <div
-                  className="bg-gradient-to-r from-[#e25822] to-[#f5a623] h-2 rounded-full transition-all duration-500"
+                  className="bg-gradient-to-r from-[#0284c7] to-[#f5a623] h-2 rounded-full transition-all duration-500"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
@@ -385,14 +385,14 @@ export function StudentPlayer({
                             key={lesson.id}
                             onClick={() => setActiveLesson(lesson)}
                             className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
-                              isActive ? 'bg-[#fff4ef]' : 'hover:bg-[#fafafc]'
+                              isActive ? 'bg-[#f0f9ff]' : 'hover:bg-[#fafafc]'
                             }`}
                           >
                             <div className="shrink-0 mt-0.5">
                               {isDone ? (
                                 <Check size={14} className="text-[#24a148]" />
                               ) : isActive ? (
-                                <Play size={14} className="text-[#e25822]" fill="#e25822" />
+                                <Play size={14} className="text-[#0284c7]" fill="#0284c7" />
                               ) : (
                                 <div className="w-3.5 h-3.5 rounded-full border-2 border-[#ccc]" />
                               )}
@@ -401,7 +401,7 @@ export function StudentPlayer({
                             <div className="flex-1 min-w-0">
                               <p
                                 className={`text-[12px] font-semibold truncate ${
-                                  isActive ? 'text-[#e25822]' : 'text-[#1d1d1f]'
+                                  isActive ? 'text-[#0284c7]' : 'text-[#1d1d1f]'
                                 }`}
                               >
                                 {lesson.order}. {lesson.title}
@@ -422,7 +422,7 @@ export function StudentPlayer({
         </div>
 
         <div className="bg-[#fffaf8] border border-[#fcd5c3] rounded-2xl p-3 flex items-start gap-2 mt-1">
-          <ShieldAlert size={14} className="text-[#e25822] shrink-0 mt-0.5" />
+          <ShieldAlert size={14} className="text-[#0284c7] shrink-0 mt-0.5" />
           <p className="text-[11px] text-[#86868b] leading-relaxed">
             Contenido protegido. Prohibida la grabación y retransmisión no autorizada.
           </p>

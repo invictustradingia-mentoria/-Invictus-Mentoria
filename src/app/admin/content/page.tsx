@@ -46,7 +46,7 @@ const ACCESS: Record<Access, { label: string; desc: string; icon: any; badge: st
   },
   MENTORIA: {
     label: 'Solo Mentoría', desc: 'Solo alumnos de Mentoría', icon: GraduationCap,
-    badge: 'bg-orange-100 text-[#e25822]', card: 'border-[#e25822] bg-[#fff4ef] text-[#e25822]',
+    badge: 'bg-sky-100 text-[#0284c7]', card: 'border-[#0284c7] bg-[#f0f9ff] text-[#0284c7]',
   },
 }
 
@@ -87,7 +87,7 @@ function explainUploadError(raw: string, file: File): { title: string; detail: s
 }
 
 const inputCls =
-  'w-full rounded-xl border border-gray-200 bg-gray-50/60 px-3.5 py-2.5 text-xs text-[#1d1d1f] placeholder:text-gray-400 focus:border-[#e25822] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#e25822]/10'
+  'w-full rounded-xl border border-gray-200 bg-gray-50/60 px-3.5 py-2.5 text-xs text-[#1d1d1f] placeholder:text-gray-400 focus:border-[#0284c7] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0284c7]/10'
 const labelCls = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-gray-500'
 
 function AccessPicker({ value, onChange }: { value: Access; onChange: (v: Access) => void }) {
@@ -414,8 +414,8 @@ export default function AdminContentPage() {
       <div className="flex flex-col gap-4 rounded-3xl bg-gradient-to-r from-[#111111] via-[#1d1d1f] to-[#2d2d30] p-6 text-white shadow-lg md:flex-row md:items-center md:justify-between">
         <div>
           <div className="mb-1 flex items-center gap-2">
-            <Sparkles size={16} className="text-[#e25822]" />
-            <span className="text-[11px] font-bold uppercase tracking-widest text-[#e25822]">Panel de gestión</span>
+            <Sparkles size={16} className="text-[#0284c7]" />
+            <span className="text-[11px] font-bold uppercase tracking-widest text-[#0284c7]">Panel de gestión</span>
           </div>
           <h1 className="text-2xl font-black tracking-tight">Contenido de cursos</h1>
           <p className="mt-1 text-xs text-gray-400">Crea módulos, sube clases y decide quién puede verlas.</p>
@@ -446,7 +446,7 @@ export default function AdminContentPage() {
         {/* Paso 1: módulo */}
         <div className="rounded-3xl border border-[#ededf0] bg-white p-6 shadow-sm lg:col-span-2 lg:self-start">
           <div className="mb-5 flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fff4ef] text-[#e25822]"><Layers size={20} /></span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f0f9ff] text-[#0284c7]"><Layers size={20} /></span>
             <div>
               <h2 className="text-sm font-bold text-[#1d1d1f]">1. Nuevo módulo</h2>
               <p className="text-[11px] text-gray-400">Una sección que agrupa varias clases</p>
@@ -462,7 +462,7 @@ export default function AdminContentPage() {
               <input value={modDesc} onChange={(e) => setModDesc(e.target.value)} placeholder="Qué se verá en este módulo" className={inputCls} />
             </div>
             <button type="submit" disabled={loadingMod}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1d1d1f] py-3 text-xs font-bold text-white transition-all hover:bg-[#e25822] disabled:opacity-50 cursor-pointer">
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1d1d1f] py-3 text-xs font-bold text-white transition-all hover:bg-[#0284c7] disabled:opacity-50 cursor-pointer">
               <Plus size={15} /> {loadingMod ? 'Creando...' : 'Crear módulo'}
             </button>
           </form>
@@ -471,7 +471,7 @@ export default function AdminContentPage() {
         {/* Paso 2: clase */}
         <div ref={lessonFormRef} className="scroll-mt-6 rounded-3xl border border-[#ededf0] bg-white p-6 shadow-sm lg:col-span-3">
           <div className="mb-5 flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fff4ef] text-[#e25822]"><Video size={20} /></span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f0f9ff] text-[#0284c7]"><Video size={20} /></span>
             <div>
               <h2 className="text-sm font-bold text-[#1d1d1f]">2. Publicar clase</h2>
               <p className="text-[11px] text-gray-400">Elige el módulo, el video y quién puede verla</p>
@@ -515,7 +515,7 @@ export default function AdminContentPage() {
                 {([['url', LinkIcon, 'Enlace (YouTube / Vimeo)'], ['upload', Upload, 'Subir desde mi PC']] as const).map(([k, Icon, label]) => (
                   <button key={k} type="button" onClick={() => { setVideoSource(k); setFormError(null) }}
                     className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer ${
-                      videoSource === k ? 'bg-white text-[#e25822] shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                      videoSource === k ? 'bg-white text-[#0284c7] shadow-sm' : 'text-gray-500 hover:text-gray-700'
                     }`}>
                     <Icon size={14} /> {label}
                   </button>
@@ -525,7 +525,7 @@ export default function AdminContentPage() {
               {videoSource === 'url' ? (
                 <input value={lessonUrl} onChange={(e) => setLessonUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." className={inputCls} />
               ) : (
-                <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/60 px-4 py-6 text-center transition-colors hover:border-[#e25822] hover:bg-[#fff4ef]/40">
+                <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/60 px-4 py-6 text-center transition-colors hover:border-[#0284c7] hover:bg-[#f0f9ff]/40">
                   <Film size={26} className="text-gray-400" />
                   {videoFile ? (
                     <>
@@ -556,16 +556,16 @@ export default function AdminContentPage() {
             )}
 
             {publishing && status && (
-              <div className="rounded-xl border border-[#e25822]/20 bg-[#fff4ef] p-3">
-                <p className="mb-2 text-[11px] font-bold text-[#e25822]">{status}</p>
-                <div className="h-1.5 overflow-hidden rounded-full bg-[#e25822]/15">
-                  <div className="h-full w-1/3 animate-pulse rounded-full bg-[#e25822]" />
+              <div className="rounded-xl border border-[#0284c7]/20 bg-[#f0f9ff] p-3">
+                <p className="mb-2 text-[11px] font-bold text-[#0284c7]">{status}</p>
+                <div className="h-1.5 overflow-hidden rounded-full bg-[#0284c7]/15">
+                  <div className="h-full w-1/3 animate-pulse rounded-full bg-[#0284c7]" />
                 </div>
               </div>
             )}
 
             <button type="submit" disabled={publishing}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#e25822] py-3.5 text-xs font-bold text-white shadow-md shadow-[#e25822]/20 transition-all hover:bg-[#c94a1a] disabled:opacity-50 cursor-pointer">
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0284c7] py-3.5 text-xs font-bold text-white shadow-md shadow-[#0284c7]/20 transition-all hover:bg-[#c94a1a] disabled:opacity-50 cursor-pointer">
               <Upload size={15} /> {publishing ? 'Publicando...' : 'Publicar clase'}
             </button>
           </form>
@@ -575,7 +575,7 @@ export default function AdminContentPage() {
       {/* Listado */}
       <div className="space-y-3">
         <h3 className="flex items-center gap-2 text-sm font-bold text-[#1d1d1f]">
-          <Layers size={16} className="text-[#e25822]" /> Módulos y clases publicados
+          <Layers size={16} className="text-[#0284c7]" /> Módulos y clases publicados
         </h3>
 
         {loadingData ? (
@@ -608,12 +608,12 @@ export default function AdminContentPage() {
                   </button>
                   <div className="flex items-center gap-1.5">
                     <button type="button" onClick={() => addLessonTo(mod.id)}
-                      className="flex items-center gap-1 rounded-lg bg-[#fff4ef] px-3 py-1.5 text-[11px] font-bold text-[#e25822] hover:bg-[#ffe6da] cursor-pointer">
+                      className="flex items-center gap-1 rounded-lg bg-[#f0f9ff] px-3 py-1.5 text-[11px] font-bold text-[#0284c7] hover:bg-[#ffe6da] cursor-pointer">
                       <Plus size={13} /> Agregar clase
                     </button>
                     <button type="button" title="Editar módulo"
                       onClick={() => setEditModule({ id: mod.id, title: mod.title ?? '', description: mod.description ?? '', order: String(mod.order ?? 0), isPublished: mod.isPublished !== false })}
-                      className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-[#e25822] cursor-pointer"><Pencil size={15} /></button>
+                      className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-[#0284c7] cursor-pointer"><Pencil size={15} /></button>
                     <button type="button" title="Eliminar módulo" onClick={() => handleDelete('module', mod.id, mod.title, lessons.length)}
                       className="rounded-lg p-2 text-rose-500 hover:bg-rose-50 cursor-pointer"><Trash2 size={15} /></button>
                   </div>
@@ -640,7 +640,7 @@ export default function AdminContentPage() {
                               </div>
                             </div>
                             <button type="button" title="Editar clase" onClick={() => openEditLesson(lesson.id, mod.id)}
-                              className="rounded-lg p-2 text-gray-500 hover:bg-[#fff4ef] hover:text-[#e25822] cursor-pointer"><Pencil size={15} /></button>
+                              className="rounded-lg p-2 text-gray-500 hover:bg-[#f0f9ff] hover:text-[#0284c7] cursor-pointer"><Pencil size={15} /></button>
                             <button type="button" title="Eliminar clase" onClick={() => handleDelete('lesson', lesson.id, lesson.title)}
                               className="rounded-lg p-2 text-rose-500 hover:bg-rose-50 cursor-pointer"><Trash2 size={15} /></button>
                           </div>
@@ -683,12 +683,12 @@ export default function AdminContentPage() {
               <div><label className={labelCls}>¿Quién puede verla?</label>
                 <AccessPicker value={editLesson.allowedRole} onChange={(v) => setEditLesson({ ...editLesson, allowedRole: v })} /></div>
               <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={editLesson.isPublished} onChange={(e) => setEditLesson({ ...editLesson, isPublished: e.target.checked })} className="h-4 w-4 accent-[#e25822]" />
+                <input type="checkbox" checked={editLesson.isPublished} onChange={(e) => setEditLesson({ ...editLesson, isPublished: e.target.checked })} className="h-4 w-4 accent-[#0284c7]" />
                 Visible para los alumnos
               </label>
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setEditLesson(null)} className="flex-1 rounded-xl bg-gray-100 py-3 text-xs font-bold text-gray-700 hover:bg-gray-200 cursor-pointer">Cancelar</button>
-                <button type="submit" disabled={savingEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#e25822] disabled:opacity-50 cursor-pointer">
+                <button type="submit" disabled={savingEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#0284c7] disabled:opacity-50 cursor-pointer">
                   <Save size={14} /> {savingEdit ? 'Guardando...' : 'Guardar'}</button>
               </div>
             </form>
@@ -712,12 +712,12 @@ export default function AdminContentPage() {
               <div><label className={labelCls}>Orden</label>
                 <input type="number" value={editModule.order} onChange={(e) => setEditModule({ ...editModule, order: e.target.value })} className={inputCls} /></div>
               <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={editModule.isPublished} onChange={(e) => setEditModule({ ...editModule, isPublished: e.target.checked })} className="h-4 w-4 accent-[#e25822]" />
+                <input type="checkbox" checked={editModule.isPublished} onChange={(e) => setEditModule({ ...editModule, isPublished: e.target.checked })} className="h-4 w-4 accent-[#0284c7]" />
                 Visible para los alumnos
               </label>
               <div className="flex gap-2 pt-1">
                 <button type="button" onClick={() => setEditModule(null)} className="flex-1 rounded-xl bg-gray-100 py-3 text-xs font-bold text-gray-700 hover:bg-gray-200 cursor-pointer">Cancelar</button>
-                <button type="submit" disabled={savingEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#e25822] disabled:opacity-50 cursor-pointer">
+                <button type="submit" disabled={savingEdit} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#1d1d1f] py-3 text-xs font-bold text-white hover:bg-[#0284c7] disabled:opacity-50 cursor-pointer">
                   <Save size={14} /> {savingEdit ? 'Guardando...' : 'Guardar'}</button>
               </div>
             </form>

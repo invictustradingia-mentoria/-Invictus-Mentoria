@@ -79,33 +79,33 @@ export default function AdminLlamadasPage() {
   }
 
   const set = (k: keyof typeof EMPTY, v: any) => setForm((f) => (f ? { ...f, [k]: v } : f))
-  const inp = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base outline-none transition focus:border-[#e25822] focus:ring-2 focus:ring-orange-100 sm:text-sm'
+  const inp = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base outline-none transition focus:border-[#0284c7] focus:ring-2 focus:ring-sky-100 sm:text-sm'
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900"><Video className="text-[#e25822]" size={24} /> Llamadas de Zoom</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900"><Video className="text-[#0284c7]" size={24} /> Llamadas de Zoom</h1>
           <p className="text-sm text-slate-500">Programa encuentros. Los alumnos ven el enlace 30 minutos antes de empezar.</p>
         </div>
-        <button onClick={openNew} className="flex items-center gap-2 rounded-xl bg-[#e25822] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-500/25 transition hover:bg-[#c94a18]"><Plus size={17} /> Nueva llamada</button>
+        <button onClick={openNew} className="flex items-center gap-2 rounded-xl bg-[#0284c7] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 transition hover:bg-[#0369a1]"><Plus size={17} /> Nueva llamada</button>
       </div>
 
       {err && !form && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-600">{err}</p>}
 
       <div className="space-y-3">
-        {calls.length === 0 && <div className="rounded-2xl border border-dashed border-orange-200 bg-[#fff4ef]/50 p-10 text-center text-sm text-slate-400">Aún no creaste ninguna llamada.</div>}
+        {calls.length === 0 && <div className="rounded-2xl border border-dashed border-sky-200 bg-[#f0f9ff]/50 p-10 text-center text-sm text-slate-400">Aún no creaste ninguna llamada.</div>}
         {calls.map((c) => {
           const end = new Date(c.startsAt).getTime() + c.durationMin * 60000
           const done = Date.now() > end
           return (
-            <div key={c.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+            <div key={c.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-100 bg-white p-4 shadow-sm">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-bold text-slate-900">{c.title}</h3>
                   {!c.isPublished && <span className="rounded bg-slate-200 px-1.5 py-px text-[10px] font-bold uppercase text-slate-600">Oculta</span>}
                   {done && <span className="rounded bg-slate-100 px-1.5 py-px text-[10px] font-bold uppercase text-slate-500">Finalizada</span>}
-                  <span className="rounded bg-[#fff4ef] px-1.5 py-px text-[10px] font-bold uppercase text-[#e25822]">{LEVELS.find((l) => l.v === c.allowedRole)?.label || c.allowedRole}</span>
+                  <span className="rounded bg-[#f0f9ff] px-1.5 py-px text-[10px] font-bold uppercase text-[#0284c7]">{LEVELS.find((l) => l.v === c.allowedRole)?.label || c.allowedRole}</span>
                 </div>
                 <p className="mt-1 flex flex-wrap gap-x-4 text-xs text-slate-500">
                   <span className="flex items-center gap-1"><CalendarDays size={13} /> {new Date(c.startsAt).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
@@ -148,12 +148,12 @@ export default function AdminLlamadasPage() {
                 </select>
               </Field>
               <Field label="Enlace de la grabación (se muestra al terminar)"><input className={inp} value={form.recordingUrl} onChange={(e) => set('recordingUrl', e.target.value)} placeholder="https://..." /></Field>
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={form.isPublished} onChange={(e) => set('isPublished', e.target.checked)} className="accent-[#e25822]" /> Publicada (visible para los alumnos)</label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={form.isPublished} onChange={(e) => set('isPublished', e.target.checked)} className="accent-[#0284c7]" /> Publicada (visible para los alumnos)</label>
             </div>
             {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
             <div className="mt-5 flex justify-end gap-2">
               <button onClick={() => setForm(null)} className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50">Cancelar</button>
-              <button onClick={save} disabled={busy} className="rounded-xl bg-[#e25822] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#c94a18] disabled:opacity-50">{busy ? 'Guardando…' : 'Guardar'}</button>
+              <button onClick={save} disabled={busy} className="rounded-xl bg-[#0284c7] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0369a1] disabled:opacity-50">{busy ? 'Guardando…' : 'Guardar'}</button>
             </div>
           </div>
         </div>

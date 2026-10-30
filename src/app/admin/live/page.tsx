@@ -105,20 +105,20 @@ export default function LivePage() {
     <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-[#e25822]"><Radio size={13} /> Telemetría en directo</p>
+          <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-[#0284c7]"><Radio size={13} /> Telemetría en directo</p>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-[#1d1d1f]">Live Activity Monitor</h1>
           <p className="mt-1 text-xs text-gray-500">Quién está conectado, desde dónde y qué está haciendo.</p>
         </div>
-        <span className="flex items-center gap-2 rounded-full border border-[#e25822]/30 bg-[#fff4ef] px-3 py-1.5 text-[11px] font-bold text-[#e25822]">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-[#e25822]" /> En vivo · se actualiza cada 5 s
+        <span className="flex items-center gap-2 rounded-full border border-[#0284c7]/30 bg-[#f0f9ff] px-3 py-1.5 text-[11px] font-bold text-[#0284c7]">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[#0284c7]" /> En vivo · se actualiza cada 5 s
         </span>
       </div>
 
       {error && <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700"><AlertCircle size={16} /> {error}</div>}
 
       <div className="inline-flex rounded-2xl bg-gray-100 p-1">
-        <button type="button" onClick={() => setTab('live')} className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${tab === 'live' ? 'bg-white text-[#e25822] shadow-sm' : 'text-gray-500'}`}><Activity size={14} /> Actividad en vivo</button>
-        <button type="button" onClick={() => setTab('alerts')} className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${tab === 'alerts' ? 'bg-white text-[#e25822] shadow-sm' : 'text-gray-500'}`}>
+        <button type="button" onClick={() => setTab('live')} className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${tab === 'live' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-gray-500'}`}><Activity size={14} /> Actividad en vivo</button>
+        <button type="button" onClick={() => setTab('alerts')} className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold cursor-pointer ${tab === 'alerts' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-gray-500'}`}>
           <ShieldAlert size={14} /> Alertas {data && data.security.length > 0 && <span className="rounded-full bg-rose-500 px-1.5 text-[10px] text-white">{data.security.length}</span>}
         </button>
       </div>
@@ -158,7 +158,7 @@ export default function LivePage() {
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-2">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="flex items-center gap-2 text-sm font-black"><Globe2 size={16} className="text-[#e25822]" /> Mapa de conexiones</h2>
+                <h2 className="flex items-center gap-2 text-sm font-black"><Globe2 size={16} className="text-[#0284c7]" /> Mapa de conexiones</h2>
                 <div className="flex gap-3 text-[11px] font-bold text-gray-500">
                   <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Ahora</span>
                   <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-sky-500" /> Últimas 24 h</span>
@@ -168,7 +168,7 @@ export default function LivePage() {
               {points.length === 0 && <p className="mt-1 text-center text-[11px] text-gray-400">Aún no hay conexiones con ubicación. Aparecerán cuando un alumno navegue.</p>}
             </div>
             <div className="space-y-4">
-              <Bars title="Países" items={data.countries} color="bg-[#e25822]" />
+              <Bars title="Países" items={data.countries} color="bg-[#0284c7]" />
               <Bars title="Navegadores" items={data.browsers} color="bg-sky-500" />
             </div>
           </div>
@@ -180,7 +180,7 @@ export default function LivePage() {
 
           <div className="grid gap-4 xl:grid-cols-5">
             <div className="space-y-3 xl:col-span-3">
-              <h2 className="flex items-center gap-2 text-sm font-black"><Users size={16} className="text-[#e25822]" /> Alumnos conectados ({online.length})</h2>
+              <h2 className="flex items-center gap-2 text-sm font-black"><Users size={16} className="text-[#0284c7]" /> Alumnos conectados ({online.length})</h2>
               {online.length === 0 ? (
                 <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center text-xs text-gray-400">No hay alumnos activos ahora.</div>
               ) : online.map((s) => (
@@ -200,7 +200,7 @@ export default function LivePage() {
                     <span className="flex items-center gap-1 rounded-lg bg-gray-100 px-2 py-1 text-gray-600"><DeviceIcon d={s.device} /> {s.device}</span>
                     <span className="rounded-lg bg-sky-50 px-2 py-1 text-sky-700">{s.browser}</span>
                     <span className="rounded-lg bg-violet-50 px-2 py-1 text-violet-700">{s.os}</span>
-                    <span className="rounded-lg bg-[#fff4ef] px-2 py-1 text-[#e25822]">{pageLabel(s.page)}</span>
+                    <span className="rounded-lg bg-[#f0f9ff] px-2 py-1 text-[#0284c7]">{pageLabel(s.page)}</span>
                     {s.lesson && <span className="flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-amber-700"><PlayCircle size={12} /> {s.lesson}</span>}
                   </div>
                 </div>
@@ -208,7 +208,7 @@ export default function LivePage() {
             </div>
 
             <div className="xl:col-span-2">
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-black"><Activity size={16} className="text-[#e25822]" /> Feed de eventos</h2>
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-black"><Activity size={16} className="text-[#0284c7]" /> Feed de eventos</h2>
               <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
                 {data.events.length === 0 ? <div className="rounded-2xl border border-gray-100 bg-white p-6 text-center text-xs text-gray-400">Sin eventos todavía.</div> :
                   data.events.map((e) => {
