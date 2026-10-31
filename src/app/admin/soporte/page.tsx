@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { LifeBuoy, Send, ArrowLeft, CheckCircle2, RotateCcw, Trash2, Pin, Plus, Eye, EyeOff, Mail, X } from 'lucide-react'
+import { LifeBuoy, Send, ArrowLeft, CheckCircle2, RotateCcw, Trash2, Pin, Plus, Eye, EyeOff, Mail, X, Phone, Wifi, WifiOff } from 'lucide-react'
 
 interface Thread {
   id: string
   name: string
   email: string | null
+  phone?: string | null
+  offlineContact?: boolean
   status: 'OPEN' | 'CLOSED'
   unreadAdmin: number
   lastMessageAt: string
@@ -14,7 +16,7 @@ interface Thread {
 }
 interface TMsg {
   id: string
-  from: 'VISITOR' | 'STAFF'
+  from: 'VISITOR' | 'STAFF' | 'BOT'
   content: string
   createdAt: string
 }
@@ -46,6 +48,10 @@ export default function SoportePage() {
   const [err, setErr] = useState('')
   const [notices, setNotices] = useState<Notice[]>([])
   const [newNotice, setNewNotice] = useState('')
+  const [offline, setOffline] = useState(false)
+  const [offMsg, setOffMsg] = useState('')
+  const [defMsg, setDefMsg] = useState('')
+  const [availBusy, setAvailBusy] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
 
@@ -68,12 +74,33 @@ export default function SoportePage() {
     if (r.ok) setNotices(d.notices)
   }, [])
 
+  const loadSettings = useCallback(async () => {
+    const r = await fetch('/api/admin/support/settings', { cache: 'no-store' })
+    const d = await r.json().catch(() => ({}))
+    if (r.ok) {
+      setOffline(!!d.offline)
+      setOffMsg(d.message || '')
+      setDefMsg(d.defaultMessage || '')
+    }
+  }, [])
+
+  async function saveAvail(nextOffline: boolean) {
+    setAvailBusy(true)
+    setErr('')
+    const r = await fetch('/api/admin/support/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ offline: nextOffline, message: offMsg }) })
+    const d = await r.json().catch(() => ({}))
+    setAvailBusy(false)
+    if (!r.ok) return setErr(d.error || 'No se pudo guardar')
+    setOffline(nextOffline)
+  }
+
   useEffect(() => {
     loadThreads()
     loadNotices()
+    loadSettings()
     const t = setInterval(() => !document.hidden && loadThreads(), 4000)
     return () => clearInterval(t)
-  }, [loadThreads, loadNotices])
+  }, [loadThreads, loadNotices, loadSettings])
 
   useEffect(() => {
     if (!sel) {
@@ -153,6 +180,44 @@ export default function SoportePage() {
         <p className="text-sm text-slate-500">Responde a quienes piden hablar con soporte desde la página principal y administra los avisos fijos del asistente.</p>
       </div>
 
+      <section className={`rounded-2xl border p-4 shadow-sm ${offline ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'}`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${offline ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+            {offline ? <WifiOff size={20} /> : <Wifi size={20} />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-slate-900">{offline ? 'Soporte fuera de línea' : 'Soporte en línea'}</p>
+            <p className="text-xs text-slate-600">
+              {offline
+                ? 'El asistente avisa que no hay nadie disponible y pide la consulta, el teléfono y el correo del visitante.'
+                : 'Los visitantes pueden escribirte y esperar tu respuesta en el chat.'}
+            </p>
+          </div>
+          <button
+            onClick={() => saveAvail(!offline)}
+            disabled={availBusy}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50 ${offline ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'}`}
+          >
+            {offline ? 'Volver a estar en línea' : 'Marcar como no disponible'}
+          </button>
+        </div>
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs font-semibold text-slate-600">Personalizar el aviso que ve el visitante</summary>
+          <textarea
+            value={offMsg}
+            onChange={(e) => setOffMsg(e.target.value)}
+            rows={3}
+            maxLength={400}
+            placeholder={defMsg}
+            className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-base outline-none focus:border-[#0284c7] focus:ring-2 focus:ring-sky-100 sm:text-sm"
+          />
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <p className="text-[11px] text-slate-500">Si lo dejas vacío se usa el aviso predeterminado.</p>
+            <button onClick={() => saveAvail(offline)} disabled={availBusy} className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#0284c7] ring-1 ring-sky-200 hover:bg-sky-50 disabled:opacity-50">Guardar aviso</button>
+          </div>
+        </details>
+      </section>
+
       <div className="flex gap-2">
         {([['chats', 'Conversaciones'], ['avisos', 'Avisos fijos del asistente']] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${tab === k ? 'bg-[#0284c7] text-white shadow' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50'}`}>{l}</button>
@@ -182,7 +247,7 @@ export default function SoportePage() {
               {list.map((t) => (
                 <button key={t.id} onClick={() => setSel(t.id)} className={`block w-full border-b border-slate-50 px-4 py-3 text-left transition hover:bg-[#f8fcff] ${sel === t.id ? 'bg-[#f0f9ff]' : ''}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`truncate text-sm ${t.unreadAdmin > 0 ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>{t.name}</span>
+                    <span className={`truncate text-sm ${t.unreadAdmin > 0 ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>{t.name}{t.offlineContact && <span className="ml-1.5 rounded-md bg-amber-100 px-1.5 py-0.5 align-middle text-[9px] font-black uppercase text-amber-700">Dejó datos</span>}</span>
                     <span className="shrink-0 text-[11px] text-slate-400">{ago(t.lastMessageAt)}</span>
                   </div>
                   <div className="mt-0.5 flex items-center justify-between gap-2">
@@ -209,7 +274,11 @@ export default function SoportePage() {
                   <button onClick={() => setSel(null)} className="lg:hidden"><ArrowLeft size={20} className="text-slate-500" /></button>
                   <div className="min-w-0 flex-1">
                     <h2 className="truncate font-bold text-slate-900">{conv.thread.name}</h2>
-                    {conv.thread.email && <a href={'mailto:' + conv.thread.email} className="flex items-center gap-1 truncate text-xs text-sky-600 hover:underline"><Mail size={12} /> {conv.thread.email}</a>}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                      {conv.thread.email && <a href={'mailto:' + conv.thread.email} className="flex items-center gap-1 truncate text-xs text-sky-600 hover:underline"><Mail size={12} /> {conv.thread.email}</a>}
+                      {conv.thread.phone && <a href={'tel:' + String(conv.thread.phone).replace(/[^\d+]/g, '')} className="flex items-center gap-1 text-xs text-sky-600 hover:underline"><Phone size={12} /> {conv.thread.phone}</a>}
+                      {conv.thread.phone && <a href={'https://wa.me/' + String(conv.thread.phone).replace(/\D/g, '')} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-emerald-600 hover:underline">WhatsApp</a>}
+                    </div>
                   </div>
                   {conv.thread.status === 'OPEN' ? (
                     <button onClick={() => setStatus('CLOSED')} className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"><CheckCircle2 size={14} /> Cerrar</button>
@@ -220,14 +289,18 @@ export default function SoportePage() {
                 </header>
 
                 <div ref={box} onScroll={() => { const el = box.current; if (el) stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }} className="flex-1 space-y-2 overflow-y-auto bg-[#f8fcff] p-4">
-                  {conv.messages.map((m) => (
+                  {conv.messages.map((m) => (m.from === 'BOT' ? (
+                    <div key={m.id} className="flex justify-center">
+                      <p className="max-w-[85%] rounded-xl bg-slate-100 px-3 py-1.5 text-center text-xs italic text-slate-500">Asistente: {m.content}</p>
+                    </div>
+                  ) : (
                     <div key={m.id} className={`flex ${m.from === 'STAFF' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm shadow-sm ${m.from === 'STAFF' ? 'rounded-br-md bg-[#0284c7] text-white' : 'rounded-bl-md border border-slate-100 bg-white text-slate-800'}`}>
                         {m.content}
                         <div className={`mt-0.5 text-right text-[10px] ${m.from === 'STAFF' ? 'text-sky-100' : 'text-slate-400'}`}>{hm(m.createdAt)}</div>
                       </div>
                     </div>
-                  ))}
+                  )))}
                   {conv.thread.status === 'CLOSED' && <p className="py-2 text-center text-xs text-slate-400">Conversación cerrada. Si respondes, se reabre.</p>}
                 </div>
 

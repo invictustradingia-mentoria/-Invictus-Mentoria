@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
-import { getAdmin, cleanText } from '@/lib/chat-utils'
+import { getStaff, cleanText } from '@/lib/chat-utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 // Conversación completa; al abrirla se marca como leída.
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const thread = await prismaDash.supportThread.findUnique({
       where: { id: params.id },
@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     if (thread.unreadAdmin > 0) await prismaDash.supportThread.update({ where: { id: thread.id }, data: { unreadAdmin: 0 } })
     return NextResponse.json(
       {
-        thread: { id: thread.id, name: thread.name, email: thread.email, status: thread.status, createdAt: thread.createdAt },
+        thread: { id: thread.id, name: thread.name, email: thread.email, phone: thread.phone, offlineContact: thread.offlineContact, status: thread.status, createdAt: thread.createdAt },
         messages: thread.messages.map((m: any) => ({ id: m.id, from: m.from, content: m.content, createdAt: m.createdAt })),
       },
       { headers: { 'Cache-Control': 'no-store' } }
@@ -31,7 +31,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 // Responder al visitante.
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const body = await req.json().catch(() => ({}))
     const content = cleanText(body?.content)
@@ -52,7 +52,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 // Cerrar o reabrir.
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const { status } = await req.json().catch(() => ({}))
     if (status !== 'OPEN' && status !== 'CLOSED') return NextResponse.json({ error: 'Estado inválido.' }, { status: 400 })
@@ -65,7 +65,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     await prismaDash.supportThread.deleteMany({ where: { id: params.id } })
     return NextResponse.json({ success: true })

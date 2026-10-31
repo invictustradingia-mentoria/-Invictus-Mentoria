@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { cleanText } from '@/lib/chat-utils'
 import { TOKEN_RE } from '@/lib/support-utils'
+import { getSupportSettings } from '@/lib/support-settings'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,8 +18,10 @@ export async function GET(_req: Request, { params }: { params: { token: string }
       include: { messages: { orderBy: { createdAt: 'asc' }, take: 200 } },
     })
     if (!thread) return NextResponse.json({ error: 'No encontrada' }, { status: 404, headers: NO_STORE })
+    const { offline } = await getSupportSettings()
     return NextResponse.json(
       {
+        offline,
         thread: { status: thread.status, name: thread.name },
         messages: thread.messages.map((m: any) => ({ id: m.id, from: m.from, content: m.content, createdAt: m.createdAt })),
       },

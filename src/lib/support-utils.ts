@@ -24,3 +24,11 @@ export function short(input: unknown, max: number): string {
   if (typeof input !== 'string') return ''
   return input.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max)
 }
+
+// Teléfono: solo dígitos, +, espacios, guiones y paréntesis; entre 7 y 15 dígitos. Devuelve null si no es válido.
+export function cleanPhone(input: unknown): string | null {
+  if (typeof input !== 'string') return null
+  const s = input.replace(/[^\d+\-()\s]/g, '').replace(/\s+/g, ' ').trim().slice(0, 25)
+  const digits = s.replace(/\D/g, '')
+  return digits.length >= 7 && digits.length <= 15 ? s : null
+}

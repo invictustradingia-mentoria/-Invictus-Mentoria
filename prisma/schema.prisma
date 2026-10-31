@@ -150,6 +150,8 @@ model SupportThread {
   token         String           @unique
   name          String
   email         String?
+  phone         String?
+  offlineContact Boolean         @default(false) // dejó sus datos con soporte fuera de línea
   status        String           @default("OPEN") // OPEN | CLOSED
   ipHash        String
   unreadAdmin   Int              @default(0)
@@ -165,13 +167,22 @@ model SupportThread {
 model SupportMessage {
   id        String        @id @default(cuid())
   threadId  String
-  from      String // VISITOR | STAFF
+  from      String // VISITOR | STAFF | BOT
   content   String
   createdAt DateTime      @default(now())
   thread    SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@index([threadId, createdAt])
   @@map("support_messages")
+}
+
+// Ajustes simples clave/valor (por ejemplo, si soporte está en línea).
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
 }
 
 model BotNotice {

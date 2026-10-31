@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { getStaff } from '@/lib/chat-utils'
+import { getSupportSettings } from '@/lib/support-settings'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,6 +21,8 @@ export async function GET() {
       id: t.id,
       name: t.name,
       email: t.email,
+      phone: t.phone,
+      offlineContact: t.offlineContact,
       status: t.status,
       unreadAdmin: t.unreadAdmin,
       lastMessageAt: t.lastMessageAt,
@@ -27,7 +30,8 @@ export async function GET() {
       last: t.messages[0] ? { from: t.messages[0].from, content: t.messages[0].content } : null,
     }))
     const unreadTotal = threads.filter((t: any) => t.status === 'OPEN').reduce((n: number, t: any) => n + (t.unreadAdmin > 0 ? 1 : 0), 0)
-    return NextResponse.json({ threads, unreadTotal }, { headers: { 'Cache-Control': 'no-store' } })
+    const settings = await getSupportSettings()
+    return NextResponse.json({ threads, unreadTotal, offline: settings.offline, offlineMessage: settings.custom ? settings.message : '' }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
   }

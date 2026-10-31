@@ -12,7 +12,7 @@ interface Msg {
 }
 interface SMsg {
   id: string
-  from: 'VISITOR' | 'STAFF'
+  from: 'VISITOR' | 'STAFF' | 'BOT'
   content: string
   createdAt: string
 }
@@ -45,8 +45,10 @@ export default function LandingBot() {
   const [sInput, setSInput] = useState('')
   const [sErr, setSErr] = useState('')
   const [sBusy, setSBusy] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', message: '' })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', message: '' })
   const [replyDot, setReplyDot] = useState(false)
+  const [offline, setOffline] = useState(false)
+  const [offMsg, setOffMsg] = useState('')
   const seenStaff = useRef(0)
   const sEnd = useRef<HTMLDivElement>(null)
 
@@ -127,6 +129,20 @@ export default function LandingBot() {
     return () => clearInterval(t)
   }, [token, open, view, loadSupport])
 
+  // Disponibilidad de soporte (la define el equipo desde el panel)
+  useEffect(() => {
+    if (!open) return
+    let alive = true
+    const load = () =>
+      fetch('/api/public/support/status', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((d) => { if (alive) { setOffline(!!d.offline); setOffMsg(d.message || '') } })
+        .catch(() => {})
+    load()
+    const t = setInterval(() => !document.hidden && load(), 20000)
+    return () => { alive = false; clearInterval(t) }
+  }, [open])
+
   function push(from: 'bot' | 'me', a: Partial<BotAnswer> & { text: string }) {
     setMsgs((m) => [...m, { id: idRef.current++, from, text: a.text, actions: a.actions, follow: a.follow }])
   }
@@ -165,7 +181,7 @@ export default function LandingBot() {
         try { localStorage.setItem(TKEY, d.token); localStorage.setItem(SEENKEY, '0') } catch {}
         seenStaff.current = 0
         setToken(d.token)
-        setForm({ name: '', email: '', message: '' })
+        setForm({ name: '', phone: '', email: '', message: '' })
       }
     } catch {
       setSErr('Sin conexión. Inténtalo de nuevo.')
@@ -250,7 +266,7 @@ export default function LandingBot() {
             )}
             <div className="ib-ht">
               <b>{view === 'support' ? 'Soporte Invictus' : 'Asistente Invictus'}</b>
-              <span><i /> {view === 'support' ? 'Te responde una persona del equipo' : 'En línea · respuestas al instante'}</span>
+              <span><i className={view === 'support' && offline ? 'off' : ''} /> {view === 'support' ? (offline ? 'Fuera de línea · te contactamos luego' : 'Te responde una persona del equipo') : 'En línea · respuestas al instante'}</span>
             </div>
             {view === 'bot' && (
               <button className="ib-x" onClick={openSupport} aria-label="Hablar con soporte" title="Hablar con soporte">
@@ -308,18 +324,27 @@ export default function LandingBot() {
                 </button>
               </form>
               <p className="ib-foot">
-                ¿Prefieres hablar con una persona? <button onClick={openSupport}>Hablar con soporte{token ? ' · ver mi conversación' : ''}</button>
+                {offline ? 'Soporte no está en línea ahora. ' : ''}¿Prefieres hablar con una persona? <button onClick={openSupport}>Hablar con soporte{token ? ' · ver mi conversación' : ''}</button>
               </p>
             </>
           ) : !token ? (
             <>
               <form className="ib-sform" onSubmit={startSupport}>
-                <p className="ib-sintro">Déjanos tu consulta y una persona del equipo te responderá aquí mismo. Si cierras esta ventana, tu conversación se guarda en este dispositivo.</p>
+                {offline ? (
+                  <div className="ib-off">
+                    <b>Soporte no está en línea en este momento</b>
+                    <span>{offMsg}</span>
+                  </div>
+                ) : (
+                  <p className="ib-sintro">Déjanos tu consulta y una persona del equipo te responderá aquí mismo. Si cierras esta ventana, tu conversación se guarda en este dispositivo.</p>
+                )}
                 <label>Tu nombre *<input value={form.name} maxLength={60} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej: Martín" required /></label>
-                <label>Correo (opcional)<input type="email" value={form.email} maxLength={120} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Para avisarte si no estás conectado" /></label>
+                <label>Teléfono{offline ? ' *' : ' (opcional)'}<input type="tel" inputMode="tel" value={form.phone} maxLength={25} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Ej: +54 9 11 1234 5678" /></label>
+                <label>Correo{offline ? ' *' : ' (opcional)'}<input type="email" value={form.email} maxLength={120} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder={offline ? 'Para poder contactarte' : 'Para avisarte si no estás conectado'} /></label>
+                {offline && <p className="ib-hint">Completa al menos uno: teléfono o correo.</p>}
                 <label>Tu consulta *<textarea value={form.message} maxLength={1000} rows={4} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Cuéntanos en qué podemos ayudarte…" required /></label>
                 {sErr && <p className="ib-err">{sErr}</p>}
-                <button type="submit" className="ib-go" disabled={sBusy || !form.name.trim() || !form.message.trim()}>{sBusy ? 'Enviando…' : 'Enviar consulta'}</button>
+                <button type="submit" className="ib-go" disabled={sBusy || !form.name.trim() || !form.message.trim() || (offline && !form.phone.trim() && !form.email.trim())}>{sBusy ? 'Enviando…' : offline ? 'Dejar mi consulta' : 'Enviar consulta'}</button>
               </form>
               <p className="ib-foot">No compartas contraseñas ni datos bancarios por este chat.</p>
             </>
@@ -328,13 +353,13 @@ export default function LandingBot() {
               <div className="ib-body">
                 {sMsgs.map((m) => (
                   <div key={m.id} className={'ib-row ' + (m.from === 'VISITOR' ? 'me' : 'bot')}>
-                    {m.from === 'STAFF' && <span className="ib-who">Equipo Invictus</span>}
+                    {m.from !== 'VISITOR' && <span className="ib-who">{m.from === 'BOT' ? 'Asistente Invictus' : 'Equipo Invictus'}</span>}
                     <div className="ib-bub">{m.content}</div>
                     <span className="ib-time">{hm(m.createdAt)}</span>
                   </div>
                 ))}
                 {!sMsgs.some((m) => m.from === 'STAFF') && !sClosed && sMsgs.length > 0 && (
-                  <p className="ib-wait">Recibimos tu consulta. Te responderemos aquí en cuanto podamos.</p>
+                  <p className="ib-wait">{offline ? 'Soporte no está en línea ahora. Te contactaremos por los datos que dejaste o te responderemos aquí.' : 'Recibimos tu consulta. Te responderemos aquí en cuanto podamos.'}</p>
                 )}
                 {sClosed && (
                   <div className="ib-closed">
@@ -420,6 +445,10 @@ box-shadow:0 24px 70px rgba(15,23,42,.28),0 0 0 1px rgba(15,23,42,.06);display:f
 .ib-wait{margin:0;text-align:center;font-size:12px;color:#64748b;background:#f1f5f9;padding:8px 12px;border-radius:10px}
 .ib-closed{text-align:center;font-size:12.5px;color:#64748b;background:#f1f5f9;padding:12px;border-radius:12px;display:flex;flex-direction:column;gap:8px;align-items:center}
 .ib-closed button{background:#0284c7;color:#fff;border:0;border-radius:999px;padding:7px 14px;font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit}
+.ib-ht i.off{background:#94a3b8}
+.ib-off{display:flex;flex-direction:column;gap:4px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;line-height:1.5;padding:10px 12px;border-radius:12px}
+.ib-off b{font-size:13px}
+.ib-hint{margin:-4px 0 0;font-size:11.5px;color:#92400e}
 @media(max-width:520px){
 .ib-panel{right:0;left:0;bottom:0;width:100%;max-width:100%;height:100dvh;max-height:100dvh;border-radius:0}
 .ib-nudge{display:none}
