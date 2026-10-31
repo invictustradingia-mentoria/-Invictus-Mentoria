@@ -14,12 +14,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   const user = await prismaDash.user.findUnique({
     where: { id },
-    select: { name: true, email: true, role: true, avatarUrl: true, status: true, isBanned: true, editorLevel: true },
+    select: { name: true, email: true, role: true, avatarUrl: true, status: true, isBanned: true, editorLevel: true, username: true },
   })
   if (!user || user.isBanned || user.status !== 'APPROVED') redirect('/login')
 
   return (
-    <DashboardShell user={{ name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, viewLevel: user.editorLevel }}>
+    <DashboardShell user={{ name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, viewLevel: user.editorLevel, username: user.username }}>
       {children}
     </DashboardShell>
   )

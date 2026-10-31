@@ -1,11 +1,12 @@
 'use client'
 import ActivityTracker from '@/components/dashboard/ActivityTracker'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { PlayCircle, UserCircle2, ShieldCheck, LogOut, Menu, X, Crown, Star, MessageSquare, Video, Pencil } from 'lucide-react'
 import { getMembership } from '@/lib/membership'
+import ThemeToggle from '@/components/ThemeToggle'
 
 interface ShellUser {
   name: string | null
@@ -13,6 +14,7 @@ interface ShellUser {
   role: string
   avatarUrl: string | null
   viewLevel?: string | null
+  username?: string | null
 }
 
 export function Avatar({ name, email, avatarUrl, size = 40 }: { name?: string | null; email?: string; avatarUrl?: string | null; size?: number }) {
@@ -34,6 +36,29 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   const m = getMembership(user.role)
   const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : m.key === 'EDITOR' ? Pencil : Star
   const viewText = user.viewLevel === 'CLUB' ? 'Ves: contenido Club' : user.viewLevel === 'MENTORIA' ? 'Ves: contenido Mentoría' : 'Ves: todo el contenido'
+
+  // Progreso del curso para la tarjeta lateral
+  const [prog, setProg] = useState<{ done: number; total: number } | null>(null)
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      try {
+        const r = await fetch('/api/student/courses', { cache: 'no-store' })
+        if (!r.ok) return
+        const d = await r.json()
+        const lessons = (d.modules || []).flatMap((x: any) => x.lessons || [])
+        const done = lessons.filter((l: any) => d.progress?.[l.id]?.completed).length
+        if (alive) setProg({ done, total: lessons.length })
+      } catch {}
+    }
+    load()
+    const t = setInterval(load, 60000)
+    const on = () => load()
+    window.addEventListener('focus', on)
+    return () => { alive = false; clearInterval(t); window.removeEventListener('focus', on) }
+  }, [pathname])
+  const pct = prog && prog.total > 0 ? Math.round((prog.done / prog.total) * 100) : 0
+  const levelText = m.key === 'MENTORIA' ? 'Nivel 2 · Programa + Mentoría' : m.key === 'CLUB' ? 'Nivel 1 · Club' : m.key === 'ADMIN' ? 'Acceso total' : 'Equipo de edición'
 
   const nav = [
     { href: '/dashboard/clases', label: 'Mis clases', icon: PlayCircle },
@@ -60,6 +85,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
             <Avatar name={user.name} email={user.email} avatarUrl={user.avatarUrl} size={44} />
             <div className="min-w-0">
               <p className="truncate text-sm font-black leading-tight">{user.name || 'Alumno'}</p>
+              {user.username && <p className="truncate text-[11px] font-bold text-white/90">@{user.username}</p>}
               <p className="truncate text-[10px] text-white/80">{user.email}</p>
             </div>
           </div>
@@ -69,6 +95,22 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
           {m.key === 'EDITOR' && <p className="relative mt-2 text-center text-[10px] font-bold text-white/85">{viewText}</p>}
         </div>
       </div>
+
+      {/* Progreso del curso */}
+      {prog && prog.total > 0 && (
+        <div className="px-4 pt-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3.5">
+            <p className="text-[10px] font-bold text-slate-500">{levelText}</p>
+            <div className="mt-2 flex items-center justify-between text-[11px] font-black text-slate-700">
+              <span>Progreso del curso</span><span className="text-sky-600">{pct}%</span>
+            </div>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700" style={{ width: `${pct}%` }} />
+            </div>
+            <p className="mt-1.5 text-[10px] text-slate-400">{prog.done} de {prog.total} clases</p>
+          </div>
+        </div>
+      )}
 
       <nav className="mt-5 flex-1 space-y-1 px-3">
         {nav.map((n) => {
@@ -92,7 +134,8 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
         )}
       </nav>
 
-      <div className="border-t border-slate-100 p-3">
+      <div className="space-y-1 border-t border-slate-100 p-3">
+        <ThemeToggle />
         <button type="button" onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer">
           <LogOut size={17} /> Cerrar sesión
@@ -107,9 +150,12 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
       {/* Barra móvil */}
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
         <span className="text-sm font-black text-slate-900">INVICTUS <span className="text-sky-500">CAMPUS</span></span>
-        <button type="button" onClick={() => setOpen(!open)} aria-label="Menú" className="rounded-lg p-1.5 text-slate-700 cursor-pointer">
-          {open ? <X size={22} /> : <Menu size={22} />}
-        </button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle variant="icon" />
+          <button type="button" onClick={() => setOpen(!open)} aria-label="Menú" className="rounded-lg p-1.5 text-slate-700 cursor-pointer">
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </div>
 
       {/* Menú móvil */}

@@ -293,4 +293,67 @@ export const LANDING_CSS = `.invl *{box-sizing:border-box;margin:0;padding:0}
 .invl .vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .invl section[id]{scroll-margin-top:90px}
 .invl #loader{animation:inv-loaderOut .01s 7s forwards}
-@keyframes inv-loaderOut{to{opacity:0;visibility:hidden}}`
+@keyframes inv-loaderOut{to{opacity:0;visibility:hidden}}
+
+/* ===== Modo noche de la landing ===== */
+.invl .tg{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1px solid #bae6fd;background:#fff;color:#0284c7;cursor:pointer;font-size:18px;line-height:1;transition:.25s}
+.invl .tg:hover{transform:rotate(18deg) scale(1.08);border-color:#38bdf8}
+.invl .tg .m{display:none}
+html[data-theme="dark"] .invl .tg .s{display:none}
+html[data-theme="dark"] .invl .tg .m{display:inline}
+@keyframes inv-gem{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.invl .gemf{animation:inv-gem 4.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+html[data-theme="dark"] .invl{--ink:#e6eaf2;--s:#121826;background:#0b0f17;color:#e6eaf2}
+html[data-theme="dark"] .invl #loader{background:#0b0f17}
+html[data-theme="dark"] .invl #loader p{color:#e6eaf2}
+html[data-theme="dark"] .invl .hero{background:radial-gradient(ellipse at 72% 45%,#0f3a5c 0%,#0b1a2e 36%,#0b0f17 72%)}
+html[data-theme="dark"] .invl .grid{background-image:linear-gradient(rgba(56,189,248,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.07) 1px,transparent 1px)}
+html[data-theme="dark"] .invl .bigtxt{-webkit-text-stroke:2px rgba(56,189,248,.16)}
+html[data-theme="dark"] .invl .glassbar{background:rgba(15,21,34,.78);border-color:#232d42;box-shadow:0 12px 44px -14px rgba(0,0,0,.7)}
+html[data-theme="dark"] .invl .links{background:rgba(26,34,52,.9)}
+html[data-theme="dark"] .invl .links a{color:#aab3c5}
+html[data-theme="dark"] .invl .lnk{color:#aab3c5}
+html[data-theme="dark"] .invl .logo{color:#e6eaf2}
+html[data-theme="dark"] .invl .tg,html[data-theme="dark"] .invl .burger{background:#121826;border-color:#232d42;color:#7dd3fc}
+html[data-theme="dark"] .invl .burger i{background:#7dd3fc}
+html[data-theme="dark"] .invl .drawer a{color:#e6eaf2}
+html[data-theme="dark"] .invl .drawer a:hover,html[data-theme="dark"] .invl .drawer a:active{background:#1a2234}
+html[data-theme="dark"] .invl h1,html[data-theme="dark"] .invl h2{color:#e6eaf2}
+html[data-theme="dark"] .invl .sub,html[data-theme="dark"] .invl .lead{color:#aab3c5}
+html[data-theme="dark"] .invl .ghost{background:rgba(18,24,38,.7);border-color:#2b6b93;color:#7dd3fc}
+html[data-theme="dark"] .invl .card{background:rgba(18,24,38,.8);border-color:#232d42;box-shadow:0 24px 50px -20px rgba(0,0,0,.7),inset 0 0 0 1px rgba(56,189,248,.18)}
+html[data-theme="dark"] .invl .card small{color:#8a94a8}
+html[data-theme="dark"] .invl .card.live{color:#7dd3fc}
+html[data-theme="dark"] .invl .fc,html[data-theme="dark"] .invl .soc a{background:rgba(18,24,38,.88);border-color:#2b6b93;color:#bae6fd}
+html[data-theme="dark"] .invl .glow{background:radial-gradient(circle,rgba(56,189,248,.5),rgba(14,165,233,.18) 45%,transparent 70%)}
+html[data-theme="dark"] .invl .ring{border-color:rgba(125,211,252,.35)}
+html[data-theme="dark"] .invl .win,html[data-theme="dark"] .invl .gl,html[data-theme="dark"] .invl .q,html[data-theme="dark"] .invl .legend li,html[data-theme="dark"] .invl .chartbox,html[data-theme="dark"] .invl .feat>div,html[data-theme="dark"] .invl .circ,html[data-theme="dark"] .invl .mini{background:#121826;border-color:#232d42}
+html[data-theme="dark"] .invl .gl{background:linear-gradient(160deg,#121826,#0f1a2b)}
+html[data-theme="dark"] .invl .chartbox{background:linear-gradient(160deg,#121826,#0f1a2b)}
+html[data-theme="dark"] .invl .tb{background:linear-gradient(#161e30,#121826);border-color:#232d42}
+html[data-theme="dark"] .invl .tb em{background:#0b0f17;color:#8a94a8}
+html[data-theme="dark"] .invl .side{background:#0f1522;border-color:#232d42}
+html[data-theme="dark"] .invl .side .a{background:rgba(14,165,233,.18);color:#7dd3fc}
+html[data-theme="dark"] .invl .track{background:#1a2234}
+html[data-theme="dark"] .invl .mods div{border-color:#232d42;color:#8a94a8}
+html[data-theme="dark"] .invl .mods h6,html[data-theme="dark"] .invl .legend li b{color:#e6eaf2}
+html[data-theme="dark"] .invl .gl h3,html[data-theme="dark"] .invl .steps h3{color:#7dd3fc}
+html[data-theme="dark"] .invl .gl p,html[data-theme="dark"] .invl .steps p,html[data-theme="dark"] .invl .q .a p,html[data-theme="dark"] .invl .legend li,html[data-theme="dark"] .invl .plans li,html[data-theme="dark"] .invl .prog{color:#aab3c5}
+html[data-theme="dark"] .invl .num{color:#1a2234}
+html[data-theme="dark"] .invl .plans p,html[data-theme="dark"] .invl .feat p{color:#aab3c5}
+html[data-theme="dark"] .invl .q.open{background:#0f1a2b;border-color:#38bdf8}
+html[data-theme="dark"] .invl .q button{color:#e6eaf2}
+html[data-theme="dark"] .invl .plans small{color:#8a94a8}
+html[data-theme="dark"] .invl .plans h3,html[data-theme="dark"] .invl .feat h3{color:#e6eaf2}
+html[data-theme="dark"] .invl .circ{border-color:#2b6b93}
+html[data-theme="dark"] .invl footer{background:#0a0d14;border-color:#232d42}
+html[data-theme="dark"] .invl footer p{color:#8a94a8}
+html[data-theme="dark"] .invl .copy{color:#6b7488}
+html[data-theme="dark"] .invl .cue{border-color:#2b6b93}
+html[data-theme="dark"] .invl .cl{fill:#e6eaf2}
+html[data-theme="dark"] .invl .vid{background:linear-gradient(135deg,#0c4a6e,#0b0f17,#0a3a52)}
+html[data-theme="dark"] .invl .gl:hover{border-color:#38bdf8}
+html[data-theme="dark"] .invl #spot{background:radial-gradient(circle,rgba(56,189,248,.14),transparent 65%)}
+html[data-theme="dark"] .invl section.s{background:transparent}
+html[data-theme="dark"] .invl .chartbox small{color:#6b7488}
+`

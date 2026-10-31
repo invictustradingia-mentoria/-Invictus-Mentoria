@@ -17,7 +17,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('inv-theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark')}}catch(e){}})();` }} />
+      </head>
       <body className={inter.className}>
         <Providers>{children}</Providers>
       </body>

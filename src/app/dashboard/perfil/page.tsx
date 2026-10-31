@@ -38,6 +38,7 @@ export default function ProfilePage() {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('CLUB')
   const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
   const [phone, setPhone] = useState('')
   const [avatar, setAvatar] = useState<string | null>(null)
   const [curPass, setCurPass] = useState('')
@@ -50,7 +51,7 @@ export default function ProfilePage() {
       .then((r) => r.json())
       .then((d) => {
         if (d.user) {
-          setEmail(d.user.email); setRole(d.user.role); setName(d.user.name ?? '')
+          setEmail(d.user.email); setRole(d.user.role); setName(d.user.name ?? ''); setUsername(d.user.username ?? '')
           setPhone(d.user.phone ?? ''); setAvatar(d.user.avatarUrl ?? null)
         }
       })
@@ -90,7 +91,7 @@ export default function ProfilePage() {
 
   const removePhoto = async () => { if (await patch({ avatarUrl: null }, 'Foto eliminada')) setAvatar(null) }
 
-  const saveData = (e: React.FormEvent) => { e.preventDefault(); patch({ name, phone }, 'Datos guardados') }
+  const saveData = (e: React.FormEvent) => { e.preventDefault(); patch({ name, phone, ...(username ? { username } : {}) }, 'Datos guardados') }
 
   const savePass = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -126,6 +127,7 @@ export default function ProfilePage() {
           </div>
           <div className="text-center sm:text-left">
             <p className="text-xl font-black">{name || 'Alumno'}</p>
+            {username && <p className="text-xs font-bold text-white/90">@{username}</p>}
             <p className="text-xs text-white/80">{email}</p>
             <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-black uppercase tracking-widest backdrop-blur">
               <MIcon size={13} /> {m.title}
@@ -144,6 +146,7 @@ export default function ProfilePage() {
       <form onSubmit={saveData} className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-sm font-black text-slate-900">Datos personales</h2>
         <div><label className={labelCls}>Nombre</label><input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} required /></div>
+        <div><label className={labelCls}>Nombre de usuario (único)</label><input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))} className={inputCls} placeholder="ej: trader_nyc" maxLength={20} autoCapitalize="none" /></div>
         <div><label className={labelCls}>Correo</label><input value={email} disabled className={`${inputCls} cursor-not-allowed opacity-60`} /></div>
         <div><label className={labelCls}>Teléfono</label><input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="+54 9 351 000 0000" /></div>
         <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-3 text-xs font-bold text-white hover:bg-sky-700 disabled:opacity-50 cursor-pointer">

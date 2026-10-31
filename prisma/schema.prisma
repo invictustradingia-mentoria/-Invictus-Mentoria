@@ -14,6 +14,7 @@ model User {
   id           String       @id @default(cuid())
   name         String?
   email        String       @unique
+  username     String?      @unique
   password     String
   role         String       @default("CLUB") // ADMIN, CLUB, MENTORIA
   status       String       @default("PENDING") // PENDING, APPROVED, REJECTED

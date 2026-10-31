@@ -10,7 +10,7 @@ export const LANDING_HTML = `<div id="loader"><div class="lcore"><svg viewBox="0
       <span class="lt">INVICTUS <b>CAMPUS</b></span>
     </a>
     <nav class="links"><a href="#top" class="on">Inicio</a><a href="#metodo">Metodología</a><a href="#plataforma">Plataforma</a><a href="#planes">Planes</a><a href="#faq">Preguntas</a></nav>
-    <div class="nr"><a class="lnk" href="/login">Iniciar sesión</a><a class="btn blue" href="/register">Crear cuenta</a><button class="burger" id="burger" aria-label="Menú" aria-expanded="false"><i></i><i></i><i></i></button></div>
+    <div class="nr"><a class="lnk" href="/login">Iniciar sesión</a><a class="btn blue" href="/register">Crear cuenta</a><button class="tg" id="themeBtn" type="button" aria-label="Cambiar entre modo claro y modo noche" title="Modo noche / claro"><span class="s">☀</span><span class="m">☾</span></button><button class="burger" id="burger" aria-label="Menú" aria-expanded="false"><i></i><i></i><i></i></button></div>
   </div>
   <nav class="drawer glassbar" id="drawer"><a href="#top">Inicio</a><a href="#metodo">Metodología</a><a href="#plataforma">Plataforma</a><a href="#planes">Planes</a><a href="#faq">Preguntas</a><a href="/login">Iniciar sesión</a><a href="/register">Crear cuenta</a></nav>
 </header>
@@ -48,7 +48,7 @@ export const LANDING_HTML = `<div id="loader"><div class="lcore"><svg viewBox="0
       <div class="ring" style="width:100%;aspect-ratio:1;transform:translate(-50%,-50%);animation:inv-gspin 60s linear infinite reverse"><i style="background:#22d3ee"></i></div>
       <div class="rig" id="rig">
         
-        <div class="bullw"><svg class="bull" viewBox="0 0 500 500" aria-label="Emblema Invictus">
+        <div class="bullw"><svg class="bull" viewBox="0 0 500 500" aria-label="Cristal Invictus">
           <defs>
             <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0f9ff"/><stop offset=".45" stop-color="#7dd3fc"/><stop offset="1" stop-color="#0369a1"/></linearGradient>
             <linearGradient id="disc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0f2fe"/><stop offset="1" stop-color="#7dd3fc"/></linearGradient>
@@ -62,6 +62,16 @@ export const LANDING_HTML = `<div id="loader"><div class="lcore"><svg viewBox="0
             <clipPath id="clipHelm"><path d="M168 330C160 230 200 180 250 178 300 180 340 230 332 330L318 340H182Z"/></clipPath>
             <clipPath id="clipDisc"><circle cx="250" cy="250" r="172"/></clipPath>
             <filter id="gl2"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <radialGradient id="disc2" cx=".5" cy=".42" r=".7"><stop offset="0" stop-color="#0e5a86"/><stop offset=".6" stop-color="#0b3a5c"/><stop offset="1" stop-color="#062a45"/></radialGradient>
+            <linearGradient id="gA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f6ff"/><stop offset="1" stop-color="#7cc4f0"/></linearGradient>
+            <linearGradient id="gB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bfe4fb"/></linearGradient>
+            <linearGradient id="gC" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#e6f5ff"/><stop offset="1" stop-color="#a9d9f6"/></linearGradient>
+            <linearGradient id="gD" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4ecfb"/><stop offset="1" stop-color="#5eb0e4"/></linearGradient>
+            <linearGradient id="gE" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a9d9f6"/><stop offset="1" stop-color="#4a9bd1"/></linearGradient>
+            <linearGradient id="gF" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6f5ff"/><stop offset="1" stop-color="#7cc4f0"/></linearGradient>
+            <linearGradient id="gG" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe9fb"/><stop offset="1" stop-color="#3f8fc8"/></linearGradient>
+            <linearGradient id="gH" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ecbf0"/><stop offset="1" stop-color="#2a76ad"/></linearGradient>
+            <clipPath id="clipGem"><path d="M250 88L172 252 250 416 328 252Z"/></clipPath>
             <path id="cr" d="M0 0 L9 34 L0 62 L-9 34Z"/>
           </defs>
           <!-- outer ring -->
@@ -71,59 +81,30 @@ export const LANDING_HTML = `<div id="loader"><div class="lcore"><svg viewBox="0
           <circle cx="250" cy="250" r="226" fill="none" stroke="#38bdf8" stroke-width="3"/>
           <g id="keyring" style="transform-origin:250px 250px;animation:inv-spin 70s linear infinite"></g>
           <circle cx="250" cy="250" r="180" fill="none" stroke="#38bdf8" stroke-width="4"/>
-          <circle cx="250" cy="250" r="172" fill="url(#disc)"/>
+          <circle cx="250" cy="250" r="172" fill="url(#disc2)"/>
           <circle cx="250" cy="250" r="172" fill="none" stroke="#fff" stroke-width="3" opacity=".9"/>
-          <!-- halo behind helmet -->
-          <circle cx="250" cy="230" r="150" fill="url(#halo)" style="animation:inv-haloP 3.4s ease-in-out infinite;transform-origin:250px 230px"/>
-          <!-- arrows -->
-          <g style="animation:inv-arrUp 2.6s ease-in-out infinite">
-            <path d="M118 335V245" stroke="#0ea5e9" stroke-width="7" stroke-linecap="round"/>
-            <path d="M118 232L96 268H140Z" fill="#0ea5e9"/>
+<!-- cristal principal -->
+          <circle cx="250" cy="250" r="150" fill="url(#halo)" style="animation:inv-haloP 3.4s ease-in-out infinite;transform-origin:250px 250px"/>
+          <g class="gemf">
+            <g style="animation:inv-twinkle 2.6s ease-in-out infinite">
+              <g filter="url(#gl2)" opacity=".55"><path d="M250 84L334 252 250 420 166 252Z" fill="#7dd3fc"/></g>
+              <path d="M250 88L172 252 222 262Z" fill="url(#gA)"/>
+              <path d="M250 88L222 262 250 270Z" fill="url(#gB)"/>
+              <path d="M250 88L250 270 278 262Z" fill="url(#gC)"/>
+              <path d="M250 88L278 262 328 252Z" fill="url(#gD)"/>
+              <path d="M172 252L222 262 250 416Z" fill="url(#gE)"/>
+              <path d="M222 262L250 270 250 416Z" fill="url(#gF)"/>
+              <path d="M250 270L278 262 250 416Z" fill="url(#gG)"/>
+              <path d="M278 262L328 252 250 416Z" fill="url(#gH)"/>
+              <path d="M250 88L172 252 250 416 328 252Z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round" opacity=".95"/>
+              <path d="M172 252L222 262 250 270 278 262 328 252" fill="none" stroke="#fff" stroke-width="2" opacity=".9"/>
+              <path d="M250 88L222 262 250 416M250 88L278 262 250 416" fill="none" stroke="#bae6fd" stroke-width="1.4" opacity=".75"/>
+              <path d="M236 150L246 112 250 130Z" fill="#fff" opacity=".9"/>
+              <path d="M204 262L226 330 214 300Z" fill="#fff" opacity=".5"/>
+              <g clip-path="url(#clipGem)"><rect x="0" y="80" width="90" height="350" fill="url(#sweep)" transform="skewX(-18)" opacity=".9"/></g>
+            </g>
           </g>
-          <g style="animation:inv-arrDown 2.6s ease-in-out infinite">
-            <path d="M382 245V335" stroke="#6366f1" stroke-width="7" stroke-linecap="round"/>
-            <path d="M382 348L360 312H404Z" fill="#6366f1"/>
-          </g>
-          <!-- crest crystals -->
-          <g filter="url(#gl2)" opacity=".5"><use href="#cr" x="250" y="70" transform="translate(0 0) scale(1.9 1.9)" transform-origin="250 70" fill="#fff"/></g>
-          <g transform="translate(250 175)">
-            <g style="animation:inv-twinkle 3s ease-in-out infinite"><use href="#cr" transform="rotate(-72) translate(0 -128) scale(1.35 .95)" fill="url(#cry2)" stroke="#0284c7" stroke-width="1.5"/></g>
-            <g style="animation:inv-twinkle 3s .3s ease-in-out infinite"><use href="#cr" transform="rotate(-48) translate(0 -138) scale(1.45 1.05)" fill="url(#cry)" stroke="#0284c7" stroke-width="1.5"/></g>
-            <g style="animation:inv-twinkle 3s .6s ease-in-out infinite"><use href="#cr" transform="rotate(-24) translate(0 -142) scale(1.5 1.1)" fill="url(#cry2)" stroke="#0284c7" stroke-width="1.5"/></g>
-            <g style="animation:inv-twinkle 3s .3s ease-in-out infinite"><use href="#cr" transform="rotate(72) translate(0 -128) scale(1.35 .95)" fill="url(#cry2)" stroke="#0284c7" stroke-width="1.5"/></g>
-            <g style="animation:inv-twinkle 3s .6s ease-in-out infinite"><use href="#cr" transform="rotate(48) translate(0 -138) scale(1.45 1.05)" fill="url(#cry)" stroke="#0284c7" stroke-width="1.5"/></g>
-            <g style="animation:inv-twinkle 3s ease-in-out infinite"><use href="#cr" transform="rotate(24) translate(0 -142) scale(1.5 1.1)" fill="url(#cry2)" stroke="#0284c7" stroke-width="1.5"/></g>
-          </g>
-          <!-- main crystal -->
-          <g style="animation:inv-twinkle 2.4s ease-in-out infinite">
-            <path d="M250 38L276 104 266 150H234L224 104Z" fill="url(#cry)" stroke="#0284c7" stroke-width="2"/>
-            <path d="M250 38L250 150M224 104H276M250 38L234 150M250 38L266 150" stroke="#fff" stroke-width="1.5" opacity=".8" fill="none"/>
-            <path d="M232 104L250 38 244 104Z" fill="#fff" opacity=".7"/>
-          </g>
-          <!-- crest base -->
-          <path d="M226 148H274L284 186H216Z" fill="url(#met)" stroke="#0c4a6e" stroke-width="2"/>
-          <!-- dome -->
-          <path d="M168 330C160 230 200 180 250 178 300 180 340 230 332 330L318 340H182Z" fill="url(#met)" stroke="#0c4a6e" stroke-width="3"/>
-          <path d="M184 300C182 240 210 198 250 190" stroke="#fff" stroke-width="6" fill="none" opacity=".55" stroke-linecap="round"/>
-          <!-- brow band -->
-          <path d="M160 268L250 240 340 268 340 296 250 270 160 296Z" fill="url(#met2)" stroke="#0c4a6e" stroke-width="2.5"/>
-          <path d="M238 266L250 244 262 266" stroke="#0c4a6e" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          <!-- face opening -->
-          <path d="M190 296H310L300 346H274L264 398H236L226 346H200Z" fill="#06223a"/>
-          <path d="M238 286H262L268 380 250 414 232 380Z" fill="url(#met)" stroke="#0c4a6e" stroke-width="2.5"/>
-          <path d="M250 292V396" stroke="#fff" stroke-width="3" opacity=".6"/>
-          <!-- cheek crystals -->
-          <g style="animation:inv-twinkle 3.4s .2s ease-in-out infinite">
-            <path d="M190 302L226 308 233 350 228 428 204 448 190 384Z" fill="url(#cry)" stroke="#0284c7" stroke-width="2.5"/>
-            <path d="M190 302L214 372 204 448M226 308L214 372 228 428M214 372L190 384" stroke="#fff" stroke-width="1.6" fill="none" opacity=".85"/>
-          </g>
-          <g style="animation:inv-twinkle 3.4s .5s ease-in-out infinite">
-            <path d="M310 302L274 308 267 350 272 428 296 448 310 384Z" fill="url(#cry2)" stroke="#0284c7" stroke-width="2.5"/>
-            <path d="M310 302L286 372 296 448M274 308L286 372 272 428M286 372L310 384" stroke="#fff" stroke-width="1.6" fill="none" opacity=".85"/>
-          </g>
-          <!-- light sweep -->
-          <g clip-path="url(#clipHelm)"><rect x="0" y="150" width="100" height="220" fill="url(#sweep)" transform="skewX(-20)" opacity=".85"/></g>
-          <!-- sparkles -->
+                    <!-- sparkles -->
           <g fill="#fff" filter="url(#gl2)">
             <path d="M250 18l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" style="animation:inv-spark 2.2s ease-in-out infinite;transform-origin:250px 30px"/>
             <path d="M330 130l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" style="animation:inv-spark 2.2s .7s ease-in-out infinite;transform-origin:330px 138px"/>

@@ -2,11 +2,13 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
-import { User, Mail, Lock, Phone, Eye, EyeOff, AlertCircle, CheckCircle2, Clock } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AtSign, User, Mail, Lock, Phone, Eye, EyeOff, AlertCircle, CheckCircle2, Clock } from 'lucide-react'
 
 export default function RegisterPage() {
   const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
+  const [uState, setUState] = useState<{ ok: boolean | null; msg: string }>({ ok: null, msg: '' })
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
@@ -14,6 +16,21 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // Comprueba en vivo si el usuario está libre
+  useEffect(() => {
+    const u = username.trim().toLowerCase()
+    if (!u) { setUState({ ok: null, msg: '' }); return }
+    setUState({ ok: null, msg: 'Comprobando...' })
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch('/api/auth/check-username?u=' + encodeURIComponent(u), { cache: 'no-store' })
+        const d = await r.json()
+        setUState({ ok: !!d.available, msg: d.message || '' })
+      } catch { setUState({ ok: null, msg: '' }) }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [username])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,6 +43,7 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
+          username: username.trim().toLowerCase(),
           email: email.trim().toLowerCase(),
           phone: phone.trim(),
           password,
@@ -142,6 +160,32 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-600">Nombre de usuario <span className="font-normal text-gray-400">(único)</span></label>
+            <div className="relative">
+              <AtSign className="absolute left-3.5 top-3 text-gray-400" size={16} />
+              <input
+                type="text"
+                required
+                minLength={3}
+                maxLength={20}
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                placeholder="ej: trader_nyc"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
+              />
+            </div>
+            {uState.msg && (
+              <p className={`text-[11px] font-bold ${uState.ok === true ? 'text-emerald-600' : uState.ok === false ? 'text-rose-600' : 'text-gray-400'}`}>
+                {uState.ok === true ? '✓ ' : uState.ok === false ? '✕ ' : ''}{uState.msg}
+              </p>
+            )}
+            <p className="text-[10px] text-gray-400">Con este nombre te verán en la comunidad y podrás iniciar sesión.</p>
+          </div>
+
+          <div className="space-y-1">
             <label className="text-xs font-bold text-gray-600">Teléfono <span className="font-normal text-gray-400">(opcional)</span></label>
             <div className="relative">
               <Phone className="absolute left-3.5 top-3 text-gray-400" size={16} />
@@ -183,7 +227,7 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || uState.ok === false}
             className="w-full py-3 rounded-xl text-xs font-bold bg-[#0284c7] text-white hover:bg-[#0369a1] transition-all shadow-md shadow-sky-500/10 cursor-pointer disabled:opacity-50"
           >
             {loading ? 'Procesando registro...' : 'Solicitar Acceso'}

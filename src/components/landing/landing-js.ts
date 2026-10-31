@@ -4,6 +4,9 @@ const on=(t,e,f,o)=>{t.addEventListener(e,f,o);cleanups.push(()=>t.removeEventLi
 const raf=f=>{if(alive)requestAnimationFrame(f)};
 const W_int=(f,t)=>{const i=setInterval(f,t);cleanups.push(()=>clearInterval(i));return i};
 const W_io=(cb,o)=>{const x=new IntersectionObserver(cb,o);cleanups.push(()=>x.disconnect());return x};
+// modo noche / claro (visitantes)
+(function(){const tb=document.getElementById('themeBtn');if(!tb)return;
+ on(tb,'click',()=>{const d=document.documentElement;const n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('inv-theme',n)}catch(e){}window.dispatchEvent(new Event('inv-theme'))})})();
 const io=W_io(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.1});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 // rotating word

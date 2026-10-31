@@ -16,11 +16,14 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Contraseña', type: 'password' },
       },
       async authorize(credentials) {
-        const email = credentials?.email?.trim().toLowerCase()
+        // El campo "email" acepta correo o nombre de usuario
+        const ident = credentials?.email?.trim().toLowerCase().replace(/^@/, '')
         const password = credentials?.password
-        if (!email || !password) throw new Error('INVALID')
+        if (!ident || !password) throw new Error('INVALID')
 
-        const user = await prismaDash.user.findUnique({ where: { email } })
+        const user = ident.includes('@')
+          ? await prismaDash.user.findUnique({ where: { email: ident } })
+          : await prismaDash.user.findUnique({ where: { username: ident } })
         if (!user) throw new Error('INVALID')
 
         const ok = await bcrypt.compare(password, user.password)

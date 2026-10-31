@@ -106,7 +106,7 @@ export default function LoginPage() {
             <div className="relative">
               <Mail className="absolute left-3.5 top-3 text-gray-400" size={16} />
               <input
-                type="email"
+                type="text" autoCapitalize="none"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

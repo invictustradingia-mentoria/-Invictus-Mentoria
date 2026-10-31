@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, Circle, PlayCircle, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft, Check, Crown, Star, ShieldCheck, Sparkles, Clock, BookOpen, AlertCircle, Pencil } from 'lucide-react'
+import { CheckCircle2, Circle, PlayCircle, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft, Check, Crown, Star, ShieldCheck, Sparkles, Clock, BookOpen, AlertCircle, Pencil, Download } from 'lucide-react'
+import Link from 'next/link'
 import SecurePlayer from '@/components/dashboard/SecurePlayer'
 import { getMembership } from '@/lib/membership'
 
@@ -279,6 +280,14 @@ export default function ClasesPage() {
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <h2 className="text-sm font-black text-slate-900">Sobre esta clase</h2>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">{current.description || 'Esta clase no tiene descripción.'}</p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h2 className="flex items-center gap-2 text-sm font-black text-slate-900"><Download size={16} className="text-sky-600" /> Material descargable</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Esta clase no lleva material adjunto. Encontrarás todo lo descargable en{' '}
+                    <Link href="/dashboard/resources" className="font-bold text-sky-600 hover:underline">Recursos</Link>.
+                  </p>
                 </div>
               </div>
 

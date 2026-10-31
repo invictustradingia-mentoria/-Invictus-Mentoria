@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import bcrypt from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prismaDash } from '@/lib/prisma-dashboard'
+import { normalizeUsername, validateUsername } from '@/lib/username'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -18,7 +19,7 @@ export async function GET() {
 
     const user = await prismaDash.user.findUnique({
       where: { id },
-      select: { name: true, email: true, phone: true, role: true, avatarUrl: true, createdAt: true },
+      select: { name: true, username: true, email: true, phone: true, role: true, avatarUrl: true, createdAt: true },
     })
     if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     return NextResponse.json({ user })
@@ -40,6 +41,14 @@ export async function PATCH(req: Request) {
       const n = body.name.trim()
       if (!n) return NextResponse.json({ error: 'El nombre no puede estar vacío' }, { status: 400 })
       data.name = n.slice(0, 80)
+    }
+    if (typeof body.username === 'string') {
+      const u = normalizeUsername(body.username)
+      const bad = validateUsername(u)
+      if (bad) return NextResponse.json({ error: bad }, { status: 400 })
+      const other = await prismaDash.user.findUnique({ where: { username: u }, select: { id: true } })
+      if (other && other.id !== id) return NextResponse.json({ error: 'Ese nombre de usuario ya está en uso' }, { status: 409 })
+      data.username = u
     }
     if (typeof body.phone === 'string') data.phone = body.phone.trim().slice(0, 30) || null
 
@@ -69,10 +78,11 @@ export async function PATCH(req: Request) {
     const user = await prismaDash.user.update({
       where: { id },
       data,
-      select: { name: true, email: true, phone: true, role: true, avatarUrl: true },
+      select: { name: true, username: true, email: true, phone: true, role: true, avatarUrl: true },
     })
     return NextResponse.json({ success: true, user })
   } catch (err: any) {
+    if (err?.code === 'P2002') return NextResponse.json({ error: 'Ese nombre de usuario ya está en uso' }, { status: 409 })
     console.error('PATCH student/profile:', err)
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
   }

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { Users, Radio, BookOpen, ExternalLink, LogOut, Menu, X, MessageSquare, Video, LifeBuoy } from 'lucide-react'
 import { EDITOR_PATHS } from '@/lib/access'
+import ThemeToggle from '@/components/ThemeToggle'
 
 const NAV = [
   { href: '/admin', label: 'Gestión de Alumnos', icon: Users, exact: true },
@@ -49,6 +50,7 @@ export default function AdminShell({ name, role, children }: { name: string; rol
       <div className="space-y-1 border-t border-gray-100 p-3">
         <Link href="/dashboard/clases" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-500 hover:bg-gray-50"><ExternalLink size={16} /> Ver modo alumno</Link>
         <p className="truncate px-3 pt-1 text-[11px] font-bold text-gray-700">{name}{isEditor && <span className="ml-1.5 rounded-md bg-indigo-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-indigo-700">Editor</span>}</p>
+        <ThemeToggle />
         <button type="button" onClick={() => signOut({ callbackUrl: '/login' })} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-500 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"><LogOut size={16} /> Cerrar sesión</button>
       </div>
     </div>
@@ -58,7 +60,7 @@ export default function AdminShell({ name, role, children }: { name: string; rol
     <div className="min-h-screen bg-[#fdfdfd]">
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
         <span className="text-sm font-black text-[#1d1d1f]">INVICTUS <span className="text-[#0284c7]">{isEditor ? 'EDITOR' : 'ADMIN'}</span></span>
-        <button type="button" onClick={() => setOpen(!open)} aria-label="Menú" className="rounded-lg p-1.5 cursor-pointer">{open ? <X size={22} /> : <Menu size={22} />}</button>
+        <div className="flex items-center gap-1"><ThemeToggle variant="icon" /><button type="button" onClick={() => setOpen(!open)} aria-label="Menú" className="rounded-lg p-1.5 cursor-pointer">{open ? <X size={22} /> : <Menu size={22} />}</button></div>
       </div>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">

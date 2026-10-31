@@ -1,0 +1,1604 @@
+===== package.json =====
+{
+  "name": "invictus-mentoria",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "5.18.0",
+    "@supabase/supabase-js": "^2.118.0",
+    "bcryptjs": "^2.4.3",
+    "d3-geo": "^3.1.1",
+    "lucide-react": "^0.300.0",
+    "next": "14.1.0",
+    "next-auth": "4.24.5",
+    "nodemailer": "^6.10.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "topojson-client": "^3.1.0"
+  },
+  "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.16.3",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/d3-geo": "^3.1.1",
+    "@types/node": "^20.11.0",
+    "@types/nodemailer": "^8.0.2",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@types/topojson-client": "^3.1.5",
+    "autoprefixer": "^10.4.17",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "14.1.0",
+    "postcss": "^8.4.33",
+    "prisma": "5.18.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3"
+  }
+}
+
+===== tailwind.config.js =====
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+      },
+    },
+  },
+  plugins: [],
+}
+===== src\app\layout.tsx =====
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+import { Providers } from '@/components/Providers'
+
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXTAUTH_URL || 'https://invictus-mentoria.netlify.app'),
+  title: 'Invictus Mentoría - Plataforma de Trading',
+  description: 'Plataforma Institucional de Trading y Mentoría Avanzada',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="es">
+      <body className={inter.className}>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
+}
+===== src\app\globals.css =====
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+===== src\app\page.tsx =====
+import type { Metadata } from 'next'
+import Landing from '../components/landing/Landing'
+import LandingBot from '../components/landing/LandingBot'
+
+export const metadata: Metadata = {
+  title: 'Invictus Campus',
+  description:
+    'Aprende trading con metodología ICT sobre el Micro Nasdaq: clases grabadas, sesiones en vivo y seguimiento de tu progreso.',
+}
+
+export default function Home() {
+  return (
+    <>
+      <Landing />
+      <LandingBot />
+    </>
+  )
+}
+===== src\app\dashboard\clases\page.tsx =====
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CheckCircle2, Circle, PlayCircle, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft, Check, Crown, Star, ShieldCheck, Sparkles, Clock, BookOpen, AlertCircle, Pencil } from 'lucide-react'
+import SecurePlayer from '@/components/dashboard/SecurePlayer'
+import { getMembership } from '@/lib/membership'
+
+interface Lesson {
+  id: string; title: string; description: string | null
+  duration: number | null; order: number; allowedRole: string
+}
+interface Mod { id: string; title: string; description: string | null; lessons: Lesson[] }
+
+const STORE_KEY = 'invictus:lastLesson'
+
+function fmtDuration(s: number | null) {
+  if (!s) return null
+  const m = Math.round(s / 60)
+  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`
+}
+
+function CourseContent({
+  modules, progress, currentId, openMods, onToggle, onOpen,
+}: {
+  modules: Mod[]; progress: Record<string, boolean>; currentId: string | null
+  openMods: Set<string>; onToggle: (id: string) => void; onOpen: (id: string) => void
+}) {
+  return (
+    <div className="space-y-3">
+      {modules.map((mod, i) => {
+        const done = mod.lessons.filter((l) => progress[l.id]).length
+        const pct = Math.round((done / mod.lessons.length) * 100)
+        const open = openMods.has(mod.id)
+        return (
+          <div key={mod.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <button type="button" onClick={() => onToggle(mod.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left cursor-pointer">
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${pct === 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-sky-100 text-sky-600'}`}>
+                {pct === 100 ? <Check size={17} /> : i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-slate-900">{mod.title}</p>
+                <p className="text-[11px] text-slate-500">{done} de {mod.lessons.length} completadas</p>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-sky-500'}`} style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+              <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+
+            {open && (
+              <div className="space-y-1 border-t border-slate-100 bg-slate-50/60 p-2">
+                {mod.lessons.map((l) => {
+                  const completed = !!progress[l.id]
+                  const current = l.id === currentId
+                  const d = fmtDuration(l.duration)
+                  return (
+                    <button key={l.id} type="button" onClick={() => onOpen(l.id)}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all cursor-pointer ${current ? 'bg-sky-50 ring-1 ring-sky-300' : 'hover:bg-white'}`}>
+                      {completed ? <CheckCircle2 size={19} className="shrink-0 text-emerald-500" />
+                        : current ? <PlayCircle size={19} className="shrink-0 text-sky-500" />
+                        : <Circle size={19} className="shrink-0 text-slate-300" />}
+                      <div className="min-w-0 flex-1">
+                        <p className={`truncate text-xs font-bold ${completed ? 'text-slate-500' : 'text-slate-800'}`}>{l.title}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {completed ? 'Completada' : current ? 'Viendo ahora' : 'Pendiente'}{d ? ` · ${d}` : ''}
+                        </p>
+                      </div>
+                      {l.allowedRole === 'MENTORIA' && <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-700">Mentoría</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export default function ClasesPage() {
+  const [modules, setModules] = useState<Mod[]>([])
+  const [progress, setProgress] = useState<Record<string, boolean>>({})
+  const [role, setRole] = useState('CLUB')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [view, setView] = useState<'list' | 'lesson'>('list')
+  const [currentId, setCurrentId] = useState<string | null>(null)
+  const [openMods, setOpenMods] = useState<Set<string>>(new Set())
+  const [firstLoad, setFirstLoad] = useState(true)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/student/courses', { cache: 'no-store' })
+      if (res.status === 401) { window.location.href = '/login'; return }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+      setModules(data.modules)
+      setRole(data.role)
+      const p: Record<string, boolean> = {}
+      Object.entries<any>(data.progress).forEach(([k, v]) => { p[k] = !!v.completed })
+      setProgress(p)
+      setError(null)
+    } catch (e: any) {
+      setError(e?.message || 'No se pudo cargar el contenido')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Sincronización: cada 20 s y al volver a la pestaña
+  useEffect(() => {
+    load()
+    const t = setInterval(load, 20000)
+    const onVis = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis) }
+  }, [load])
+
+  const flat = useMemo(() => modules.flatMap((m) => m.lessons), [modules])
+
+  // Primera carga: abre el módulo de la última lección, o el primero
+  useEffect(() => {
+    if (!firstLoad || modules.length === 0) return
+    let last: string | null = null
+    try { last = localStorage.getItem(STORE_KEY) } catch {}
+    const target = flat.find((l) => l.id === last) ?? flat.find((l) => !progress[l.id]) ?? flat[0]
+    if (target) {
+      setCurrentId(target.id)
+      const mod = modules.find((m) => m.lessons.some((l) => l.id === target.id))
+      setOpenMods(new Set(mod ? [mod.id] : [modules[0].id]))
+    }
+    setFirstLoad(false)
+  }, [firstLoad, modules, flat, progress])
+
+  // Si la lección actual fue eliminada por el admin
+  useEffect(() => {
+    if (currentId && flat.length && !flat.some((l) => l.id === currentId)) {
+      setCurrentId(flat[0].id)
+    }
+    if (flat.length === 0 && view === 'lesson') setView('list')
+  }, [flat, currentId, view])
+
+  const current = flat.find((l) => l.id === currentId) ?? null
+  const idx = current ? flat.findIndex((l) => l.id === current.id) : -1
+  const currentModule = current ? modules.find((m) => m.lessons.some((l) => l.id === current.id)) : null
+  const total = flat.length
+  const done = flat.filter((l) => progress[l.id]).length
+  const pct = total ? Math.round((done / total) * 100) : 0
+  const m = getMembership(role)
+  const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : m.key === 'EDITOR' ? Pencil : Star
+
+  const toggleModule = (id: string) => setOpenMods((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+
+  const openLesson = (id: string) => {
+    setCurrentId(id)
+    setView('lesson')
+    try { localStorage.setItem(STORE_KEY, id) } catch {}    try { sessionStorage.setItem('invictus:viewing', id) } catch {}
+    const mod = modules.find((x) => x.lessons.some((l) => l.id === id))
+    if (mod) setOpenMods((prev) => new Set(prev).add(mod.id))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const toggleComplete = async () => {
+    if (!current) return
+    const next = !progress[current.id]
+    setProgress((p) => ({ ...p, [current.id]: next }))
+    try {
+      const res = await fetch('/api/student/progress', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonId: current.id, completed: next }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setProgress((p) => ({ ...p, [current.id]: !next }))
+      setError('No se pudo guardar tu progreso. Revisa tu conexión e inténtalo de nuevo.')
+    }
+  }
+
+  if (loading) {
+    return <div className="flex min-h-[60vh] items-center justify-center text-xs font-bold text-slate-400">Cargando tus clases...</div>
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 p-5 md:p-8">
+      {error && (
+        <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-bold text-rose-700">
+          <AlertCircle size={16} className="shrink-0" /> {error}
+        </div>
+      )}
+
+      {total === 0 ? (
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center">
+          <BookOpen size={32} className="mx-auto mb-3 text-slate-300" />
+          <p className="text-sm font-bold text-slate-700">Aún no hay clases disponibles para tu membresía</p>
+          <p className="mt-1 text-xs text-slate-400">Cuando se publiquen, aparecerán aquí automáticamente.</p>
+        </div>
+      ) : view === 'list' ? (
+        <>
+          {/* Banner de membresía */}
+          <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${m.gradient} p-7 text-white shadow-xl ${m.glow}`}>
+            <MIcon size={150} className="absolute -right-6 -top-6 opacity-15" />
+            <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-black uppercase tracking-widest backdrop-blur">
+                  <MIcon size={13} /> {m.title}
+                </span>
+                <h1 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">Tus lecciones</h1>
+                <p className="mt-1 max-w-md text-sm text-white/85">{m.tagline}</p>
+              </div>
+              <button type="button" onClick={() => openLesson(currentId ?? flat[0].id)}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-black text-slate-900 shadow-lg transition-transform hover:scale-105 cursor-pointer">
+                <PlayCircle size={18} /> {done === 0 ? 'Empezar' : 'Continuar donde lo dejaste'}
+              </button>
+            </div>
+          </div>
+
+          {/* Resumen de progreso */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Progreso', value: `${pct}%`, icon: Sparkles, color: 'text-sky-600 bg-sky-50' },
+              { label: 'Completadas', value: done, icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
+              { label: 'Por ver', value: total - done, icon: Clock, color: 'text-amber-600 bg-amber-50' },
+              { label: 'Total', value: total, icon: BookOpen, color: 'text-slate-600 bg-slate-100' },
+            ].map((s) => (
+              <div key={s.label} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${s.color}`}><s.icon size={19} /></span>
+                <div>
+                  <p className="text-xl font-black leading-none text-slate-900">{s.value}</p>
+                  <p className="mt-1 text-[11px] font-bold text-slate-500">{s.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700" style={{ width: `${pct}%` }} />
+          </div>
+
+          <div>
+            <h2 className="mb-3 text-sm font-black text-slate-900">Contenido del curso</h2>
+            <CourseContent modules={modules} progress={progress} currentId={currentId} openMods={openMods} onToggle={toggleModule} onOpen={openLesson} />
+          </div>
+        </>
+      ) : (
+        current && (
+          <>
+            <button type="button" onClick={() => { setView('list'); try { sessionStorage.removeItem('invictus:viewing') } catch {} }} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-sky-600 cursor-pointer">
+              <ArrowLeft size={15} /> Volver a las lecciones
+            </button>
+
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+              <div className="space-y-4 xl:col-span-2">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-sky-500">{currentModule?.title}</p>
+                  <h1 className="mt-1 text-xl font-black tracking-tight text-slate-900">{current.title}</h1>
+                </div>
+
+                <SecurePlayer key={current.id} lessonId={current.id} title={current.title} />
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <button type="button" onClick={toggleComplete}
+                    className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-black transition-all cursor-pointer ${
+                      progress[current.id] ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-sky-600 text-white shadow-md shadow-sky-300/50 hover:bg-sky-700'
+                    }`}>
+                    <CheckCircle2 size={16} /> {progress[current.id] ? 'Completada · clic para desmarcar' : 'Marcar como completada'}
+                  </button>
+                  <div className="flex gap-2">
+                    <button type="button" disabled={idx <= 0} onClick={() => openLesson(flat[idx - 1].id)}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:border-sky-300 disabled:opacity-40 cursor-pointer">
+                      <ChevronLeft size={15} /> Anterior
+                    </button>
+                    <button type="button" disabled={idx >= flat.length - 1} onClick={() => openLesson(flat[idx + 1].id)}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:border-sky-300 disabled:opacity-40 cursor-pointer">
+                      Siguiente <ChevronRight size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h2 className="text-sm font-black text-slate-900">Sobre esta clase</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{current.description || 'Esta clase no tiene descripción.'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 xl:sticky xl:top-6 xl:self-start">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-black text-slate-700">
+                    <span>Tu progreso</span><span className="text-sky-600">{pct}%</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700" style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-slate-500">{done} de {total} clases completadas</p>
+                </div>
+                <CourseContent modules={modules} progress={progress} currentId={currentId} openMods={openMods} onToggle={toggleModule} onOpen={openLesson} />
+              </div>
+            </div>
+          </>
+        )
+      )}
+    </div>
+  )
+}
+===== src\app\register\page.tsx =====
+'use client'
+
+export const dynamic = 'force-dynamic'
+
+import { useState } from 'react'
+import { User, Mail, Lock, Phone, Eye, EyeOff, AlertCircle, CheckCircle2, Clock } from 'lucide-react'
+
+export default function RegisterPage() {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          password,
+        }),
+      })
+
+      let data: any = {}
+      try {
+        data = await res.json()
+      } catch {
+        data = {}
+      }
+
+      if (!res.ok) {
+        setError(data.error || `Ocurrió un error al registrar la cuenta (HTTP ${res.status})`)
+        setLoading(false)
+        return
+      }
+
+      // Sin signIn automático: la cuenta queda pendiente hasta que el admin la apruebe
+      setSuccess(true)
+      setLoading(false)
+
+      setTimeout(() => {
+        window.location.href = '/login?registered=1'
+      }, 3500)
+    } catch (err) {
+      setError('Error de conexión con el servidor')
+      setLoading(false)
+    }
+  }
+
+  // ---------- Pantalla de éxito ----------
+  if (success) {
+    return (
+      <div className="min-h-screen bg-[#fdfdfd] text-[#1d1d1f] flex flex-col justify-center items-center px-6 py-12">
+        <div className="w-full max-w-md bg-white p-8 rounded-3xl border border-[#ededf0] shadow-sm text-center space-y-4">
+          <div className="inline-flex w-14 h-14 rounded-2xl bg-sky-50 text-[#0284c7] items-center justify-center mx-auto">
+            <Clock size={28} />
+          </div>
+          <h1 className="text-xl font-black tracking-tight">¡Solicitud enviada!</h1>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Tu cuenta fue creada y está <span className="font-bold text-[#0284c7]">pendiente de aprobación</span>.
+            El equipo la revisará y podrás iniciar sesión cuando sea activada.
+          </p>
+          <div className="p-3 rounded-2xl bg-sky-50 border border-sky-200 text-[#0369a1] text-xs font-bold flex items-center justify-center gap-2">
+            <CheckCircle2 size={16} className="shrink-0 text-[#0284c7]" />
+            <span>Te llevamos al inicio de sesión...</span>
+          </div>
+          <a href="/login?registered=1" className="inline-block text-xs font-bold text-[#0284c7] hover:underline">
+            Ir ahora al inicio de sesión
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-[#fdfdfd] text-[#1d1d1f] flex flex-col justify-center items-center px-6 py-12 selection:bg-[#0284c7] selection:text-white">
+      <div className="w-full max-w-md bg-white p-8 rounded-3xl border border-[#ededf0] shadow-sm space-y-6">
+        <div className="text-center space-y-2">
+          <div className="inline-flex w-12 h-12 rounded-2xl bg-[#1d1d1f] text-white items-center justify-center font-black tracking-wider text-base shadow-md shadow-black/5 mx-auto">
+            IT
+          </div>
+          <h1 className="text-xl font-black tracking-tight text-[#1d1d1f]">INVICTUS CAMPUS</h1>
+          <p className="text-xs text-gray-500">Solicitud de Registro de Alumno</p>
+        </div>
+
+        <div className="space-y-1">
+          <h2 className="text-sm font-bold text-[#1d1d1f]">Crear Cuenta</h2>
+          <p className="text-xs text-gray-400">
+            Ingresa tus datos. Tu acceso será activado una vez que el equipo apruebe tu solicitud.
+          </p>
+        </div>
+
+        {error && (
+          <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-2">
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-600">Nombre Completo</label>
+            <div className="relative">
+              <User className="absolute left-3.5 top-3 text-gray-400" size={16} />
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Tu nombre y apellido"
+                autoComplete="name"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-600">Correo Electrónico</label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-3 text-gray-400" size={16} />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="ejemplo@invictus.com"
+                autoComplete="email"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-600">Teléfono <span className="font-normal text-gray-400">(opcional)</span></label>
+            <div className="relative">
+              <Phone className="absolute left-3.5 top-3 text-gray-400" size={16} />
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+54 9 351 000 0000"
+                autoComplete="tel"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-600">Contraseña</label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-3 text-gray-400" size={16} />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+                autoComplete="new-password"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600 cursor-pointer"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl text-xs font-bold bg-[#0284c7] text-white hover:bg-[#0369a1] transition-all shadow-md shadow-sky-500/10 cursor-pointer disabled:opacity-50"
+          >
+            {loading ? 'Procesando registro...' : 'Solicitar Acceso'}
+          </button>
+        </form>
+
+        <div className="text-center pt-2">
+          <p className="text-xs text-gray-500">
+            ¿Ya tienes una cuenta?{' '}
+            <a href="/login" className="font-bold text-[#0284c7] hover:underline">
+              Iniciar Sesión
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+===== src\app\api\auth\register\route.ts =====
+import { NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
+import { prismaDash } from '@/lib/prisma-dashboard'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json()
+
+    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+    const password = typeof body.password === 'string' ? body.password : ''
+    const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: 'Ingresa un correo válido' }, { status: 400 })
+    }
+    if (password.length < 8) {
+      return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 })
+    }
+
+    const exists = await prismaDash.user.findUnique({ where: { email } })
+    if (exists) {
+      return NextResponse.json({ error: 'Ya existe una cuenta con ese correo' }, { status: 409 })
+    }
+
+    const ip = req.headers.get('x-nf-client-connection-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
+    const userAgent = req.headers.get('user-agent')
+
+    await prismaDash.user.create({
+      data: {
+        name: name || null,
+        email,
+        password: await bcrypt.hash(password, 10),
+        phone: phone || null,
+        role: 'CLUB',        // fijo: el admin lo cambia después
+        status: 'PENDING',   // fijo: requiere aprobación
+        isBanned: false,
+        registeredIp: ip,
+        userAgent,
+      },
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Cuenta creada. Tu solicitud quedó pendiente de aprobación.',
+    })
+  } catch (err: any) {
+    console.error('register:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+===== src\app\api\student\profile\route.ts =====
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import bcrypt from 'bcryptjs'
+import { authOptions } from '@/lib/auth'
+import { prismaDash } from '@/lib/prisma-dashboard'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+const AVATAR_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/
+const MAX_AVATAR_CHARS = 300_000
+
+export async function GET() {
+  try {
+    const session: any = await getServerSession(authOptions)
+    const id = session?.user?.id
+    if (!id) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    const user = await prismaDash.user.findUnique({
+      where: { id },
+      select: { name: true, email: true, phone: true, role: true, avatarUrl: true, createdAt: true },
+    })
+    if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    return NextResponse.json({ user })
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const session: any = await getServerSession(authOptions)
+    const id = session?.user?.id
+    if (!id) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    const body = await req.json()
+    const data: Record<string, any> = {}
+
+    if (typeof body.name === 'string') {
+      const n = body.name.trim()
+      if (!n) return NextResponse.json({ error: 'El nombre no puede estar vacío' }, { status: 400 })
+      data.name = n.slice(0, 80)
+    }
+    if (typeof body.phone === 'string') data.phone = body.phone.trim().slice(0, 30) || null
+
+    if (body.avatarUrl === null) {
+      data.avatarUrl = null
+    } else if (typeof body.avatarUrl === 'string') {
+      if (!AVATAR_RE.test(body.avatarUrl) || body.avatarUrl.length > MAX_AVATAR_CHARS) {
+        return NextResponse.json({ error: 'La imagen no es válida o es demasiado pesada' }, { status: 400 })
+      }
+      data.avatarUrl = body.avatarUrl
+    }
+
+    if (typeof body.newPassword === 'string' && body.newPassword) {
+      if (body.newPassword.length < 8) {
+        return NextResponse.json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' }, { status: 400 })
+      }
+      const current = await prismaDash.user.findUnique({ where: { id }, select: { password: true } })
+      const ok = current && typeof body.currentPassword === 'string' && (await bcrypt.compare(body.currentPassword, current.password))
+      if (!ok) return NextResponse.json({ error: 'La contraseña actual no es correcta' }, { status: 400 })
+      data.password = await bcrypt.hash(body.newPassword, 10)
+    }
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: 'No hay cambios para guardar' }, { status: 400 })
+    }
+
+    const user = await prismaDash.user.update({
+      where: { id },
+      data,
+      select: { name: true, email: true, phone: true, role: true, avatarUrl: true },
+    })
+    return NextResponse.json({ success: true, user })
+  } catch (err: any) {
+    console.error('PATCH student/profile:', err)
+    return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
+  }
+}
+===== src\lib\prisma.ts =====
+import { PrismaClient } from '@prisma/client'
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: ['error'],
+  })
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+===== src\lib\prisma-dashboard.ts =====
+import { PrismaClient } from '@prisma/client'
+
+const globalForPrisma = globalThis as unknown as { prismaDash?: PrismaClient }
+
+export const prismaDash = globalForPrisma.prismaDash ?? new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prismaDash = prismaDash
+}
+===== src\components\dashboard\ActivityTracker.tsx =====
+'use client'
+
+import { useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
+
+export default function ActivityTracker() {
+  const pathname = usePathname()
+  const sid = useRef('')
+  const lastLesson = useRef<string | null>(null)
+
+  const send = (event?: string) => {
+    if (!sid.current) return
+    let lessonId: string | null = null
+    try { lessonId = sessionStorage.getItem('invictus:viewing') } catch {}
+    fetch('/api/student/ping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sid: sid.current, page: window.location.pathname, lessonId, event }),
+      keepalive: true,
+    }).catch(() => {})
+  }
+
+  useEffect(() => {
+    try {
+      let s = sessionStorage.getItem('invictus:sid')
+      if (!s) { s = crypto.randomUUID(); sessionStorage.setItem('invictus:sid', s) }
+      sid.current = s
+    } catch { sid.current = Math.random().toString(36).slice(2) }
+
+    const beat = setInterval(() => { if (document.visibilityState === 'visible') send() }, 25000)
+    const watch = setInterval(() => {
+      let cur: string | null = null
+      try { cur = sessionStorage.getItem('invictus:viewing') } catch {}
+      if (cur !== lastLesson.current) { lastLesson.current = cur; if (cur) send('LESSON_VIEW'); else send() }
+    }, 3000)
+    return () => { clearInterval(beat); clearInterval(watch) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (sid.current) send('PAGE_VIEW')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
+
+  return null
+}
+===== src\components\dashboard\DashboardShell.tsx =====
+'use client'
+import ActivityTracker from '@/components/dashboard/ActivityTracker'
+import { useState, type ReactNode } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
+import { PlayCircle, UserCircle2, ShieldCheck, LogOut, Menu, X, Crown, Star, MessageSquare, Video, Pencil } from 'lucide-react'
+import { getMembership } from '@/lib/membership'
+
+interface ShellUser {
+  name: string | null
+  email: string
+  role: string
+  avatarUrl: string | null
+  viewLevel?: string | null
+}
+
+export function Avatar({ name, email, avatarUrl, size = 40 }: { name?: string | null; email?: string; avatarUrl?: string | null; size?: number }) {
+  const initials = (name || email || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('')
+  if (avatarUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={avatarUrl} alt="Foto de perfil" style={{ width: size, height: size }} className="shrink-0 rounded-full object-cover ring-2 ring-white" />
+  }
+  return (
+    <span style={{ width: size, height: size, fontSize: size * 0.38 }} className="flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-400 font-black text-white ring-2 ring-white">
+      {initials}
+    </span>
+  )
+}
+
+export default function DashboardShell({ user, children }: { user: ShellUser; children: ReactNode }) {
+  const pathname = usePathname()
+  const [open, setOpen] = useState(false)
+  const m = getMembership(user.role)
+  const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : m.key === 'EDITOR' ? Pencil : Star
+  const viewText = user.viewLevel === 'CLUB' ? 'Ves: contenido Club' : user.viewLevel === 'MENTORIA' ? 'Ves: contenido Mentoría' : 'Ves: todo el contenido'
+
+  const nav = [
+    { href: '/dashboard/clases', label: 'Mis clases', icon: PlayCircle },
+    { href: '/dashboard/chat', label: 'Comunidad', icon: MessageSquare },
+    { href: '/dashboard/llamadas', label: 'Llamadas en vivo', icon: Video },
+    { href: '/dashboard/perfil', label: 'Mi perfil', icon: UserCircle2 },
+  ]
+
+  // Las páginas nuevas (chat y llamadas) llevan un margen alrededor.
+  const padded = !!pathname && (pathname.startsWith('/dashboard/chat') || pathname.startsWith('/dashboard/llamadas'))
+
+  const sidebar = (
+    <div className="flex h-full flex-col">
+      <Link href="/dashboard/clases" className="flex items-center gap-2.5 px-5 py-5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-600 to-cyan-400 text-xs font-black text-white shadow-md shadow-sky-300/50">IC</span>
+        <span className="text-sm font-black tracking-tight text-slate-900">INVICTUS <span className="text-sky-500">CAMPUS</span></span>
+      </Link>
+
+      {/* Tarjeta de membresía */}
+      <div className="px-4">
+        <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${m.gradient} p-4 text-white shadow-lg ${m.glow}`}>
+          <MIcon size={64} className="absolute -right-3 -top-3 opacity-20" />
+          <div className="relative flex items-center gap-3">
+            <Avatar name={user.name} email={user.email} avatarUrl={user.avatarUrl} size={44} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black leading-tight">{user.name || 'Alumno'}</p>
+              <p className="truncate text-[10px] text-white/80">{user.email}</p>
+            </div>
+          </div>
+          <div className="relative mt-3 flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider backdrop-blur">
+            <MIcon size={13} /> {m.title}
+          </div>
+          {m.key === 'EDITOR' && <p className="relative mt-2 text-center text-[10px] font-bold text-white/85">{viewText}</p>}
+        </div>
+      </div>
+
+      <nav className="mt-5 flex-1 space-y-1 px-3">
+        {nav.map((n) => {
+          const active = pathname?.startsWith(n.href)
+          return (
+            <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all ${active ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200' : 'text-slate-600 hover:bg-slate-50'}`}>
+              <n.icon size={17} /> {n.label}
+            </Link>
+          )
+        })}
+        {user.role === 'ADMIN' && (
+          <Link href="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-sky-600 hover:bg-sky-50">
+            <ShieldCheck size={17} /> Panel de Administración
+          </Link>
+        )}
+        {user.role === 'EDITOR' && (
+          <Link href="/admin/content" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Pencil size={17} /> Panel de Edición
+          </Link>
+        )}
+      </nav>
+
+      <div className="border-t border-slate-100 p-3">
+        <button type="button" onClick={() => signOut({ callbackUrl: '/login' })}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer">
+          <LogOut size={17} /> Cerrar sesión
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="min-h-screen bg-slate-50/70 text-slate-800">
+      <ActivityTracker />
+      {/* Barra móvil */}
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
+        <span className="text-sm font-black text-slate-900">INVICTUS <span className="text-sky-500">CAMPUS</span></span>
+        <button type="button" onClick={() => setOpen(!open)} aria-label="Menú" className="rounded-lg p-1.5 text-slate-700 cursor-pointer">
+          {open ? <X size={22} /> : <Menu size={22} />}
+        </button>
+      </div>
+
+      {/* Menú móvil */}
+      {open && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 w-72 bg-white shadow-2xl">{sidebar}</aside>
+        </div>
+      )}
+
+      {/* Menú escritorio */}
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white lg:block">{sidebar}</aside>
+
+      <main className="lg:pl-64">
+        <div className={padded ? 'p-3 sm:p-6' : ''}>{children}</div>
+      </main>
+    </div>
+  )
+}
+
+===== src\components\dashboard\SecurePlayer.tsx =====
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Loader2, AlertCircle, ShieldAlert } from 'lucide-react'
+
+declare global {
+  interface Window { YT?: any; onYouTubeIframeAPIReady?: () => void; Hls?: any }
+}
+
+type Source =
+  | { type: 'youtube'; id: string; watermark: string }
+  | { type: 'file'; url: string; watermark: string }
+  | { type: 'hls'; url: string; watermark: string }
+  | { type: 'embed'; src: string; watermark: string }
+
+let ytPromise: Promise<any> | null = null
+function loadYT(): Promise<any> {
+  if (typeof window === 'undefined') return Promise.reject()
+  if (window.YT?.Player) return Promise.resolve(window.YT)
+  if (!ytPromise) {
+    ytPromise = new Promise((resolve) => {
+      const prev = window.onYouTubeIframeAPIReady
+      window.onYouTubeIframeAPIReady = () => { prev?.(); resolve(window.YT) }
+      const s = document.createElement('script')
+      s.src = 'https://www.youtube.com/iframe_api'
+      document.head.appendChild(s)
+    })
+  }
+  return ytPromise
+}
+
+let hlsPromise: Promise<any> | null = null
+function loadHls(): Promise<any> {
+  if (typeof window === 'undefined') return Promise.reject()
+  if (window.Hls) return Promise.resolve(window.Hls)
+  if (!hlsPromise) {
+    hlsPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script')
+      s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js'
+      s.onload = () => resolve(window.Hls)
+      s.onerror = () => { hlsPromise = null; reject(new Error('hls')) }
+      document.head.appendChild(s)
+    })
+  }
+  return hlsPromise
+}
+
+const fmt = (s: number) => {
+  if (!isFinite(s) || s < 0) s = 0
+  const m = Math.floor(s / 60)
+  return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+}
+
+const RATES = [0.75, 1, 1.25, 1.5, 2]
+
+export default function SecurePlayer({ lessonId, title }: { lessonId: string; title: string }) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const ytHost = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const ytPlayer = useRef<any>(null)
+  const hlsRef = useRef<any>(null)
+  const tick = useRef<any>(null)
+  const srcRef = useRef<Source | null>(null)
+  const lockedRef = useRef(false)
+  const lastSig = useRef<Record<string, number>>({})
+
+  const [src, setSrc] = useState<Source | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [locked, setLocked] = useState<{ reason: string } | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [ready, setReady] = useState(false)
+  const [started, setStarted] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const [cur, setCur] = useState(0)
+  const [dur, setDur] = useState(0)
+  const [muted, setMuted] = useState(false)
+  const [rate, setRate] = useState(1)
+  const [full, setFull] = useState(false)
+  const [wm, setWm] = useState({ top: 12, left: 12 })
+
+  srcRef.current = src
+  lockedRef.current = !!locked
+
+  // 1. Pedir el video al servidor (valida sesión, nivel y bloqueo de seguridad)
+  useEffect(() => {
+    let alive = true
+    setSrc(null); setError(null); setReady(false); setStarted(false); setPlaying(false); setCur(0); setDur(0)
+    fetch(`/api/student/video?lessonId=${encodeURIComponent(lessonId)}`, { cache: 'no-store' })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}))
+        if (!alive) return
+        if (d.locked) setLocked({ reason: d.reason || '' })
+        else if (!r.ok) setError(d.error || `No se pudo cargar el video (HTTP ${r.status})`)
+        else { setLocked(null); setSrc(d) }
+      })
+      .catch(() => alive && setError('No se pudo conectar con el servidor.'))
+    return () => { alive = false }
+  }, [lessonId, reloadKey])
+
+  // 2. YouTube con controles propios
+  useEffect(() => {
+    if (!src || src.type !== 'youtube') return
+    let destroyed = false
+    loadYT().then((YT) => {
+      if (destroyed || !ytHost.current) return
+      const mount = document.createElement('div')
+      ytHost.current.innerHTML = ''
+      ytHost.current.appendChild(mount)
+      ytPlayer.current = new YT.Player(mount, {
+        videoId: src.id,
+        host: 'https://www.youtube-nocookie.com',
+        width: '100%',
+        height: '100%',
+        playerVars: {
+          controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, iv_load_policy: 3,
+          playsinline: 1, cc_load_policy: 0, origin: window.location.origin,
+        },
+        events: {
+          onReady: (e: any) => { setDur(e.target.getDuration()); setReady(true) },
+          onStateChange: (e: any) => {
+            setPlaying(e.data === 1)
+            if (e.data === 1) setStarted(true)
+            if (e.data === 1 || e.data === 2) setDur(e.target.getDuration())
+          },
+          onError: (e: any) => {
+            const map: Record<number, string> = {
+              2: 'El enlace del video no es válido.',
+              5: 'Error de reproducción en tu navegador.',
+              100: 'El video fue eliminado o está privado en su origen.',
+              101: 'El dueño del video no permite reproducirlo en otras páginas.',
+              150: 'El dueño del video no permite reproducirlo en otras páginas.',
+              153: 'El video no permite reproducirse aquí (configuración de inserción).',
+            }
+            setError(map[e.data] || 'No se pudo reproducir el video.')
+          },
+        },
+      })
+      tick.current = setInterval(() => {
+        const p = ytPlayer.current
+        if (p?.getCurrentTime) setCur(p.getCurrentTime())
+      }, 400)
+    }).catch(() => setError('No se pudo cargar el reproductor.'))
+
+    return () => {
+      destroyed = true
+      clearInterval(tick.current)
+      try { ytPlayer.current?.destroy() } catch {}
+      ytPlayer.current = null
+    }
+  }, [src])
+
+  // 3. Streaming HLS (.m3u8): Safari lo reproduce directo; el resto usa hls.js
+  useEffect(() => {
+    if (!src || src.type !== 'hls') return
+    let destroyed = false
+    const v = videoRef.current
+    if (!v) return
+    if (v.canPlayType('application/vnd.apple.mpegurl')) {
+      v.src = src.url
+    } else {
+      loadHls().then((Hls) => {
+        if (destroyed || !Hls?.isSupported?.()) {
+          if (!destroyed) setError('Tu navegador no puede reproducir este tipo de video.')
+          return
+        }
+        const h = new Hls()
+        hlsRef.current = h
+        h.on(Hls.Events.ERROR, (_: any, d: any) => {
+          if (d?.fatal) setError('No se pudo cargar el video (el servidor del video no permite reproducirlo aquí o el enlace venció).')
+        })
+        h.loadSource(src.url)
+        h.attachMedia(v)
+      }).catch(() => setError('No se pudo cargar el reproductor de video.'))
+    }
+    return () => {
+      destroyed = true
+      try { hlsRef.current?.destroy() } catch {}
+      hlsRef.current = null
+    }
+  }, [src])
+
+  // Marca de agua: cambia de lugar
+  useEffect(() => {
+    const t = setInterval(() => setWm({ top: 8 + Math.random() * 72, left: 4 + Math.random() * 58 }), 7000)
+    return () => clearInterval(t)
+  }, [])
+
+  const pauseNow = useCallback(() => {
+    const s = srcRef.current
+    if (s?.type === 'youtube') ytPlayer.current?.pauseVideo?.()
+    else videoRef.current?.pause()
+  }, [])
+
+  // Pausar al cambiar de pestaña
+  useEffect(() => {
+    const onHide = () => { if (document.hidden) pauseNow() }
+    document.addEventListener('visibilitychange', onHide)
+    return () => document.removeEventListener('visibilitychange', onHide)
+  }, [pauseNow])
+
+  useEffect(() => {
+    const onFs = () => setFull(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onFs)
+    return () => document.removeEventListener('fullscreenchange', onFs)
+  }, [])
+
+  // ---- Seguridad: señales sospechosas -> el servidor decide si bloquea ----
+  const reportSignal = useCallback((signal: string, strong: boolean) => {
+    if (!srcRef.current || lockedRef.current) return
+    if (strong) pauseNow()
+    const now = Date.now()
+    if (now - (lastSig.current[signal] || 0) < 3000) return
+    lastSig.current[signal] = now
+    fetch('/api/student/security', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signal, lessonId }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.locked) {
+          pauseNow()
+          if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+          setSrc(null)
+          setPlaying(false)
+          setLocked({ reason: d.reason || '' })
+        }
+      })
+      .catch(() => {})
+  }, [lessonId, pauseNow])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const k = e.key
+      const code = e.code
+      // Captura de pantalla: Impr Pant, Win+Shift+S, Cmd+Shift+3/4/5
+      if (k === 'PrintScreen' || code === 'PrintScreen' ||
+          (e.metaKey && e.shiftKey && (code === 'KeyS' || code === 'Digit3' || code === 'Digit4' || code === 'Digit5'))) {
+        try { navigator.clipboard.writeText('') } catch {}
+        reportSignal('screenshot_key', true)
+        return
+      }
+      // Imprimir
+      if ((e.ctrlKey || e.metaKey) && code === 'KeyP') { reportSignal('print', true); return }
+      // Herramientas de desarrollador / ver código fuente
+      if (k === 'F12' ||
+          ((e.ctrlKey || e.metaKey) && e.shiftKey && (code === 'KeyI' || code === 'KeyJ' || code === 'KeyC')) ||
+          (e.metaKey && e.altKey && code === 'KeyI') ||
+          ((e.ctrlKey || e.metaKey) && code === 'KeyU')) {
+        reportSignal('devtools_key', false)
+      }
+    }
+    const onPrint = () => reportSignal('print', true)
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('keyup', onKey)
+    window.addEventListener('beforeprint', onPrint)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keyup', onKey)
+      window.removeEventListener('beforeprint', onPrint)
+    }
+  }, [reportSignal])
+
+  // Mientras está bloqueado: preguntar cada 15 s si un administrador ya lo habilitó
+  useEffect(() => {
+    if (!locked) return
+    const t = setInterval(async () => {
+      try {
+        const r = await fetch('/api/student/security', { cache: 'no-store' })
+        const d = await r.json()
+        if (r.ok && d.locked === false) { setLocked(null); setReloadKey((k) => k + 1) }
+      } catch {}
+    }, 15000)
+    return () => clearInterval(t)
+  }, [locked])
+
+  const play = useCallback(() => {
+    if (src?.type === 'youtube') ytPlayer.current?.playVideo?.()
+    else videoRef.current?.play()
+  }, [src])
+
+  function pause() { pauseNow() }
+
+  const toggle = () => (playing ? pause() : play())
+
+  const seek = (t: number) => {
+    setCur(t)
+    if (src?.type === 'youtube') ytPlayer.current?.seekTo?.(t, true)
+    else if (videoRef.current) videoRef.current.currentTime = t
+  }
+
+  const toggleMute = () => {
+    const next = !muted
+    setMuted(next)
+    if (src?.type === 'youtube') next ? ytPlayer.current?.mute?.() : ytPlayer.current?.unMute?.()
+    else if (videoRef.current) videoRef.current.muted = next
+  }
+
+  const cycleRate = () => {
+    const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length]
+    setRate(next)
+    if (src?.type === 'youtube') ytPlayer.current?.setPlaybackRate?.(next)
+    else if (videoRef.current) videoRef.current.playbackRate = next
+  }
+
+  const toggleFull = () => {
+    if (document.fullscreenElement) document.exitFullscreen()
+    else boxRef.current?.requestFullscreen?.()
+  }
+
+  const watermark = src?.watermark || ''
+
+  return (
+    <div
+      ref={boxRef}
+      onContextMenu={(e) => e.preventDefault()}
+      className="relative aspect-video w-full select-none overflow-hidden rounded-2xl bg-black"
+    >
+      {locked ? (
+        <div className="flex h-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-center text-white">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/20 text-rose-400">
+            <ShieldAlert size={34} />
+          </span>
+          <p className="text-lg font-black">Video detenido por seguridad</p>
+          <p className="max-w-md text-sm text-white/80">
+            Detectamos actividad no permitida mientras veías el contenido. Tu acceso a los videos quedó suspendido hasta que el equipo realice una revisión manual.
+          </p>
+          {locked.reason && <p className="max-w-md rounded-lg bg-white/10 px-3 py-1.5 text-[11px] text-white/70">Motivo: {locked.reason}</p>}
+          <p className="text-[11px] text-white/50">Si crees que fue un error, escríbenos por soporte. Esta pantalla se actualizará sola cuando te habiliten.</p>
+        </div>
+      ) : error ? (
+        <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-white">
+          <AlertCircle size={30} className="text-rose-400" />
+          <p className="text-sm font-bold">{error}</p>
+        </div>
+      ) : !src ? (
+        <div className="flex h-full items-center justify-center text-white/70"><Loader2 className="animate-spin" /></div>
+      ) : src.type === 'embed' ? (
+        <>
+          <iframe
+            src={src.src}
+            title={title}
+            className="h-full w-full"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+          <div
+            className="pointer-events-none absolute z-30 whitespace-nowrap text-[11px] font-bold text-white/30 transition-all duration-[2000ms]"
+            style={{ top: `${wm.top}%`, left: `${wm.left}%`, textShadow: '0 0 4px rgba(0,0,0,.6)' }}
+          >
+            {watermark}
+          </div>
+        </>
+      ) : (
+        <>
+          {src.type === 'youtube' ? (
+            <div ref={ytHost} className="absolute inset-0 [&_iframe]:h-full [&_iframe]:w-full" />
+          ) : (
+            <video
+              ref={videoRef}
+              src={src.type === 'file' ? src.url : undefined}
+              className="absolute inset-0 h-full w-full"
+              controlsList="nodownload noplaybackrate noremoteplayback"
+              disablePictureInPicture
+              disableRemotePlayback
+              playsInline
+              preload="metadata"
+              onLoadedMetadata={(e) => { setDur(e.currentTarget.duration); setReady(true) }}
+              onCanPlay={() => setReady(true)}
+              onTimeUpdate={(e) => setCur(e.currentTarget.currentTime)}
+              onPlay={() => { setPlaying(true); setStarted(true) }}
+              onPause={() => setPlaying(false)}
+              onError={() => { if (src.type === 'file') setError('No se pudo cargar el video. Es posible que el enlace haya vencido: recarga la página.') }}
+            />
+          )}
+
+          {/* Capa que bloquea cualquier clic sobre el reproductor original */}
+          <div className="absolute inset-0 z-10" onClick={toggle} onDoubleClick={toggleFull} />
+
+          {/* Portada: tapa el título y las sugerencias de YouTube mientras no se reproduce */}
+          {!playing && (
+            <div className="absolute inset-0 z-20 flex cursor-pointer flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-700 text-white" onClick={toggle}>
+              {!ready ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <>
+                  <span className="flex h-20 w-20 items-center justify-center rounded-full bg-sky-500 shadow-xl shadow-sky-500/40 transition-transform hover:scale-110">
+                    <Play size={34} fill="white" className="ml-1" />
+                  </span>
+                  <p className="mt-4 max-w-md px-6 text-center text-sm font-bold">{started ? 'En pausa' : title}</p>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Marca de agua con el correo del alumno */}
+          <div
+            className="pointer-events-none absolute z-30 whitespace-nowrap text-[11px] font-bold text-white/30 transition-all duration-[2000ms]"
+            style={{ top: `${wm.top}%`, left: `${wm.left}%`, textShadow: '0 0 4px rgba(0,0,0,.6)' }}
+          >
+            {watermark}
+          </div>
+
+          {/* Controles propios */}
+          <div className="absolute inset-x-0 bottom-0 z-40 bg-gradient-to-t from-black/85 to-transparent px-3 pb-2 pt-8" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="range" min={0} max={dur || 0} step={0.5} value={Math.min(cur, dur || 0)}
+              onChange={(e) => seek(Number(e.target.value))}
+              aria-label="Progreso"
+              className="h-1 w-full cursor-pointer accent-sky-400"
+            />
+            <div className="mt-1.5 flex items-center gap-3 text-white">
+              <button type="button" onClick={toggle} aria-label={playing ? 'Pausar' : 'Reproducir'} className="cursor-pointer">
+                {playing ? <Pause size={20} fill="white" /> : <Play size={20} fill="white" />}
+              </button>
+              <span className="text-[11px] font-bold tabular-nums">{fmt(cur)} / {fmt(dur)}</span>
+              <div className="ml-auto flex items-center gap-3">
+                <button type="button" onClick={cycleRate} className="rounded-md bg-white/15 px-2 py-0.5 text-[11px] font-black cursor-pointer">{rate}x</button>
+                <button type="button" onClick={toggleMute} aria-label="Sonido" className="cursor-pointer">
+                  {muted ? <VolumeX size={19} /> : <Volume2 size={19} />}
+                </button>
+                <button type="button" onClick={toggleFull} aria-label="Pantalla completa" className="cursor-pointer">
+                  {full ? <Minimize size={19} /> : <Maximize size={19} />}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+===== src\app\api\user\profile\route.ts =====
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
+
+export const dynamic = 'force-dynamic'
+
+// GET - Fetch current user profile
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
+    const userId = (session.user as any).id
+    if (!userId) {
+      return NextResponse.json({ error: 'ID de usuario no encontrado' }, { status: 400 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        avatarUrl: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        registeredIp: true,
+        _count: {
+          select: {
+            progress: true,
+            activityLogs: true,
+          },
+        },
+      },
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    return NextResponse.json(user)
+  } catch (error) {
+    console.error('Profile fetch error:', error)
+    return NextResponse.json({ error: 'Error al obtener perfil' }, { status: 500 })
+  }
+}
+
+// PATCH - Update user profile (name, phone, avatarUrl, password)
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
+    const userId = (session.user as any).id
+    if (!userId) {
+      return NextResponse.json({ error: 'ID de usuario no encontrado' }, { status: 400 })
+    }
+
+    const body = await req.json()
+    const { name, phone, avatarUrl, currentPassword, newPassword } = body
+
+    const updateData: any = {}
+
+    if (name?.trim()) updateData.name = name.trim()
+    if (phone !== undefined) updateData.phone = phone || null
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl || null
+
+    // Password change flow
+    if (newPassword) {
+      if (!currentPassword) {
+        return NextResponse.json(
+          { error: 'Debes proporcionar tu contraseña actual para cambiarla.' },
+          { status: 400 }
+        )
+      }
+
+      if (newPassword.length < 6) {
+        return NextResponse.json(
+          { error: 'La nueva contraseña debe tener al menos 6 caracteres.' },
+          { status: 400 }
+        )
+      }
+
+      // Verify current password
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } })
+      if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+
+      const isValid = await bcrypt.compare(currentPassword, user.password)
+      if (!isValid) {
+        return NextResponse.json({ error: 'La contraseña actual no es correcta.' }, { status: 400 })
+      }
+
+      updateData.password = await bcrypt.hash(newPassword, 12)
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No se proporcionaron datos para actualizar.' }, { status: 400 })
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        avatarUrl: true,
+        role: true,
+        status: true,
+      },
+    })
+
+    return NextResponse.json({ success: true, user: updatedUser })
+  } catch (error) {
+    console.error('Profile update error:', error)
+    return NextResponse.json({ error: 'Error al actualizar perfil' }, { status: 500 })
+  }
+}
+
+===== src\app\api\user\progress\route.ts =====
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+
+// POST - Upsert lesson progress
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
+    const userId = (session.user as any).id
+    if (!userId) {
+      return NextResponse.json({ error: 'ID de usuario no encontrado' }, { status: 400 })
+    }
+
+    const { lessonId, completed, watchedSecs } = await req.json()
+    if (!lessonId) {
+      return NextResponse.json({ error: 'lessonId requerido' }, { status: 400 })
+    }
+
+    const progress = await prisma.lessonProgress.upsert({
+      where: {
+        userId_lessonId: { userId, lessonId },
+      },
+      update: {
+        completed: completed ?? false,
+        watchedSecs: watchedSecs ?? 0,
+      },
+      create: {
+        userId,
+        lessonId,
+        completed: completed ?? false,
+        watchedSecs: watchedSecs ?? 0,
+      },
+    })
+
+    return NextResponse.json({ success: true, progress })
+  } catch (error) {
+    console.error('Progress update error:', error)
+    return NextResponse.json({ error: 'Error al actualizar progreso' }, { status: 500 })
+  }
+}
+
+// GET - Get all progress for current user
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
+    const userId = (session.user as any).id
+    const progress = await prisma.lessonProgress.findMany({
+      where: { userId },
+      include: {
+        lesson: {
+          select: { id: true, title: true, moduleId: true },
+        },
+      },
+    })
+
+    return NextResponse.json(progress)
+  } catch (error) {
+    return NextResponse.json({ error: 'Error al obtener progreso' }, { status: 500 })
+  }
+}
+
+===== public (lista) =====
+public\uploads\videos\.gitignore  483
+public\uploads\videos\.gitkeep  169
+public\uploads\videos\1793132272005-ADELANTO2.mp4  51737680
+public\uploads\videos\1793132306782-ADELANTO_PLATAFORMA.mp4  118052665
