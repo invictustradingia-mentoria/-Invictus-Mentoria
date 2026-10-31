@@ -356,4 +356,18 @@ html[data-theme="dark"] .invl .gl:hover{border-color:#38bdf8}
 html[data-theme="dark"] .invl #spot{background:radial-gradient(circle,rgba(56,189,248,.14),transparent 65%)}
 html[data-theme="dark"] .invl section.s{background:transparent}
 html[data-theme="dark"] .invl .chartbox small{color:#6b7488}
+
+/* ===== Testimonios (columna vertical) ===== */
+.invl .tstack{display:flex;flex-direction:column;align-items:center;gap:24px;margin-top:40px}
+.invl .tcard{margin:0;width:100%;max-width:640px;border-radius:26px;overflow:hidden;background:#fff;border:1px solid #bae6fd;box-shadow:0 30px 60px -28px rgba(2,132,199,.55)}
+.invl .tcard img{display:block;width:100%;height:auto}
+.invl .tcard figcaption{padding:16px 20px;font-size:14px;color:#334155;text-align:center}
+.invl .tcard img+figcaption{border-top:1px solid #e0f2fe}
+.invl .tcard .tq{line-height:1.7;white-space:pre-line;font-weight:500}
+.invl .tcard figcaption b{display:block;margin-top:8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#0284c7}
+.invl .tvid{position:relative;aspect-ratio:16/9;background:#000}
+.invl .tvid iframe,.invl .tvid video{position:absolute;inset:0;width:100%;height:100%;border:0}
+html[data-theme="dark"] .invl .tcard{background:#121826;border-color:#232d42;box-shadow:0 30px 60px -28px rgba(0,0,0,.8)}
+html[data-theme="dark"] .invl .tcard figcaption{color:#aab3c5;border-color:#232d42}
+html[data-theme="dark"] .invl .tcard figcaption b{color:#7dd3fc}
 `

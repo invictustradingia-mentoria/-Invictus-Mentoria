@@ -291,3 +291,18 @@ model PasswordReset {
   @@index([userId])
   @@map("password_resets")
 }
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  kind        String   @default("IMAGE") // IMAGE, TEXT, VIDEO
+  name        String?  // nombre del alumno
+  image       String?  // imagen en base64 (data URL)
+  caption     String?  // texto del testimonio
+  videoUrl    String?  // enlace de YouTube / Vimeo / mp4
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@map("testimonials")
+}

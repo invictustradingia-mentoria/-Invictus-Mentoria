@@ -10,9 +10,9 @@ export const LANDING_HTML = `<div id="loader"><div class="lcore"><svg viewBox="0
       <span class="lt">INVICTUS <b>CAMPUS</b></span>
     </a>
     <nav class="links"><a href="#top" class="on">Inicio</a><a href="#metodo">Metodología</a><a href="#plataforma">Plataforma</a><a href="#planes">Planes</a><a href="#faq">Preguntas</a></nav>
-    <div class="nr"><a class="lnk" href="/login">Iniciar sesión</a><a class="btn blue" href="/register">Crear cuenta</a><button class="tg" id="themeBtn" type="button" aria-label="Cambiar entre modo claro y modo noche" title="Modo noche / claro"><span class="s">☀</span><span class="m">☾</span></button><button class="burger" id="burger" aria-label="Menú" aria-expanded="false"><i></i><i></i><i></i></button></div>
+    <div class="nr"><a class="lnk" href="/login">Iniciar sesión</a><a class="btn blue" href="https://invictus-os.netlify.app/">Ir a InvictusOs</a><button class="tg" id="themeBtn" type="button" aria-label="Cambiar entre modo claro y modo noche" title="Modo noche / claro"><span class="s">☀</span><span class="m">☾</span></button><button class="burger" id="burger" aria-label="Menú" aria-expanded="false"><i></i><i></i><i></i></button></div>
   </div>
-  <nav class="drawer glassbar" id="drawer"><a href="#top">Inicio</a><a href="#metodo">Metodología</a><a href="#plataforma">Plataforma</a><a href="#planes">Planes</a><a href="#faq">Preguntas</a><a href="/login">Iniciar sesión</a><a href="/register">Crear cuenta</a></nav>
+  <nav class="drawer glassbar" id="drawer"><a href="#top">Inicio</a><a href="#metodo">Metodología</a><a href="#plataforma">Plataforma</a><a href="#planes">Planes</a><a href="#faq">Preguntas</a><a href="/login">Iniciar sesión</a><a href="https://invictus-os.netlify.app/">Ir a InvictusOs</a></nav>
 </header>
 
 <section class="hero" id="top">
@@ -145,24 +145,10 @@ export const LANDING_HTML = `<div id="loader"><div class="lcore"><svg viewBox="0
 
 <div class="tick"><div id="tick"></div></div>
 
-<section class="s" id="chart" style="padding-bottom:40px">
-  <div class="wrap chartwrap">
-    <div class="reveal">
-      <p class="eyebrow">Lectura de mercado</p>
-      <h2 class="grad">Así piensa un trader institucional</h2>
-      <p class="lead">Mira cómo se construye una operación paso a paso: del barrido de liquidez a una entrada con riesgo definido.</p>
-      <ul class="legend" id="legend">
-        <li data-s="1"><i>1</i><div><b>Liquidez barrida</b>El precio rompe mínimos iguales y recoge órdenes.</div></li>
-        <li data-s="2"><i>2</i><div><b>Order Block</b>La última vela bajista antes del desplazamiento.</div></li>
-        <li data-s="3"><i>3</i><div><b>Fair Value Gap</b>El desequilibrio al que el precio suele volver.</div></li>
-        <li data-s="4"><i>4</i><div><b>Entrada y gestión</b>Stop protegido y objetivo definido antes de entrar.</div></li>
-      </ul>
-      <button class="btn ghost" id="replay">↻ Repetir animación</button>
-    </div>
-    <div class="reveal chartbox" style="transition-delay:.15s">
-      <svg id="mk" viewBox="0 0 640 330" role="img" aria-label="Gráfico ilustrativo de velas con liquidez, order block, fair value gap y entrada"></svg>
-      <small>Ilustración educativa, no es una señal de operación.</small>
-    </div>
+<section class="s" id="testimonios" style="display:none;padding-top:56px;padding-bottom:40px">
+  <div class="wrap">
+    <div class="reveal" style="text-align:center"><p class="eyebrow">Resultados de alumnos</p><h2 class="grad" style="margin-inline:auto">Lo que dicen nuestros alumnos</h2></div>
+    <div class="tstack" id="tstack"></div>
   </div>
 </section>
 

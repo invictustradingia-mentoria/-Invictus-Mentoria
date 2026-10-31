@@ -84,9 +84,9 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
           <div className="relative flex items-center gap-3">
             <Avatar name={user.name} email={user.email} avatarUrl={user.avatarUrl} size={44} />
             <div className="min-w-0">
-              <p className="truncate text-sm font-black leading-tight">{user.name || 'Alumno'}</p>
-              {user.username && <p className="truncate text-[11px] font-bold text-white/90">@{user.username}</p>}
-              <p className="truncate text-[10px] text-white/80">{user.email}</p>
+              <p className="break-words text-sm font-black leading-tight">{user.name || 'Alumno'}</p>
+              {user.username && <p className="break-all text-[11px] font-bold text-white/90">@{user.username}</p>}
+              <p className="break-all text-[10px] leading-tight text-white/80">{user.email}</p>
             </div>
           </div>
           <div className="relative mt-3 flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider backdrop-blur">

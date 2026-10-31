@@ -61,7 +61,7 @@ document.getElementById('tick').innerHTML=[...t,...t].map(x=>\`<span>\${x}</span
 // big text parallax
 (function(){const big=document.getElementById('big');if(!big)return;on(window,'scroll',()=>{big.style.transform=\`translateY(\${Math.min(scrollY,900)*.18}px)\`},{passive:true})})();
 // market chart
-(function(){const svg=document.getElementById('mk'),ns='http://www.w3.org/2000/svg';
+(function(){const svg=document.getElementById('mk'),ns='http://www.w3.org/2000/svg';if(!svg)return;
  const D=[[50,54,56,48],[54,52,57,50],[52,56,58,51],[56,53,58,52],[53,55,57,51],[55,52,56,50],[52,50,53,48],[50,51,53,48.5],[51,49,52,48],[49,47,50,44],[47,53,54,46.5],[53,60,61,52.5],[60,66,67,59],[66,64,68,63],[64,67,69,63],[67,63,68,62],[63,60,64,58],[60,59,62,57],[59,62,63,54.5],[62,68,69,61],[68,73,74,67],[73,71,75,70],[71,77,78,70],[77,82,83,76]];
  const X=i=>34+i*25,Y=p=>300-(p-43)*6.9;
  function el(t,a,par){const e=document.createElementNS(ns,t);for(const k in a)e.setAttribute(k,a[k]);(par||svg).appendChild(e);return e}
@@ -94,6 +94,23 @@ document.getElementById('tick').innerHTML=[...t,...t].map(x=>\`<span>\${x}</span
   T.push(setTimeout(()=>{M.zs.en.classList.add('on');M.zs.sl.classList.add('on');M.zs.tp.classList.add('on');step(4)},t0+3900))}
  let started=false;W_io((es,o)=>{if(es[0].isIntersecting&&!started){started=true;run();o.disconnect()}},{threshold:.35}).observe(svg);
  document.getElementById('replay').onclick=run})();
+// testimonios de alumnos (se actualizan solos)
+(function(){const box=document.getElementById('tstack'),sec=document.getElementById('testimonios');if(!box||!sec)return;let sig='';
+ async function load(){try{const r=await fetch('/api/public/testimonials',{cache:'no-store'});if(!r.ok)return;const d=await r.json();const items=d.items||[];const k=JSON.stringify(items);if(k===sig)return;sig=k;
+  box.innerHTML='';
+  items.forEach(it=>{const f=document.createElement('figure');f.className='tcard';
+   if(it.video){const w=document.createElement('div');w.className='tvid';
+    if(it.videoDirect){const v=document.createElement('video');v.src=it.video;v.controls=true;v.preload='metadata';v.playsInline=true;w.appendChild(v)}
+    else{const i=document.createElement('iframe');i.src=it.video;i.loading='lazy';i.allow='accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen';i.allowFullscreen=true;i.title='Testimonio en video';w.appendChild(i)}
+    f.appendChild(w)}
+   if(it.hasImage){const im=new Image();im.loading='lazy';im.alt=it.name?('Testimonio de '+it.name):'Testimonio de un alumno';im.src='/api/public/testimonials/'+it.id+'?v='+it.v;f.appendChild(im)}
+   if(it.text||it.name){const c=document.createElement('figcaption');
+    if(it.text){const p=document.createElement('p');p.className='tq';p.textContent=it.text;c.appendChild(p)}
+    if(it.name){const n=document.createElement('b');n.textContent=it.name;c.appendChild(n)}
+    f.appendChild(c)}
+   box.appendChild(f)});
+  sec.style.display=items.length?'':'none'}catch(e){}}
+ load();W_int(load,60000)})();
 // video
 (function(){const v=document.getElementById('vid');if(!v)return;
  function play(){if(v.classList.contains('playing'))return;v.classList.add('playing');v.removeAttribute('role');v.removeAttribute('tabindex');
