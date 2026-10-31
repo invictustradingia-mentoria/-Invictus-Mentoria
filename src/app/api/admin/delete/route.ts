@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { isStaff } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 
 export async function DELETE(req: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || (session.user as any)?.role !== 'ADMIN') {
+    if (!session || !isStaff((session.user as any)?.role)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 

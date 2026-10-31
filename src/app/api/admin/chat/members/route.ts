@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
-import { getAdmin } from '@/lib/chat-utils'
+import { getStaff } from '@/lib/chat-utils'
 import { avatarIds } from '@/lib/chat-avatars'
 
 export const runtime = 'nodejs'
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 // Buscar alumnos por nombre o correo para silenciarlos o bloquearlos del chat.
 export async function GET(req: Request) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const q = (new URL(req.url).searchParams.get('q') || '').trim().slice(0, 60)
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     const users = await prismaDash.user.findMany({
       where: {
         status: 'APPROVED',
-        role: { not: 'ADMIN' },
+        role: { notIn: ['ADMIN', 'EDITOR'] },
         OR: [{ name: { contains: q, mode: 'insensitive' } }, { email: { contains: q, mode: 'insensitive' } }],
       },
       select: { id: true, name: true, email: true, role: true },

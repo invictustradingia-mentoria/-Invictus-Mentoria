@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { avatarIds } from '@/lib/chat-avatars'
-import { getAdmin, cleanText, MAX_LEN } from '@/lib/chat-utils'
+import { getStaff, cleanText, MAX_LEN } from '@/lib/chat-utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,7 +12,7 @@ const MAX_PINNED = 3
 // Feed completo para moderar (incluye mensajes eliminados) + sanciones vigentes.
 export async function GET() {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401, headers: NO_STORE })
 
     const messages = await prismaDash.chatMessage.findMany({ orderBy: { createdAt: 'desc' }, take: 150 })
@@ -60,7 +60,7 @@ export async function GET() {
 // Publicar un mensaje del equipo (opcionalmente fijado).
 export async function POST(req: Request) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const body = await req.json().catch(() => ({}))
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     }
 
     const message = await prismaDash.chatMessage.create({
-      data: { userId: admin.id, userName: admin.name, userRole: 'ADMIN', content, pinned },
+      data: { userId: admin.id, userName: admin.name, userRole: admin.role, content, pinned },
     })
     return NextResponse.json({ message })
   } catch (err: any) {
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
 // Acciones sobre un mensaje: delete | restore | pin | unpin
 export async function PATCH(req: Request) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const { id, action } = await req.json().catch(() => ({}))

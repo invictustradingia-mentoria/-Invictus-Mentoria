@@ -20,6 +20,7 @@ model User {
   isBanned     Boolean      @default(false)
   phone        String?
   avatarUrl    String?
+  editorLevel  String       @default("ALL")
   registeredIp String?
   userAgent    String?
   createdAt    DateTime     @default(now())

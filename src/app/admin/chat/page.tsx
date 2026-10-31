@@ -213,7 +213,7 @@ export default function AdminChatPage() {
           <div ref={box} onScroll={() => { const el = box.current; if (el) stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }} className="flex-1 space-y-1 overflow-y-auto p-3">
             {visible.length === 0 && <p className="py-12 text-center text-sm text-slate-400">No hay mensajes.</p>}
             {visible.map((m) => {
-              const staff = m.userRole === 'ADMIN'
+              const staff = m.userRole === 'ADMIN' || m.userRole === 'EDITOR'
               return (
                 <div key={m.id} className={`group rounded-xl border px-3 py-2 transition ${m.deletedAt ? 'border-dashed border-slate-200 bg-slate-50 opacity-70' : m.pinned ? 'border-amber-200 bg-amber-50' : 'border-transparent hover:border-sky-100 hover:bg-[#f8fcff]'}`}>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">

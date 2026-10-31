@@ -47,7 +47,7 @@ export const authOptions: NextAuthOptions = {
       if (token.id) {
         const db = await prismaDash.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, status: true, isBanned: true },
+          select: { role: true, status: true, isBanned: true, editorLevel: true },
         })
 
         if (!db || db.isBanned || db.status !== 'APPROVED') {
@@ -55,6 +55,7 @@ export const authOptions: NextAuthOptions = {
         } else {
           token.blocked = false
           token.role = db.role
+          token.viewLevel = db.editorLevel
         }
       }
       return token
@@ -68,6 +69,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         ;(session.user as any).id = token.id
         ;(session.user as any).role = token.role
+        ;(session.user as any).viewLevel = token.viewLevel
       }
       return session
     },

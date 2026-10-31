@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   try {
     const s: any = await getServerSession(authOptions)
     if (!s?.user?.id) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    if (s.user.role === 'ADMIN') return NextResponse.json({ locked: false })
+    if (s.user.role === 'ADMIN' || s.user.role === 'EDITOR') return NextResponse.json({ locked: false })
 
     const body = await req.json().catch(() => ({}))
     const signal = typeof body.signal === 'string' ? body.signal : ''

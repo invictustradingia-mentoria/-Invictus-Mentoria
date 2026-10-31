@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { PlayCircle, UserCircle2, ShieldCheck, LogOut, Menu, X, Crown, Star, MessageSquare, Video } from 'lucide-react'
+import { PlayCircle, UserCircle2, ShieldCheck, LogOut, Menu, X, Crown, Star, MessageSquare, Video, Pencil } from 'lucide-react'
 import { getMembership } from '@/lib/membership'
 
 interface ShellUser {
@@ -12,6 +12,7 @@ interface ShellUser {
   email: string
   role: string
   avatarUrl: string | null
+  viewLevel?: string | null
 }
 
 export function Avatar({ name, email, avatarUrl, size = 40 }: { name?: string | null; email?: string; avatarUrl?: string | null; size?: number }) {
@@ -31,7 +32,8 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const m = getMembership(user.role)
-  const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : Star
+  const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : m.key === 'EDITOR' ? Pencil : Star
+  const viewText = user.viewLevel === 'CLUB' ? 'Ves: contenido Club' : user.viewLevel === 'MENTORIA' ? 'Ves: contenido Mentoría' : 'Ves: todo el contenido'
 
   const nav = [
     { href: '/dashboard/clases', label: 'Mis clases', icon: PlayCircle },
@@ -64,6 +66,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
           <div className="relative mt-3 flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider backdrop-blur">
             <MIcon size={13} /> {m.title}
           </div>
+          {m.key === 'EDITOR' && <p className="relative mt-2 text-center text-[10px] font-bold text-white/85">{viewText}</p>}
         </div>
       </div>
 
@@ -80,6 +83,11 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
         {user.role === 'ADMIN' && (
           <Link href="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-sky-600 hover:bg-sky-50">
             <ShieldCheck size={17} /> Panel de Administración
+          </Link>
+        )}
+        {user.role === 'EDITOR' && (
+          <Link href="/admin/content" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+            <Pencil size={17} /> Panel de Edición
           </Link>
         )}
       </nav>

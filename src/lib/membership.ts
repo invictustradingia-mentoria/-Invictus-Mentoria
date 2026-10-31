@@ -1,4 +1,4 @@
-export type MembershipKey = 'CLUB' | 'MENTORIA' | 'ADMIN'
+export type MembershipKey = 'CLUB' | 'MENTORIA' | 'ADMIN' | 'EDITOR'
 
 export const MEMBERSHIPS: Record<MembershipKey, {
   label: string
@@ -24,6 +24,14 @@ export const MEMBERSHIPS: Record<MembershipKey, {
     chip: 'bg-amber-100 text-amber-700',
     glow: 'shadow-sky-300/60',
   },
+  EDITOR: {
+    label: 'Editor',
+    title: 'Editor',
+    tagline: 'Gestionas contenido, chat, llamadas y soporte, y ves el campus segun el acceso que te habilitó el administrador.',
+    gradient: 'from-indigo-600 via-blue-600 to-sky-500',
+    chip: 'bg-indigo-100 text-indigo-700',
+    glow: 'shadow-indigo-300/60',
+  },
   ADMIN: {
     label: 'Administrador',
     title: 'Administración',
@@ -35,6 +43,6 @@ export const MEMBERSHIPS: Record<MembershipKey, {
 }
 
 export function getMembership(role?: string | null) {
-  const key: MembershipKey = role === 'ADMIN' ? 'ADMIN' : role === 'MENTORIA' ? 'MENTORIA' : 'CLUB'
+  const key: MembershipKey = role === 'ADMIN' ? 'ADMIN' : role === 'EDITOR' ? 'EDITOR' : role === 'MENTORIA' ? 'MENTORIA' : 'CLUB'
   return { key, ...MEMBERSHIPS[key] }
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, Circle, PlayCircle, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft, Check, Crown, Star, ShieldCheck, Sparkles, Clock, BookOpen, AlertCircle } from 'lucide-react'
+import { CheckCircle2, Circle, PlayCircle, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft, Check, Crown, Star, ShieldCheck, Sparkles, Clock, BookOpen, AlertCircle, Pencil } from 'lucide-react'
 import SecurePlayer from '@/components/dashboard/SecurePlayer'
 import { getMembership } from '@/lib/membership'
 
@@ -148,7 +148,7 @@ export default function ClasesPage() {
   const done = flat.filter((l) => progress[l.id]).length
   const pct = total ? Math.round((done / total) * 100) : 0
   const m = getMembership(role)
-  const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : Star
+  const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : m.key === 'EDITOR' ? Pencil : Star
 
   const toggleModule = (id: string) => setOpenMods((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
 

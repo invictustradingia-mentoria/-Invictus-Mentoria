@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'La lección no existe' }, { status: 404 })
     }
 
-    const levels = visibleLevels(session.user.role)
+    const levels = visibleLevels(session.user.role, session.user.viewLevel)
     if (levels && !levels.includes(lesson.allowedRole)) {
       return NextResponse.json({ error: 'No tienes acceso a esta lección' }, { status: 403 })
     }

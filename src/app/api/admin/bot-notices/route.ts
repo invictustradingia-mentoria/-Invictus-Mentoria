@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
-import { getAdmin, cleanText } from '@/lib/chat-utils'
+import { getStaff, cleanText } from '@/lib/chat-utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const notices = await prismaDash.botNotice.findMany({ orderBy: { createdAt: 'desc' }, take: 50 })
     return NextResponse.json({ notices }, { headers: { 'Cache-Control': 'no-store' } })
@@ -18,7 +18,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const body = await req.json().catch(() => ({}))
     const content = cleanText(body?.content)
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const { id, isActive } = await req.json().catch(() => ({}))
     if (typeof id !== 'string' || typeof isActive !== 'boolean') return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 })
@@ -52,7 +52,7 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const id = new URL(req.url).searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'Falta el aviso.' }, { status: 400 })

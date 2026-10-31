@@ -7,6 +7,7 @@ export interface Actor {
   name: string
   email: string
   role: string
+  viewLevel: string
 }
 
 export const MAX_LEN = 500
@@ -18,15 +19,22 @@ export async function getActor(): Promise<Actor | null> {
   if (!id) return null
   const u = await prismaDash.user.findUnique({
     where: { id },
-    select: { id: true, name: true, email: true, role: true, status: true, isBanned: true },
+    select: { id: true, name: true, email: true, role: true, status: true, isBanned: true, editorLevel: true },
   })
   if (!u || u.isBanned || u.status !== 'APPROVED') return null
-  return { id: u.id, name: u.name || u.email.split('@')[0], email: u.email, role: u.role }
+  return { id: u.id, name: u.name || u.email.split('@')[0], email: u.email, role: u.role, viewLevel: u.editorLevel }
 }
 
+// Solo administrador.
 export async function getAdmin(): Promise<Actor | null> {
   const a = await getActor()
   return a && a.role === 'ADMIN' ? a : null
+}
+
+// Equipo: administrador o editor (chat, llamadas, soporte y avisos del asistente).
+export async function getStaff(): Promise<Actor | null> {
+  const a = await getActor()
+  return a && (a.role === 'ADMIN' || a.role === 'EDITOR') ? a : null
 }
 
 // Sanción vigente del chat (silencio temporal o bloqueo). Limpia las vencidas.

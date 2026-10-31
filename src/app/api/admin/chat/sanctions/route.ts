@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
-import { getAdmin } from '@/lib/chat-utils'
+import { getStaff } from '@/lib/chat-utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 // Silenciar (MUTE, con duración en minutos) o bloquear (BAN) a un alumno del chat.
 export async function POST(req: Request) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const body = await req.json().catch(() => ({}))
@@ -22,7 +22,9 @@ export async function POST(req: Request) {
 
     const target = await prismaDash.user.findUnique({ where: { id: userId }, select: { id: true, role: true } })
     if (!target) return NextResponse.json({ error: 'El usuario no existe.' }, { status: 404 })
-    if (target.role === 'ADMIN') return NextResponse.json({ error: 'No puedes sancionar a otro administrador.' }, { status: 400 })
+    if (target.role === 'ADMIN' || (target.role === 'EDITOR' && admin.role !== 'ADMIN')) {
+      return NextResponse.json({ error: 'No puedes sancionar a un miembro del equipo.' }, { status: 400 })
+    }
 
     let until: Date | null = null
     if (kind === 'MUTE') {
@@ -51,7 +53,7 @@ export async function POST(req: Request) {
 // Quitar la sanción de un alumno.
 export async function DELETE(req: Request) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const userId = new URL(req.url).searchParams.get('userId')
     if (!userId) return NextResponse.json({ error: 'Falta el usuario.' }, { status: 400 })

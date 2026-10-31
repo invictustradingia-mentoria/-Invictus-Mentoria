@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, Trash2, Save, Lock, CheckCircle2, AlertCircle, Crown, Star, ShieldCheck } from 'lucide-react'
+import { Camera, Trash2, Save, Lock, CheckCircle2, AlertCircle, Crown, Star, ShieldCheck, Pencil } from 'lucide-react'
 import { Avatar } from '@/components/dashboard/DashboardShell'
 import { getMembership } from '@/lib/membership'
 
@@ -98,7 +98,7 @@ export default function ProfilePage() {
   }
 
   const m = getMembership(role)
-  const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : Star
+  const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : m.key === 'EDITOR' ? Pencil : Star
 
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-xs font-bold text-slate-400">Cargando perfil...</div>
 

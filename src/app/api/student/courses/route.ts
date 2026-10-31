@@ -14,7 +14,7 @@ export async function GET() {
     if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const role: string = session.user.role ?? 'CLUB'
-    const levels = visibleLevels(role)
+    const levels = visibleLevels(role, session.user.viewLevel)
 
     const modules = await prismaDash.module.findMany({
       where: { isPublished: true },

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { avatarIds } from '@/lib/chat-avatars'
+import { isStaff as isStaffRole } from '@/lib/access'
 import { getActor, activeSanction, cleanText, MAX_LEN, LINK_RE } from '@/lib/chat-utils'
 
 export const runtime = 'nodejs'
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `El mensaje supera los ${MAX_LEN} caracteres.` }, { status: 400 })
     }
 
-    const isStaff = me.role === 'ADMIN'
+    const isStaff = isStaffRole(me.role)
     if (!isStaff && LINK_RE.test(content)) {
       return NextResponse.json({ error: 'Por seguridad, solo el equipo puede compartir enlaces en el chat.' }, { status: 400 })
     }
@@ -105,7 +106,7 @@ export async function DELETE(req: Request) {
 
     const msg = await prismaDash.chatMessage.findUnique({ where: { id }, select: { userId: true } })
     if (!msg) return NextResponse.json({ error: 'El mensaje no existe.' }, { status: 404 })
-    if (msg.userId !== me.id && me.role !== 'ADMIN') {
+    if (msg.userId !== me.id && !isStaffRole(me.role)) {
       return NextResponse.json({ error: 'No puedes eliminar este mensaje.' }, { status: 403 })
     }
 

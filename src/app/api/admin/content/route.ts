@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { isStaff } from '@/lib/access'
 import { prismaDash } from '@/lib/prisma-dashboard'
 
 export const runtime = 'nodejs'
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     const session: any = await getServerSession(authOptions)
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || !isStaff(session.user.role)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 

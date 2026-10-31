@@ -11,7 +11,7 @@ const ROLES = ['ALL', 'CLUB', 'MENTORIA']
 
 async function isAdmin() {
   const session: any = await getServerSession(authOptions)
-  return !!session?.user && session.user.role === 'ADMIN'
+  return !!session?.user && ["ADMIN", "EDITOR"].includes(session.user.role)
 }
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {

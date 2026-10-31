@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
-import { getAdmin } from '@/lib/chat-utils'
+import { getStaff } from '@/lib/chat-utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 // Lista de conversaciones de soporte (las más recientes primero).
 export async function GET() {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const rows = await prismaDash.supportThread.findMany({

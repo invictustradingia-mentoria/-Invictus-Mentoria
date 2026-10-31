@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     if (!lessonId) return NextResponse.json({ error: 'Falta la lección' }, { status: 400 })
 
     // Alumno bloqueado por seguridad: no se entrega el video hasta que un administrador lo habilite
-    if (session.user.role !== 'ADMIN') {
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'EDITOR') {
       const lock = await activeLock(session.user.id)
       if (lock) {
         return NextResponse.json(
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'La lección no existe' }, { status: 404 })
     }
 
-    const levels = visibleLevels(session.user.role)
+    const levels = visibleLevels(session.user.role, session.user.viewLevel)
     if (levels && !levels.includes(lesson.allowedRole)) {
       return NextResponse.json({ error: 'No tienes acceso a esta lección' }, { status: 403 })
     }

@@ -11,6 +11,7 @@ interface Student {
   name: string | null
   email: string
   role: string
+  editorLevel?: string
   status: string
   isBanned: boolean
   phone: string | null
@@ -315,8 +316,24 @@ export default function AdminStudentsPage() {
                       >
                         <option value="CLUB">CLUB</option>
                         <option value="MENTORIA">MENTORIA</option>
+                        <option value="EDITOR">EDITOR</option>
                         <option value="ADMIN">ADMIN</option>
                       </select>
+                      {u.role === 'EDITOR' && (
+                        <div className="mt-1.5">
+                          <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-gray-400">Ve como alumno</p>
+                          <select
+                            value={u.editorLevel || 'ALL'}
+                            disabled={busy}
+                            onChange={(e) => patchUser(u.id, { editorLevel: e.target.value }, 'Acceso del editor actualizado')}
+                            className="rounded-xl border border-indigo-200 bg-indigo-50/60 px-3 py-1.5 text-xs font-bold text-indigo-700 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
+                          >
+                            <option value="ALL">Todo el contenido</option>
+                            <option value="CLUB">Solo Club</option>
+                            <option value="MENTORIA">Solo Mentoría</option>
+                          </select>
+                        </div>
+                      )}
                     </td>
 
                     <td className="px-5 py-3 text-gray-500">{u.registeredIp || '—'}</td>

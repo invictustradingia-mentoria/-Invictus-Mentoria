@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
-import { getAdmin } from '@/lib/chat-utils'
+import { getStaff } from '@/lib/chat-utils'
 import { parseCall } from '@/lib/calls'
 
 export const runtime = 'nodejs'
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const calls = await prismaDash.zoomCall.findMany({ orderBy: { startsAt: 'desc' }, take: 200 })
     return NextResponse.json({ calls }, { headers: { 'Cache-Control': 'no-store' } })
@@ -19,7 +19,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const admin = await getAdmin()
+    const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const body = await req.json().catch(() => ({}))
     const parsed: any = parseCall(body)

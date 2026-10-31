@@ -167,7 +167,7 @@ export default function ChatPage() {
     load()
   }
 
-  const isAdmin = me?.role === 'ADMIN'
+  const isAdmin = me?.role === 'ADMIN' || me?.role === 'EDITOR'
   const blocked = !!me?.sanction
 
   return (
@@ -212,7 +212,7 @@ export default function ChatPage() {
           const prev = msgs[i - 1]
           const newDay = !prev || new Date(prev.createdAt).toDateString() !== new Date(m.createdAt).toDateString()
           const mine = m.userId === me?.id
-          const staff = m.userRole === 'ADMIN'
+          const staff = m.userRole === 'ADMIN' || m.userRole === 'EDITOR'
           const grouped = !newDay && prev && prev.userId === m.userId && new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 120000
           return (
             <div key={m.id}>

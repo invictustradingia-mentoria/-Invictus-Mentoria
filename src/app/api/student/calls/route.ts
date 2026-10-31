@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { getActor } from '@/lib/chat-utils'
-import { visibleLevels } from '@/lib/access'
+import { visibleLevels, isStaff } from '@/lib/access'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,8 +15,8 @@ export async function GET() {
     const me = await getActor()
     if (!me) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const levels = visibleLevels(me.role)
-    const isAdmin = me.role === 'ADMIN'
+    const levels = visibleLevels(me.role, me.viewLevel)
+    const isAdmin = isStaff(me.role)
     const where: any = { isPublished: true }
     if (levels) where.allowedRole = { in: levels }
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { isStaff } from '@/lib/access'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,7 +14,7 @@ const ALLOWED_EXT = ['mp4', 'webm', 'mkv', 'mov']
 export async function POST(req: Request) {
   try {
     const session: any = await getServerSession(authOptions)
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || !isStaff(session.user.role)) {
       return NextResponse.json({ error: 'No autorizado: tu sesión no es de administrador. Cierra sesión y vuelve a entrar.' }, { status: 401 })
     }
 
