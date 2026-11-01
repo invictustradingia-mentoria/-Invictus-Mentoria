@@ -5,7 +5,7 @@ export const ACCESS_LEVELS = ['ALL', 'CLUB', 'MENTORIA']
 export const STAFF_ROLES = ['ADMIN', 'EDITOR']
 
 // Secciones del panel que puede usar un editor.
-export const EDITOR_PATHS = ['/admin/content', '/admin/chat', '/admin/llamadas', '/admin/soporte', '/admin/testimonios']
+export const EDITOR_PATHS = ['/admin/content', '/admin/chat', '/admin/llamadas', '/admin/soporte', '/admin/testimonios', '/admin/recursos']
 
 export function isAdminRole(role?: string | null): boolean {
   return role === 'ADMIN'

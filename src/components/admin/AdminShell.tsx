@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { Users, Radio, BookOpen, ExternalLink, LogOut, Menu, X, MessageSquare, Video, LifeBuoy, Star } from 'lucide-react'
+import { Users, Radio, BookOpen, ExternalLink, LogOut, Menu, X, MessageSquare, Video, LifeBuoy, Star, FolderOpen } from 'lucide-react'
 import { EDITOR_PATHS } from '@/lib/access'
 import ThemeToggle from '@/components/ThemeToggle'
 
@@ -16,6 +16,7 @@ const NAV = [
   { href: '/admin/llamadas', label: 'Llamadas de Zoom', icon: Video },
   { href: '/admin/soporte', label: 'Soporte', icon: LifeBuoy },
   { href: '/admin/testimonios', label: 'Testimonios', icon: Star },
+  { href: '/admin/recursos', label: 'Recursos', icon: FolderOpen },
 ]
 
 export default function AdminShell({ name, role, children }: { name: string; role?: string; children: ReactNode }) {

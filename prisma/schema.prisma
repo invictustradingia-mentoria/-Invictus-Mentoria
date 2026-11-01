@@ -89,8 +89,10 @@ model Resource {
   id          String   @id @default(cuid())
   title       String
   fileUrl     String
+  fileName    String?
+  fileSize    Int?
   description String?
-  allowedRole String   @default("CLUB") // CLUB, MENTORIA
+  allowedRole String   @default("ALL") // ALL, CLUB, MENTORIA
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
