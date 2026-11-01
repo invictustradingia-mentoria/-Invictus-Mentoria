@@ -6,7 +6,29 @@ export const LANDING_HTML = `<div id="loader"><div class="lcore"><svg viewBox="0
 <header>
   <div class="nav glassbar">
     <a class="logo" href="/">
-      <svg viewBox="0 0 40 40"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#0284c7"/></linearGradient></defs><circle cx="20" cy="20" r="20" fill="url(#lg)"/><path d="M20 6l2.5 6h-5zM11 24c0-7 4-11 9-11s9 4 9 11v2h-3l-1-4h-10l-1 4h-3z" fill="#fff"/><path d="M18 24h4l1 9h-6z" fill="#fff"/></svg>
+      <svg viewBox="0 0 40 40" aria-label="Cristal Invictus">
+        <defs>
+          <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#0284c7"/></linearGradient>
+          <linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bfe4fb"/></linearGradient>
+          <linearGradient id="lgB" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eaf6ff"/><stop offset="1" stop-color="#8fcdf2"/></linearGradient>
+          <linearGradient id="lgC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bfe4fb"/><stop offset="1" stop-color="#5aa9db"/></linearGradient>
+          <linearGradient id="lgD" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dcf0fc"/><stop offset="1" stop-color="#9fd4f3"/></linearGradient>
+        </defs>
+        <circle cx="20" cy="20" r="20" fill="url(#lg)"/>
+        <g>
+          <path d="M20 7L13 20 10 20 20 20Z" fill="url(#lgA)"/>
+          <path d="M20 7L20 20 10 20Z" fill="url(#lgB)"/>
+          <path d="M20 7L27 20 30 20 20 20Z" fill="url(#lgC)"/>
+          <path d="M20 7L20 20 30 20Z" fill="url(#lgD)"/>
+          <path d="M10 20L13 20 20 33Z" fill="url(#lgC)"/>
+          <path d="M10 20L20 20 20 33Z" fill="url(#lgB)"/>
+          <path d="M30 20L27 20 20 33Z" fill="url(#lgA)"/>
+          <path d="M30 20L20 20 20 33Z" fill="url(#lgD)"/>
+          <path d="M20 7L13 20 20 33 27 20Z" fill="none" stroke="#fff" stroke-width="1.1" stroke-linejoin="round" opacity=".95"/>
+          <path d="M13 20L20 20 27 20" fill="none" stroke="#fff" stroke-width=".9" opacity=".85"/>
+          <path d="M18 11L20.5 9 20 14Z" fill="#fff" opacity=".9"/>
+        </g>
+      </svg>
       <span class="lt">INVICTUS <b>CAMPUS</b></span>
     </a>
     <nav class="links"><a href="#top" class="on">Inicio</a><a href="#metodo">Metodología</a><a href="#plataforma">Plataforma</a><a href="#planes">Planes</a><a href="#faq">Preguntas</a></nav>
