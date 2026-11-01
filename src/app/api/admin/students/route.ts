@@ -6,7 +6,8 @@ import { prismaDash } from '@/lib/prisma-dashboard'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const ROLES = ['ADMIN', 'CLUB', 'MENTORIA']
+const ROLES = ['ADMIN', 'EDITOR', 'CLUB', 'MENTORIA']
+const EDITOR_LEVELS = ['ALL', 'CLUB', 'MENTORIA']
 const STATUSES = ['PENDING', 'APPROVED', 'REJECTED']
 
 async function getAdmin() {
@@ -33,6 +34,7 @@ export async function GET() {
         phone: true,
         registeredIp: true,
         createdAt: true,
+        editorLevel: true,
       },
     })
 
@@ -87,6 +89,11 @@ export async function PATCH(req: Request) {
       data.isBanned = body.isBanned
     }
 
+    if (typeof body.editorLevel === 'string') {
+      if (!EDITOR_LEVELS.includes(body.editorLevel)) return NextResponse.json({ error: 'Nivel de editor no válido' }, { status: 400 })
+      data.editorLevel = body.editorLevel
+    }
+
     if (typeof body.name === 'string') data.name = body.name.trim() || null
     if (typeof body.phone === 'string') data.phone = body.phone.trim() || null
 
@@ -99,7 +106,7 @@ export async function PATCH(req: Request) {
       data,
       select: {
         id: true, name: true, email: true, role: true, status: true,
-        isBanned: true, isProtected: true, phone: true, registeredIp: true, createdAt: true,
+        isBanned: true, isProtected: true, phone: true, registeredIp: true, createdAt: true, editorLevel: true,
       },
     })
 

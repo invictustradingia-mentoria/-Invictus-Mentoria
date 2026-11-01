@@ -17,6 +17,7 @@ interface Student {
   phone: string | null
   registeredIp: string | null
   createdAt: string
+  editorLevel?: string
 }
 
 type Filter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'BANNED'
@@ -314,16 +315,32 @@ export default function AdminStudentsPage() {
                     </td>
 
                     <td className="px-5 py-3">
-                      <select
-                        value={u.role}
-                        disabled={busy || isSelf || locked}
-                        onChange={(e) => patchUser(u.id, { role: e.target.value }, `Rol cambiado a ${e.target.value}`)}
-                        className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-1.5 text-xs font-bold text-[#0284c7] focus:border-[#0284c7] focus:outline-none disabled:opacity-50"
-                      >
-                        <option value="CLUB">CLUB</option>
-                        <option value="MENTORIA">MENTORIA</option>
-                        <option value="ADMIN">ADMIN</option>
-                      </select>
+                      <div className="flex flex-col gap-1.5">
+                        <select
+                          value={u.role}
+                          disabled={busy || isSelf || locked}
+                          onChange={(e) => patchUser(u.id, { role: e.target.value }, `Rol cambiado a ${e.target.value}`)}
+                          className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-1.5 text-xs font-bold text-[#0284c7] focus:border-[#0284c7] focus:outline-none disabled:opacity-50"
+                        >
+                          <option value="CLUB">CLUB</option>
+                          <option value="MENTORIA">MENTORIA</option>
+                          <option value="EDITOR">EDITOR</option>
+                          <option value="ADMIN">ADMIN</option>
+                        </select>
+                        {u.role === 'EDITOR' && (
+                          <select
+                            value={u.editorLevel || 'ALL'}
+                            disabled={busy || locked}
+                            onChange={(e) => patchUser(u.id, { editorLevel: e.target.value }, `Contenido visible: ${e.target.value}`)}
+                            title="Qué contenido puede ver y editar este editor"
+                            className="rounded-xl border border-indigo-200 bg-indigo-50/60 px-3 py-1 text-[10px] font-bold text-indigo-700 focus:border-indigo-400 focus:outline-none disabled:opacity-50"
+                          >
+                            <option value="ALL">Ve: todo el contenido</option>
+                            <option value="CLUB">Ve: solo Club</option>
+                            <option value="MENTORIA">Ve: solo Mentoría</option>
+                          </select>
+                        )}
+                      </div>
                     </td>
 
                     <td className="px-5 py-3 text-gray-500">{u.registeredIp || '—'}</td>
