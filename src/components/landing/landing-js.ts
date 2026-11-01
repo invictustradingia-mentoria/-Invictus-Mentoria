@@ -94,8 +94,10 @@ document.getElementById('tick').innerHTML=[...t,...t].map(x=>\`<span>\${x}</span
   T.push(setTimeout(()=>{M.zs.en.classList.add('on');M.zs.sl.classList.add('on');M.zs.tp.classList.add('on');step(4)},t0+3900))}
  let started=false;W_io((es,o)=>{if(es[0].isIntersecting&&!started){started=true;run();o.disconnect()}},{threshold:.35}).observe(svg);
  document.getElementById('replay').onclick=run})();
-// testimonios de alumnos (se actualizan solos)
-(function(){const box=document.getElementById('tstack'),sec=document.getElementById('testimonios');if(!box||!sec)return;let sig='';
+// testimonios de alumnos (se actualizan solos, carrusel en pantallas grandes)
+(function(){const box=document.getElementById('tstack'),sec=document.getElementById('testimonios'),prev=document.getElementById('tprev'),next=document.getElementById('tnext');if(!box||!sec)return;let sig='';
+ function scrollBy1(dir){const c=box.querySelector('.tcard');const gap=24;const w=(c?c.getBoundingClientRect().width:380)+gap;box.scrollBy({left:dir*w,behavior:'smooth'})}
+ prev&&on(prev,'click',()=>scrollBy1(-1));next&&on(next,'click',()=>scrollBy1(1));
  async function load(){try{const r=await fetch('/api/public/testimonials',{cache:'no-store'});if(!r.ok)return;const d=await r.json();const items=d.items||[];const k=JSON.stringify(items);if(k===sig)return;sig=k;
   box.innerHTML='';
   items.forEach(it=>{const f=document.createElement('figure');f.className='tcard';

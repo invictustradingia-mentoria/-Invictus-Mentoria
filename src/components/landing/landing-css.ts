@@ -357,9 +357,23 @@ html[data-theme="dark"] .invl #spot{background:radial-gradient(circle,rgba(56,18
 html[data-theme="dark"] .invl section.s{background:transparent}
 html[data-theme="dark"] .invl .chartbox small{color:#6b7488}
 
-/* ===== Testimonios (columna vertical) ===== */
-.invl .tstack{display:flex;flex-direction:column;align-items:center;gap:24px;margin-top:40px}
-.invl .tcard{margin:0;width:100%;max-width:640px;border-radius:26px;overflow:hidden;background:#fff;border:1px solid #bae6fd;box-shadow:0 30px 60px -28px rgba(2,132,199,.55)}
+/* ===== Testimonios: carrusel horizontal en pantallas grandes, columna en moviles ===== */
+.invl .tcarousel{position:relative;margin-top:40px}
+.invl .tstack{display:flex;gap:24px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 4px 26px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.invl .tstack::-webkit-scrollbar{display:none}
+.invl .tcard{margin:0;flex:0 0 380px;scroll-snap-align:start;border-radius:26px;overflow:hidden;background:#fff;border:1px solid #bae6fd;box-shadow:0 30px 60px -28px rgba(2,132,199,.55)}
+.invl .tnav{position:absolute;top:42%;transform:translateY(-50%);z-index:5;width:46px;height:46px;border-radius:50%;background:#fff;border:1px solid #bae6fd;color:#0284c7;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 14px 30px -12px rgba(2,132,199,.5);transition:.2s}
+.invl .tnav:hover{background:#0ea5e9;color:#fff;transform:translateY(-50%) scale(1.08)}
+.invl .tprev{left:-10px}
+.invl .tnext{right:-10px}
+@media(max-width:1280px){.invl .tprev{left:-6px}.invl .tnext{right:-6px}}
+@media(max-width:768px){
+  .invl .tstack{flex-direction:column;overflow-x:visible;scroll-snap-type:none;padding:0;align-items:center}
+  .invl .tcard{flex:none;width:100%;max-width:520px}
+  .invl .tnav{display:none}
+}
+html[data-theme="dark"] .invl .tnav{background:#121826;border-color:#232d42;color:#7dd3fc}
+html[data-theme="dark"] .invl .tnav:hover{background:#0ea5e9;color:#fff}
 .invl .tcard img{display:block;width:100%;height:auto}
 .invl .tcard figcaption{padding:16px 20px;font-size:14px;color:#334155;text-align:center}
 .invl .tcard img+figcaption{border-top:1px solid #e0f2fe}

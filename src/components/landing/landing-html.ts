@@ -148,7 +148,11 @@ export const LANDING_HTML = `<div id="loader"><div class="lcore"><svg viewBox="0
 <section class="s" id="testimonios" style="display:none;padding-top:56px;padding-bottom:40px">
   <div class="wrap">
     <div class="reveal" style="text-align:center"><p class="eyebrow">Resultados de alumnos</p><h2 class="grad" style="margin-inline:auto">Lo que dicen nuestros alumnos</h2></div>
-    <div class="tstack" id="tstack"></div>
+    <div class="tcarousel">
+      <button class="tnav tprev" type="button" id="tprev" aria-label="Testimonios anteriores">&#8249;</button>
+      <div class="tstack" id="tstack"></div>
+      <button class="tnav tnext" type="button" id="tnext" aria-label="Testimonios siguientes">&#8250;</button>
+    </div>
   </div>
 </section>
 
