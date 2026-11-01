@@ -12,7 +12,7 @@ interface Msg {
 }
 interface SMsg {
   id: string
-  from: 'VISITOR' | 'STAFF' | 'BOT'
+  from: 'VISITOR' | 'STAFF'
   content: string
   createdAt: string
 }
@@ -45,10 +45,8 @@ export default function LandingBot() {
   const [sInput, setSInput] = useState('')
   const [sErr, setSErr] = useState('')
   const [sBusy, setSBusy] = useState(false)
-  const [form, setForm] = useState({ name: '', phone: '', email: '', message: '' })
+  const [form, setForm] = useState({ name: '', email: '', message: '' })
   const [replyDot, setReplyDot] = useState(false)
-  const [offline, setOffline] = useState(false)
-  const [offMsg, setOffMsg] = useState('')
   const seenStaff = useRef(0)
   const sEnd = useRef<HTMLDivElement>(null)
 
@@ -129,20 +127,6 @@ export default function LandingBot() {
     return () => clearInterval(t)
   }, [token, open, view, loadSupport])
 
-  // Disponibilidad de soporte (la define el equipo desde el panel)
-  useEffect(() => {
-    if (!open) return
-    let alive = true
-    const load = () =>
-      fetch('/api/public/support/status', { cache: 'no-store' })
-        .then((r) => r.json())
-        .then((d) => { if (alive) { setOffline(!!d.offline); setOffMsg(d.message || '') } })
-        .catch(() => {})
-    load()
-    const t = setInterval(() => !document.hidden && load(), 20000)
-    return () => { alive = false; clearInterval(t) }
-  }, [open])
-
   function push(from: 'bot' | 'me', a: Partial<BotAnswer> & { text: string }) {
     setMsgs((m) => [...m, { id: idRef.current++, from, text: a.text, actions: a.actions, follow: a.follow }])
   }
@@ -181,7 +165,7 @@ export default function LandingBot() {
         try { localStorage.setItem(TKEY, d.token); localStorage.setItem(SEENKEY, '0') } catch {}
         seenStaff.current = 0
         setToken(d.token)
-        setForm({ name: '', phone: '', email: '', message: '' })
+        setForm({ name: '', email: '', message: '' })
       }
     } catch {
       setSErr('Sin conexión. Inténtalo de nuevo.')
@@ -247,8 +231,19 @@ export default function LandingBot() {
         {showDot && <span className={'ib-dot' + (replyDot ? ' ib-red' : '')} />}
       </button>
 
-      {!open && unread && !replyDot && <div className="ib-nudge" onClick={() => { setOpen(true); setUnread(false) }}>¿Dudas sobre el Club o la Mentoría? 👋</div>}
-      {!open && replyDot && <div className="ib-nudge" onClick={openSupport}>El equipo respondió tu consulta 💬</div>}
+      {!open && unread && !replyDot && (
+        <div className="ib-nudge" onClick={() => { setOpen(true); setUnread(false) }}>
+          <span className="ib-nudge-ico">💬</span>
+          <span className="ib-nudge-txt">¿Dudas sobre el Club o la Mentoría?</span>
+          <button className="ib-nudge-x" aria-label="Cerrar aviso" onClick={(e) => { e.stopPropagation(); setUnread(false) }}>✕</button>
+        </div>
+      )}
+      {!open && replyDot && (
+        <div className="ib-nudge ib-nudge-reply" onClick={openSupport}>
+          <span className="ib-nudge-ico">🔔</span>
+          <span className="ib-nudge-txt">El equipo respondió tu consulta</span>
+        </div>
+      )}
 
       {open && (
         <section className="ib-panel" role="dialog" aria-label="Asistente de Invictus Campus">
@@ -266,7 +261,7 @@ export default function LandingBot() {
             )}
             <div className="ib-ht">
               <b>{view === 'support' ? 'Soporte Invictus' : 'Asistente Invictus'}</b>
-              <span><i className={view === 'support' && offline ? 'off' : ''} /> {view === 'support' ? (offline ? 'Fuera de línea · te contactamos luego' : 'Te responde una persona del equipo') : 'En línea · respuestas al instante'}</span>
+              <span><i /> {view === 'support' ? 'Te responde una persona del equipo' : 'En línea · respuestas al instante'}</span>
             </div>
             {view === 'bot' && (
               <button className="ib-x" onClick={openSupport} aria-label="Hablar con soporte" title="Hablar con soporte">
@@ -324,27 +319,18 @@ export default function LandingBot() {
                 </button>
               </form>
               <p className="ib-foot">
-                {offline ? 'Soporte no está en línea ahora. ' : ''}¿Prefieres hablar con una persona? <button onClick={openSupport}>Hablar con soporte{token ? ' · ver mi conversación' : ''}</button>
+                ¿Prefieres hablar con una persona? <button onClick={openSupport}>Hablar con soporte{token ? ' · ver mi conversación' : ''}</button>
               </p>
             </>
           ) : !token ? (
             <>
               <form className="ib-sform" onSubmit={startSupport}>
-                {offline ? (
-                  <div className="ib-off">
-                    <b>Soporte no está en línea en este momento</b>
-                    <span>{offMsg}</span>
-                  </div>
-                ) : (
-                  <p className="ib-sintro">Déjanos tu consulta y una persona del equipo te responderá aquí mismo. Si cierras esta ventana, tu conversación se guarda en este dispositivo.</p>
-                )}
+                <p className="ib-sintro">Déjanos tu consulta y una persona del equipo te responderá aquí mismo. Si cierras esta ventana, tu conversación se guarda en este dispositivo.</p>
                 <label>Tu nombre *<input value={form.name} maxLength={60} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej: Martín" required /></label>
-                <label>Teléfono{offline ? ' *' : ' (opcional)'}<input type="tel" inputMode="tel" value={form.phone} maxLength={25} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Ej: +54 9 11 1234 5678" /></label>
-                <label>Correo{offline ? ' *' : ' (opcional)'}<input type="email" value={form.email} maxLength={120} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder={offline ? 'Para poder contactarte' : 'Para avisarte si no estás conectado'} /></label>
-                {offline && <p className="ib-hint">Completa al menos uno: teléfono o correo.</p>}
+                <label>Correo (opcional)<input type="email" value={form.email} maxLength={120} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Para avisarte si no estás conectado" /></label>
                 <label>Tu consulta *<textarea value={form.message} maxLength={1000} rows={4} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Cuéntanos en qué podemos ayudarte…" required /></label>
                 {sErr && <p className="ib-err">{sErr}</p>}
-                <button type="submit" className="ib-go" disabled={sBusy || !form.name.trim() || !form.message.trim() || (offline && !form.phone.trim() && !form.email.trim())}>{sBusy ? 'Enviando…' : offline ? 'Dejar mi consulta' : 'Enviar consulta'}</button>
+                <button type="submit" className="ib-go" disabled={sBusy || !form.name.trim() || !form.message.trim()}>{sBusy ? 'Enviando…' : 'Enviar consulta'}</button>
               </form>
               <p className="ib-foot">No compartas contraseñas ni datos bancarios por este chat.</p>
             </>
@@ -353,13 +339,13 @@ export default function LandingBot() {
               <div className="ib-body">
                 {sMsgs.map((m) => (
                   <div key={m.id} className={'ib-row ' + (m.from === 'VISITOR' ? 'me' : 'bot')}>
-                    {m.from !== 'VISITOR' && <span className="ib-who">{m.from === 'BOT' ? 'Asistente Invictus' : 'Equipo Invictus'}</span>}
+                    {m.from === 'STAFF' && <span className="ib-who">Equipo Invictus</span>}
                     <div className="ib-bub">{m.content}</div>
                     <span className="ib-time">{hm(m.createdAt)}</span>
                   </div>
                 ))}
                 {!sMsgs.some((m) => m.from === 'STAFF') && !sClosed && sMsgs.length > 0 && (
-                  <p className="ib-wait">{offline ? 'Soporte no está en línea ahora. Te contactaremos por los datos que dejaste o te responderemos aquí.' : 'Recibimos tu consulta. Te responderemos aquí en cuanto podamos.'}</p>
+                  <p className="ib-wait">Recibimos tu consulta. Te responderemos aquí en cuanto podamos.</p>
                 )}
                 {sClosed && (
                   <div className="ib-closed">
@@ -394,9 +380,16 @@ background:linear-gradient(135deg,#38bdf8,#0284c7);box-shadow:0 10px 30px rgba(2
 .ib-dot{position:absolute;top:4px;right:4px;width:13px;height:13px;border-radius:50%;background:#22c55e;border:2px solid #fff;animation:ib-p 2s infinite}
 .ib-dot.ib-red{background:#ef4444}
 @keyframes ib-p{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}50%{box-shadow:0 0 0 7px rgba(34,197,94,0)}}
-.ib-nudge{position:fixed;right:90px;bottom:32px;z-index:9997;background:#fff;color:#0f172a;font:600 13px/1.3 system-ui,sans-serif;padding:10px 14px;border-radius:14px 14px 4px 14px;
-box-shadow:0 8px 28px rgba(15,23,42,.18);cursor:pointer;max-width:220px;animation:ib-in .5s .8s both}
-@keyframes ib-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.ib-nudge{position:fixed;right:88px;bottom:30px;z-index:9997;display:flex;align-items:center;gap:9px;background:linear-gradient(135deg,#38bdf8,#0369a1);color:#fff;font:600 13.5px/1.3 system-ui,sans-serif;padding:11px 10px 11px 12px;border-radius:18px;
+box-shadow:0 16px 40px -8px rgba(2,132,199,.55),0 0 0 1px rgba(255,255,255,.14) inset;cursor:pointer;max-width:250px;animation:ib-in .55s .8s cubic-bezier(.2,.9,.3,1.1) both,ib-float 3.2s 1.5s ease-in-out infinite}
+.ib-nudge::after{content:'';position:absolute;right:10px;bottom:-6px;width:13px;height:13px;background:inherit;transform:rotate(45deg);border-radius:0 0 3px 0}
+.ib-nudge-ico{flex:none;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:14px}
+.ib-nudge-txt{flex:1}
+.ib-nudge-x{flex:none;background:rgba(255,255,255,.2);border:0;color:#fff;width:20px;height:20px;border-radius:50%;font-size:10px;line-height:1;cursor:pointer;display:grid;place-items:center;opacity:.85}
+.ib-nudge-x:hover{opacity:1;background:rgba(255,255,255,.35)}
+.ib-nudge-reply{background:linear-gradient(135deg,#34d399,#15803d)}
+@keyframes ib-in{from{opacity:0;transform:translateY(10px) scale(.92)}to{opacity:1;transform:none}}
+@keyframes ib-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 .ib-panel{position:fixed;right:20px;bottom:90px;z-index:9999;width:380px;max-width:calc(100vw - 24px);height:560px;max-height:calc(100dvh - 110px);background:#fff;border-radius:22px;
 box-shadow:0 24px 70px rgba(15,23,42,.28),0 0 0 1px rgba(15,23,42,.06);display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,sans-serif;animation:ib-up .28s cubic-bezier(.2,.9,.3,1.1)}
 @keyframes ib-up{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
@@ -445,10 +438,6 @@ box-shadow:0 24px 70px rgba(15,23,42,.28),0 0 0 1px rgba(15,23,42,.06);display:f
 .ib-wait{margin:0;text-align:center;font-size:12px;color:#64748b;background:#f1f5f9;padding:8px 12px;border-radius:10px}
 .ib-closed{text-align:center;font-size:12.5px;color:#64748b;background:#f1f5f9;padding:12px;border-radius:12px;display:flex;flex-direction:column;gap:8px;align-items:center}
 .ib-closed button{background:#0284c7;color:#fff;border:0;border-radius:999px;padding:7px 14px;font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit}
-.ib-ht i.off{background:#94a3b8}
-.ib-off{display:flex;flex-direction:column;gap:4px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;line-height:1.5;padding:10px 12px;border-radius:12px}
-.ib-off b{font-size:13px}
-.ib-hint{margin:-4px 0 0;font-size:11.5px;color:#92400e}
 @media(max-width:520px){
 .ib-panel{right:0;left:0;bottom:0;width:100%;max-width:100%;height:100dvh;max-height:100dvh;border-radius:0}
 .ib-nudge{display:none}

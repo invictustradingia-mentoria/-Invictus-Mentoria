@@ -248,6 +248,14 @@ export const LANDING_HTML = `<div id="loader"><div class="lcore"><svg viewBox="0
 
 <footer>
   <div class="wrap"><a class="logo" href="/">INVICTUS <b>CAMPUS</b></a>
-  <p>Aviso de riesgo: operar en mercados financieros implica un riesgo significativo de pérdida. El contenido de Invictus Campus es exclusivamente educativo y no constituye asesoramiento financiero ni recomendación de inversión. Los resultados pasados no garantizan resultados futuros.</p></div>
+  <p>Aviso de riesgo: operar en mercados financieros implica un riesgo significativo de pérdida. El contenido de Invictus Campus es exclusivamente educativo y no constituye asesoramiento financiero ni recomendación de inversión. Los resultados pasados no garantizan resultados futuros.</p>
+  <nav class="flegal" aria-label="Enlaces legales">
+    <a href="/legal/terminos">Términos y Condiciones</a>
+    <a href="/legal/privacidad">Privacidad</a>
+    <a href="/legal/cookies">Cookies</a>
+    <a href="/legal/reembolsos">Reembolsos</a>
+    <a href="/legal/riesgo">Aviso de Riesgo</a>
+  </nav>
+  </div>
   <p class="copy">© 2026 Invictus Campus. Todos los derechos reservados.</p>
 </footer>`

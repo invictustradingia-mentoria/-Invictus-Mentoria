@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, Lora } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
+import CookieBar from '@/components/CookieBar'
 
 const inter = Inter({ subsets: ['latin'] })
 const lora = Lora({ subsets: ['latin'], variable: '--font-lora', display: 'swap' })
@@ -24,6 +25,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} ${lora.variable}`}>
         <Providers>{children}</Providers>
+        <CookieBar />
       </body>
     </html>
   )

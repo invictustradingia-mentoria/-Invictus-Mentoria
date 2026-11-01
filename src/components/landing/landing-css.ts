@@ -186,8 +186,11 @@ export const LANDING_CSS = `.invl *{box-sizing:border-box;margin:0;padding:0}
 .invl .final p{color:#e0f2fe;margin:18px auto 0;max-width:540px;line-height:1.7}
 .invl .final .btn{background:#fff;color:#0284c7}
 .invl footer{border-top:1px solid #bae6fd;background:#f0f9ff;padding:44px 0}
-.invl footer .wrap{display:flex;gap:24px;justify-content:space-between;flex-wrap:wrap}
-.invl footer p{max-width:560px;font-size:11px;line-height:1.7;color:#64748b}
+.invl footer .wrap{display:flex;flex-direction:column;gap:14px;max-width:560px}
+.invl footer p{margin:0;max-width:560px;font-size:11px;line-height:1.7;color:#64748b}
+.invl footer .flegal{display:flex;flex-wrap:wrap;gap:6px 16px}
+.invl footer .flegal a{font-size:11.5px;font-weight:600;color:#0284c7;text-decoration:none}
+.invl footer .flegal a:hover{text-decoration:underline}
 .invl .copy{max-width:1240px;margin:28px auto 0;padding:0 28px;font-size:11px;color:#94a3b8}
 .invl{overflow-x:clip}
 @keyframes inv-gshift{to{background-position:200% 0}}
@@ -348,6 +351,7 @@ html[data-theme="dark"] .invl .plans h3,html[data-theme="dark"] .invl .feat h3{c
 html[data-theme="dark"] .invl .circ{border-color:#2b6b93}
 html[data-theme="dark"] .invl footer{background:#0a0d14;border-color:#232d42}
 html[data-theme="dark"] .invl footer p{color:#8a94a8}
+html[data-theme="dark"] .invl footer .flegal a{color:#7dd3fc}
 html[data-theme="dark"] .invl .copy{color:#6b7488}
 html[data-theme="dark"] .invl .cue{border-color:#2b6b93}
 html[data-theme="dark"] .invl .cl{fill:#e6eaf2}
