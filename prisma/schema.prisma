@@ -23,6 +23,7 @@ model User {
   phone        String?
   avatarUrl    String?
   editorLevel  String       @default("ALL")
+  welcomeEmailSentAt DateTime?
   registeredIp String?
   userAgent    String?
   createdAt    DateTime     @default(now())

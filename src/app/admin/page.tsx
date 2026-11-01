@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   RefreshCw, Search, Clock, CheckCircle2, Users, AlertCircle, Check, X, Ban,
-  ShieldOff, Pencil, Trash2, Save, Lock,
+  ShieldOff, Pencil, Trash2, Save, Lock, MailCheck, MailWarning,
 } from 'lucide-react'
 
 interface Student {
@@ -18,6 +18,7 @@ interface Student {
   registeredIp: string | null
   createdAt: string
   editorLevel?: string
+  welcomeEmailSentAt?: string | null
 }
 
 type Filter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'BANNED'
@@ -312,6 +313,15 @@ export default function AdminStudentsPage() {
                           <span className="rounded-md bg-black px-2 py-0.5 text-[10px] font-bold uppercase text-white">Baneado</span>
                         )}
                       </div>
+                      {u.status === 'APPROVED' && (
+                        <p className={`mt-1.5 flex items-center gap-1 text-[10px] font-semibold ${u.welcomeEmailSentAt ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {u.welcomeEmailSentAt ? (
+                            <><MailCheck size={11} /> Bienvenida enviada {new Date(u.welcomeEmailSentAt).toLocaleDateString('es-AR')}</>
+                          ) : (
+                            <><MailWarning size={11} /> Correo de bienvenida sin enviar</>
+                          )}
+                        </p>
+                      )}
                     </td>
 
                     <td className="px-5 py-3">
@@ -383,6 +393,17 @@ export default function AdminStudentsPage() {
                           >
                             {u.isBanned ? <ShieldOff size={13} /> : <Ban size={13} />}
                             {u.isBanned ? 'Desbanear' : 'Banear'}
+                          </button>
+                        )}
+                        {u.status === 'APPROVED' && !locked && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => patchUser(u.id, { resendWelcome: true }, 'Correo de bienvenida reenviado')}
+                            className="flex items-center gap-1 rounded-xl bg-indigo-50 px-2.5 py-1.5 text-[11px] font-bold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 cursor-pointer"
+                            title="Reenviar correo de bienvenida"
+                          >
+                            <MailCheck size={13} /> Reenviar
                           </button>
                         )}
                         <button

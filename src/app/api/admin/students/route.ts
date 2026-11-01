@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prismaDash } from '@/lib/prisma-dashboard'
+import { createToken, siteUrl } from '@/lib/auth-tokens'
+import { sendMail } from '@/lib/mailer'
+import { welcomeEmail } from '@/lib/email-templates'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,6 +38,7 @@ export async function GET() {
         registeredIp: true,
         createdAt: true,
         editorLevel: true,
+        welcomeEmailSentAt: true,
       },
     })
 
@@ -97,18 +101,50 @@ export async function PATCH(req: Request) {
     if (typeof body.name === 'string') data.name = body.name.trim() || null
     if (typeof body.phone === 'string') data.phone = body.phone.trim() || null
 
-    if (Object.keys(data).length === 0) {
+    if (Object.keys(data).length === 0 && body.resendWelcome !== true) {
       return NextResponse.json({ error: 'No hay cambios para guardar' }, { status: 400 })
     }
 
-    const user = await prismaDash.user.update({
+    let user = target
+    if (Object.keys(data).length > 0) user = await prismaDash.user.update({
       where: { id },
       data,
       select: {
         id: true, name: true, email: true, role: true, status: true,
-        isBanned: true, isProtected: true, phone: true, registeredIp: true, createdAt: true, editorLevel: true,
+        isBanned: true, isProtected: true, phone: true, registeredIp: true, createdAt: true,
+        editorLevel: true, welcomeEmailSentAt: true,
       },
     })
+
+    // Correo de bienvenida: se envía al aprobar por primera vez, o si el admin pide reenviarlo
+    const firstApproval = data.status === 'APPROVED' && target.status !== 'APPROVED'
+    const resendWelcome = body.resendWelcome === true
+    const finalStatus = data.status || target.status
+    let emailSent: boolean | null = null
+
+    if (firstApproval || (resendWelcome && finalStatus === 'APPROVED')) {
+      try {
+        const site = siteUrl(req)
+        const token = await createToken(user.id, 'WELCOME')
+        const mail = welcomeEmail(user.name, `${site}/login`, `${site}/reset-password?token=${token}`)
+        await sendMail({ to: user.email, subject: mail.subject, html: mail.html, text: mail.text })
+        user = await prismaDash.user.update({
+          where: { id },
+          data: { welcomeEmailSentAt: new Date() },
+          select: {
+            id: true, name: true, email: true, role: true, status: true,
+            isBanned: true, isProtected: true, phone: true, registeredIp: true, createdAt: true,
+            editorLevel: true, welcomeEmailSentAt: true,
+          },
+        })
+        emailSent = true
+      } catch (e: any) {
+        console.error('No se pudo enviar el correo de bienvenida:', e?.message || e)
+        emailSent = false
+      }
+    } else if (resendWelcome && finalStatus !== 'APPROVED') {
+      return NextResponse.json({ error: 'El usuario todavía no está aprobado: no se puede reenviar el correo de bienvenida' }, { status: 400 })
+    }
 
     // Si se banea o rechaza, cerrar sus sesiones activas
     if (data.isBanned === true || data.status === 'REJECTED') {
@@ -118,7 +154,9 @@ export async function PATCH(req: Request) {
       })
     }
 
-    return NextResponse.json({ success: true, user })
+    // target (usado cuando no hay cambios de campos, solo reenvío de correo) trae la contraseña: nunca debe salir en la respuesta
+    const { password: _pw, ...safeUser } = user as any
+    return NextResponse.json({ success: true, user: safeUser, emailSent })
   } catch (err: any) {
     console.error('PATCH students:', err)
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
