@@ -6,8 +6,7 @@ import { prismaDash } from '@/lib/prisma-dashboard'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const ROLES = ['ADMIN', 'EDITOR', 'CLUB', 'MENTORIA']
-const LEVELS = ['ALL', 'CLUB', 'MENTORIA']
+const ROLES = ['ADMIN', 'CLUB', 'MENTORIA']
 const STATUSES = ['PENDING', 'APPROVED', 'REJECTED']
 
 async function getAdmin() {
@@ -28,9 +27,9 @@ export async function GET() {
         name: true,
         email: true,
         role: true,
-        editorLevel: true,
         status: true,
         isBanned: true,
+        isProtected: true,
         phone: true,
         registeredIp: true,
         createdAt: true,
@@ -63,6 +62,7 @@ export async function PATCH(req: Request) {
     const data: Record<string, any> = {}
 
     if (typeof body.role === 'string') {
+      if (target.isProtected) return NextResponse.json({ error: 'Esta cuenta está protegida: no se le puede cambiar el rol' }, { status: 400 })
       if (!ROLES.includes(body.role)) return NextResponse.json({ error: 'Rol no válido' }, { status: 400 })
       if (isSelf && body.role !== 'ADMIN') {
         return NextResponse.json({ error: 'No puedes quitarte tu propio rol de administrador' }, { status: 400 })
@@ -70,12 +70,8 @@ export async function PATCH(req: Request) {
       data.role = body.role
     }
 
-    if (typeof body.editorLevel === 'string') {
-      if (!LEVELS.includes(body.editorLevel)) return NextResponse.json({ error: 'Nivel de acceso no válido' }, { status: 400 })
-      data.editorLevel = body.editorLevel
-    }
-
     if (typeof body.status === 'string') {
+      if (target.isProtected) return NextResponse.json({ error: 'Esta cuenta está protegida: no se le puede cambiar el estado' }, { status: 400 })
       if (!STATUSES.includes(body.status)) return NextResponse.json({ error: 'Estado no válido' }, { status: 400 })
       if (isSelf && body.status !== 'APPROVED') {
         return NextResponse.json({ error: 'No puedes cambiar tu propio estado de aprobación' }, { status: 400 })
@@ -84,6 +80,7 @@ export async function PATCH(req: Request) {
     }
 
     if (typeof body.isBanned === 'boolean') {
+      if (target.isProtected && body.isBanned) return NextResponse.json({ error: 'Esta cuenta está protegida: no se puede banear' }, { status: 400 })
       if (isSelf && body.isBanned) {
         return NextResponse.json({ error: 'No puedes banearte a ti mismo' }, { status: 400 })
       }
@@ -101,8 +98,8 @@ export async function PATCH(req: Request) {
       where: { id },
       data,
       select: {
-        id: true, name: true, email: true, role: true, editorLevel: true, status: true,
-        isBanned: true, phone: true, registeredIp: true, createdAt: true,
+        id: true, name: true, email: true, role: true, status: true,
+        isBanned: true, isProtected: true, phone: true, registeredIp: true, createdAt: true,
       },
     })
 
@@ -131,6 +128,8 @@ export async function DELETE(req: Request) {
 
     const target = await prismaDash.user.findUnique({ where: { id } })
     if (!target) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+
+    if (target.isProtected) return NextResponse.json({ error: 'Esta cuenta está protegida: no se puede eliminar' }, { status: 400 })
 
     const isSelf = (!!admin.id && admin.id === target.id) || (!!admin.email && admin.email === target.email)
     if (isSelf) return NextResponse.json({ error: 'No puedes eliminarte a ti mismo' }, { status: 400 })

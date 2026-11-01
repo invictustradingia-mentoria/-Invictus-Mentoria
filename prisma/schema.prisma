@@ -15,6 +15,7 @@ model User {
   name         String?
   email        String       @unique
   username     String?      @unique
+  isProtected  Boolean      @default(false) // cuenta blindada: no se puede eliminar ni cambiarle el rol/estado/baneo desde el panel
   password     String
   role         String       @default("CLUB") // ADMIN, CLUB, MENTORIA
   status       String       @default("PENDING") // PENDING, APPROVED, REJECTED

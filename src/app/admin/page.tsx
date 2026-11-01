@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   RefreshCw, Search, Clock, CheckCircle2, Users, AlertCircle, Check, X, Ban,
-  ShieldOff, Pencil, Trash2, Save,
+  ShieldOff, Pencil, Trash2, Save, Lock,
 } from 'lucide-react'
 
 interface Student {
@@ -11,9 +11,9 @@ interface Student {
   name: string | null
   email: string
   role: string
-  editorLevel?: string
   status: string
   isBanned: boolean
+  isProtected: boolean
   phone: string | null
   registeredIp: string | null
   createdAt: string
@@ -285,12 +285,18 @@ export default function AdminStudentsPage() {
               visible.map((u) => {
                 const isSelf = !!currentEmail && u.email === currentEmail
                 const busy = busyId === u.id
+                const locked = u.isProtected
                 return (
-                  <tr key={u.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40">
+                  <tr key={u.id} className={`border-b border-gray-50 last:border-0 hover:bg-gray-50/40 ${locked ? 'bg-amber-50/30' : ''}`}>
                     <td className="px-5 py-3">
-                      <p className="font-bold text-[#1d1d1f]">
+                      <p className="flex flex-wrap items-center gap-1.5 font-bold text-[#1d1d1f]">
                         {u.name || 'Sin nombre'}
-                        {isSelf && <span className="ml-2 rounded-md bg-gray-200 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-600">Tú</span>}
+                        {isSelf && <span className="rounded-md bg-gray-200 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-600">Tú</span>}
+                        {locked && (
+                          <span className="flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-700" title="Cuenta protegida: no se puede eliminar ni cambiarle el rol, el estado o banearla">
+                            <Lock size={10} /> Protegida
+                          </span>
+                        )}
                       </p>
                       <p className="text-[11px] text-gray-500">{u.email}</p>
                       {u.phone && <p className="text-[11px] text-gray-400">{u.phone}</p>}
@@ -310,37 +316,21 @@ export default function AdminStudentsPage() {
                     <td className="px-5 py-3">
                       <select
                         value={u.role}
-                        disabled={busy || isSelf}
+                        disabled={busy || isSelf || locked}
                         onChange={(e) => patchUser(u.id, { role: e.target.value }, `Rol cambiado a ${e.target.value}`)}
                         className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-1.5 text-xs font-bold text-[#0284c7] focus:border-[#0284c7] focus:outline-none disabled:opacity-50"
                       >
                         <option value="CLUB">CLUB</option>
                         <option value="MENTORIA">MENTORIA</option>
-                        <option value="EDITOR">EDITOR</option>
                         <option value="ADMIN">ADMIN</option>
                       </select>
-                      {u.role === 'EDITOR' && (
-                        <div className="mt-1.5">
-                          <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-gray-400">Ve como alumno</p>
-                          <select
-                            value={u.editorLevel || 'ALL'}
-                            disabled={busy}
-                            onChange={(e) => patchUser(u.id, { editorLevel: e.target.value }, 'Acceso del editor actualizado')}
-                            className="rounded-xl border border-indigo-200 bg-indigo-50/60 px-3 py-1.5 text-xs font-bold text-indigo-700 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
-                          >
-                            <option value="ALL">Todo el contenido</option>
-                            <option value="CLUB">Solo Club</option>
-                            <option value="MENTORIA">Solo Mentoría</option>
-                          </select>
-                        </div>
-                      )}
                     </td>
 
                     <td className="px-5 py-3 text-gray-500">{u.registeredIp || '—'}</td>
 
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        {u.status !== 'APPROVED' && (
+                        {u.status !== 'APPROVED' && !locked && (
                           <button
                             type="button"
                             disabled={busy}
@@ -351,7 +341,7 @@ export default function AdminStudentsPage() {
                             <Check size={13} /> Aprobar
                           </button>
                         )}
-                        {u.status !== 'REJECTED' && !isSelf && (
+                        {u.status !== 'REJECTED' && !isSelf && !locked && (
                           <button
                             type="button"
                             disabled={busy}
@@ -362,7 +352,7 @@ export default function AdminStudentsPage() {
                             <X size={13} /> Rechazar
                           </button>
                         )}
-                        {!isSelf && (
+                        {!isSelf && !locked && (
                           <button
                             type="button"
                             disabled={busy}
@@ -387,7 +377,7 @@ export default function AdminStudentsPage() {
                         >
                           <Pencil size={14} />
                         </button>
-                        {!isSelf && (
+                        {!isSelf && !locked && (
                           <button
                             type="button"
                             disabled={busy}

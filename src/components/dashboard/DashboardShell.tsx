@@ -84,11 +84,9 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
             <Avatar name={user.name} email={user.email} avatarUrl={user.avatarUrl} size={44} />
             <div className="min-w-0">
               <p className="break-words text-sm font-black leading-tight text-slate-900">{user.name || 'Alumno'}</p>
-              {user.username && <p className="break-all text-[11px] font-bold text-sky-600">@{user.username}</p>}
               <p className="mt-0.5 text-[11px] font-medium text-slate-500">{levelText}</p>
             </div>
           </div>
-          <p className="mt-2 break-all text-[10px] leading-tight text-slate-400">{user.email}</p>
           <div className={`mt-2.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${m.chip}`}>
             <MIcon size={12} /> {m.title}
           </div>
