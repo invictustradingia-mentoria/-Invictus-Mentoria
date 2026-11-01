@@ -10,9 +10,9 @@ export const LANDING_HTML = `<div id="loader"><div class="lcore"><svg viewBox="0
       <span class="lt">INVICTUS <b>CAMPUS</b></span>
     </a>
     <nav class="links"><a href="#top" class="on">Inicio</a><a href="#metodo">Metodología</a><a href="#plataforma">Plataforma</a><a href="#planes">Planes</a><a href="#faq">Preguntas</a></nav>
-    <div class="nr"><a class="lnk" href="/login">Iniciar sesión</a><a class="btn blue" href="https://invictus-os.netlify.app/">Ir a InvictusOs</a><button class="tg" id="themeBtn" type="button" aria-label="Cambiar entre modo claro y modo noche" title="Modo noche / claro"><span class="s">☀</span><span class="m">☾</span></button><button class="burger" id="burger" aria-label="Menú" aria-expanded="false"><i></i><i></i><i></i></button></div>
+    <div class="nr"><a class="lnk" href="/login">Iniciar sesión</a><a class="osbtn" href="https://invictus-os.netlify.app/"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2.5"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><span>Invictus OS</span></a><button class="tg" id="themeBtn" type="button" aria-label="Cambiar entre modo claro y modo noche" title="Modo noche / claro"><span class="s">☀</span><span class="m">☾</span></button><button class="burger" id="burger" aria-label="Menú" aria-expanded="false"><i></i><i></i><i></i></button></div>
   </div>
-  <nav class="drawer glassbar" id="drawer"><a href="#top">Inicio</a><a href="#metodo">Metodología</a><a href="#plataforma">Plataforma</a><a href="#planes">Planes</a><a href="#faq">Preguntas</a><a href="/login">Iniciar sesión</a><a href="https://invictus-os.netlify.app/">Ir a InvictusOs</a></nav>
+  <nav class="drawer glassbar" id="drawer"><a href="#top">Inicio</a><a href="#metodo">Metodología</a><a href="#plataforma">Plataforma</a><a href="#planes">Planes</a><a href="#faq">Preguntas</a><a href="/login">Iniciar sesión</a><a href="https://invictus-os.netlify.app/">Invictus OS</a></nav>
 </header>
 
 <section class="hero" id="top">

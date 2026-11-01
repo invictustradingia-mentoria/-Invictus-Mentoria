@@ -370,4 +370,10 @@ html[data-theme="dark"] .invl .chartbox small{color:#6b7488}
 html[data-theme="dark"] .invl .tcard{background:#121826;border-color:#232d42;box-shadow:0 30px 60px -28px rgba(0,0,0,.8)}
 html[data-theme="dark"] .invl .tcard figcaption{color:#aab3c5;border-color:#232d42}
 html[data-theme="dark"] .invl .tcard figcaption b{color:#7dd3fc}
+
+/* ===== Botón Invictus OS ===== */
+.invl .osbtn{display:inline-flex;align-items:center;gap:9px;padding:11px 18px;border-radius:12px;background:#0f1522;border:1px solid #2b3650;color:#fff;font-weight:800;font-size:13px;letter-spacing:.01em;white-space:nowrap;transition:transform .2s,border-color .2s,box-shadow .2s;box-shadow:0 8px 20px -10px rgba(2,132,199,.6)}
+.invl .osbtn svg{color:#38bdf8;flex:none}
+.invl .osbtn:hover{transform:translateY(-2px);border-color:#38bdf8;box-shadow:0 12px 26px -10px rgba(56,189,248,.7)}
+@media(max-width:640px){.invl .osbtn{padding:10px 12px;font-size:12px}.invl .osbtn svg{display:none}}
 `
