@@ -1,23 +1,25 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, Circle, PlayCircle, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft, Check, Crown, Star, ShieldCheck, Sparkles, Clock, BookOpen, AlertCircle, Pencil, Download } from 'lucide-react'
 import Link from 'next/link'
+import { CheckCircle2, Circle, PlayCircle, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft, Check, BookOpen, AlertCircle, Download, CheckCircle } from 'lucide-react'
 import SecurePlayer from '@/components/dashboard/SecurePlayer'
-import { getMembership } from '@/lib/membership'
 
 interface Lesson {
   id: string; title: string; description: string | null
   duration: number | null; order: number; allowedRole: string
 }
-interface Mod { id: string; title: string; description: string | null; lessons: Lesson[] }
+interface Mod { id: string; title: string; description: string | null; createdAt?: string; lessons: Lesson[] }
 
 const STORE_KEY = 'invictus:lastLesson'
+const NEW_DAYS = 14
 
 function fmtDuration(s: number | null) {
   if (!s) return null
-  const m = Math.round(s / 60)
-  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`
+  const sec = Math.round(s)
+  const m = Math.floor(sec / 60)
+  const r = sec % 60
+  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m}:${String(r).padStart(2, '0')}`
 }
 
 function CourseContent({
@@ -30,40 +32,48 @@ function CourseContent({
     <div className="space-y-3">
       {modules.map((mod, i) => {
         const done = mod.lessons.filter((l) => progress[l.id]).length
-        const pct = Math.round((done / mod.lessons.length) * 100)
+        const n = mod.lessons.length
+        const pct = Math.round((done / n) * 100)
+        const complete = pct === 100
         const open = openMods.has(mod.id)
+        const isNew = !!mod.createdAt && !complete && Date.now() - new Date(mod.createdAt).getTime() < NEW_DAYS * 86400000
         return (
-          <div key={mod.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <button type="button" onClick={() => onToggle(mod.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left cursor-pointer">
-              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${pct === 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-sky-100 text-sky-600'}`}>
-                {pct === 100 ? <Check size={17} /> : i + 1}
+          <div key={mod.id} className="dz-glass overflow-hidden rounded-2xl">
+            <button type="button" onClick={() => onToggle(mod.id)} className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left cursor-pointer">
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black ${complete ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                {complete ? <Check size={18} /> : i + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-slate-900">{mod.title}</p>
-                <p className="text-[11px] text-slate-500">{done} de {mod.lessons.length} completadas</p>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-sky-500'}`} style={{ width: `${pct}%` }} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-bold text-slate-900">{mod.title}</p>
+                  {isNew && <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">Nuevo</span>}
                 </div>
+                <p className={`mt-0.5 text-[11px] font-semibold ${complete ? 'text-emerald-600' : 'text-slate-500'}`}>
+                  {complete ? `Módulo completado · ${n} clases` : `${n} clases · ${pct}% completado`}
+                </p>
+              </div>
+              <div className="dz-track hidden h-1.5 w-28 shrink-0 overflow-hidden rounded-full sm:block">
+                <div className={`h-full rounded-full transition-all duration-500 ${complete ? 'dz-fill-done' : pct > 0 ? 'dz-fill-part' : 'dz-fill-none'}`} style={{ width: `${Math.max(pct, pct > 0 ? 8 : 0)}%` }} />
               </div>
               <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
 
             {open && (
-              <div className="space-y-1 border-t border-slate-100 bg-slate-50/60 p-2">
-                {mod.lessons.map((l) => {
+              <div className="space-y-1 border-t border-slate-200/60 p-2">
+                {mod.lessons.map((l, li) => {
                   const completed = !!progress[l.id]
                   const current = l.id === currentId
                   const d = fmtDuration(l.duration)
                   return (
                     <button key={l.id} type="button" onClick={() => onOpen(l.id)}
-                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all cursor-pointer ${current ? 'bg-sky-50 ring-1 ring-sky-300' : 'hover:bg-white'}`}>
-                      {completed ? <CheckCircle2 size={19} className="shrink-0 text-emerald-500" />
-                        : current ? <PlayCircle size={19} className="shrink-0 text-sky-500" />
-                        : <Circle size={19} className="shrink-0 text-slate-300" />}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all cursor-pointer ${current ? 'dz-cur' : 'hover:bg-slate-100'}`}>
+                      {completed ? <CheckCircle2 size={21} className="shrink-0 text-emerald-500" />
+                        : current ? <PlayCircle size={21} className="shrink-0 text-amber-500" />
+                        : <Circle size={21} className="shrink-0 text-slate-300" />}
                       <div className="min-w-0 flex-1">
-                        <p className={`truncate text-xs font-bold ${completed ? 'text-slate-500' : 'text-slate-800'}`}>{l.title}</p>
-                        <p className="text-[10px] text-slate-400">
-                          {completed ? 'Completada' : current ? 'Viendo ahora' : 'Pendiente'}{d ? ` · ${d}` : ''}
+                        <p className={`text-[13px] font-bold ${current ? 'text-amber-600' : completed ? 'text-slate-700' : 'text-slate-800'}`}>{l.title}</p>
+                        <p className={`text-[11px] font-semibold ${current ? 'text-amber-600' : completed ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {completed ? 'Vista' : 'Pendiente'}{current ? ' · la estás viendo' : ''}{d ? ` · ${d}` : ''}
                         </p>
                       </div>
                       {l.allowedRole === 'MENTORIA' && <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-700">Mentoría</span>}
@@ -82,7 +92,6 @@ function CourseContent({
 export default function ClasesPage() {
   const [modules, setModules] = useState<Mod[]>([])
   const [progress, setProgress] = useState<Record<string, boolean>>({})
-  const [role, setRole] = useState('CLUB')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'lesson'>('list')
@@ -97,7 +106,6 @@ export default function ClasesPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
       setModules(data.modules)
-      setRole(data.role)
       const p: Record<string, boolean> = {}
       Object.entries<any>(data.progress).forEach(([k, v]) => { p[k] = !!v.completed })
       setProgress(p)
@@ -144,19 +152,20 @@ export default function ClasesPage() {
 
   const current = flat.find((l) => l.id === currentId) ?? null
   const idx = current ? flat.findIndex((l) => l.id === current.id) : -1
-  const currentModule = current ? modules.find((m) => m.lessons.some((l) => l.id === current.id)) : null
+  const modIdx = current ? modules.findIndex((m) => m.lessons.some((l) => l.id === current.id)) : -1
+  const currentModule = modIdx >= 0 ? modules[modIdx] : null
+  const lessonNo = currentModule && current ? currentModule.lessons.findIndex((l) => l.id === current.id) + 1 : 0
   const total = flat.length
   const done = flat.filter((l) => progress[l.id]).length
   const pct = total ? Math.round((done / total) * 100) : 0
-  const m = getMembership(role)
-  const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : m.key === 'EDITOR' ? Pencil : Star
 
   const toggleModule = (id: string) => setOpenMods((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
 
   const openLesson = (id: string) => {
     setCurrentId(id)
     setView('lesson')
-    try { localStorage.setItem(STORE_KEY, id) } catch {}    try { sessionStorage.setItem('invictus:viewing', id) } catch {}
+    try { localStorage.setItem(STORE_KEY, id) } catch {}
+    try { sessionStorage.setItem('invictus:viewing', id) } catch {}
     const mod = modules.find((x) => x.lessons.some((l) => l.id === id))
     if (mod) setOpenMods((prev) => new Set(prev).add(mod.id))
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -191,54 +200,31 @@ export default function ClasesPage() {
       )}
 
       {total === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center">
+        <div className="dz-glass rounded-3xl p-12 text-center">
           <BookOpen size={32} className="mx-auto mb-3 text-slate-300" />
           <p className="text-sm font-bold text-slate-700">Aún no hay clases disponibles para tu membresía</p>
           <p className="mt-1 text-xs text-slate-400">Cuando se publiquen, aparecerán aquí automáticamente.</p>
         </div>
       ) : view === 'list' ? (
         <>
-          {/* Banner de membresía */}
-          <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${m.gradient} p-7 text-white shadow-xl ${m.glow}`}>
-            <MIcon size={150} className="absolute -right-6 -top-6 opacity-15" />
-            <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-black uppercase tracking-widest backdrop-blur">
-                  <MIcon size={13} /> {m.title}
-                </span>
-                <h1 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">Tus lecciones</h1>
-                <p className="mt-1 max-w-md text-sm text-white/85">{m.tagline}</p>
-              </div>
-              <button type="button" onClick={() => openLesson(currentId ?? flat[0].id)}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-black text-slate-900 shadow-lg transition-transform hover:scale-105 cursor-pointer">
-                <PlayCircle size={18} /> {done === 0 ? 'Empezar' : 'Continuar donde lo dejaste'}
-              </button>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[.2em] text-amber-500">Tu campus</p>
+              <h1 className="font-display mt-1 text-3xl font-bold tracking-tight text-slate-900">Mis clases</h1>
+              <p className="mt-1 text-xs font-semibold text-slate-500">{done} de {total} clases completadas · {pct}%</p>
             </div>
+            <button type="button" onClick={() => openLesson(currentId ?? flat[0].id)}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-sky-600 px-6 py-3 text-xs font-black text-white shadow-lg shadow-sky-500/30 transition-transform hover:scale-105 cursor-pointer">
+              <PlayCircle size={17} /> {done === 0 ? 'Empezar' : 'Continuar donde lo dejaste'}
+            </button>
           </div>
 
-          {/* Resumen de progreso */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { label: 'Progreso', value: `${pct}%`, icon: Sparkles, color: 'text-sky-600 bg-sky-50' },
-              { label: 'Completadas', value: done, icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
-              { label: 'Por ver', value: total - done, icon: Clock, color: 'text-amber-600 bg-amber-50' },
-              { label: 'Total', value: total, icon: BookOpen, color: 'text-slate-600 bg-slate-100' },
-            ].map((s) => (
-              <div key={s.label} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${s.color}`}><s.icon size={19} /></span>
-                <div>
-                  <p className="text-xl font-black leading-none text-slate-900">{s.value}</p>
-                  <p className="mt-1 text-[11px] font-bold text-slate-500">{s.label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+          <div className="dz-track h-2 overflow-hidden rounded-full">
             <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700" style={{ width: `${pct}%` }} />
           </div>
 
           <div>
-            <h2 className="mb-3 text-sm font-black text-slate-900">Contenido del curso</h2>
+            <h2 className="font-display mb-3 text-xl font-bold text-slate-900">Contenido del curso</h2>
             <CourseContent modules={modules} progress={progress} currentId={currentId} openMods={openMods} onToggle={toggleModule} onOpen={openLesson} />
           </div>
         </>
@@ -249,59 +235,70 @@ export default function ClasesPage() {
               <ArrowLeft size={15} /> Volver a las lecciones
             </button>
 
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-              <div className="space-y-4 xl:col-span-2">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[.2em] text-amber-500">Módulo {modIdx + 1}</p>
+              <h1 className="font-display mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{currentModule?.title}</h1>
+            </div>
+
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <div className="space-y-5 lg:col-span-2">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-widest text-sky-500">{currentModule?.title}</p>
-                  <h1 className="mt-1 text-xl font-black tracking-tight text-slate-900">{current.title}</h1>
+                  <p className="text-[11px] font-black uppercase tracking-[.2em] text-amber-500">Clase {modIdx + 1}.{lessonNo}</p>
+                  <h2 className="font-display mt-1 text-2xl font-bold tracking-tight text-slate-900">{current.title}</h2>
                 </div>
 
                 <SecurePlayer key={current.id} lessonId={current.id} title={current.title} />
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <button type="button" onClick={toggleComplete}
-                    className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-black transition-all cursor-pointer ${
-                      progress[current.id] ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-sky-600 text-white shadow-md shadow-sky-300/50 hover:bg-sky-700'
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black transition-all cursor-pointer ${
+                      progress[current.id] ? 'border border-emerald-300 bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-sky-600 text-white shadow-md shadow-sky-500/30 hover:bg-sky-700'
                     }`}>
-                    <CheckCircle2 size={16} /> {progress[current.id] ? 'Completada · clic para desmarcar' : 'Marcar como completada'}
+                    <CheckCircle size={16} /> {progress[current.id] ? 'Clase completada' : 'Marcar como completada'}
                   </button>
                   <div className="flex gap-2">
                     <button type="button" disabled={idx <= 0} onClick={() => openLesson(flat[idx - 1].id)}
-                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:border-sky-300 disabled:opacity-40 cursor-pointer">
+                      className="dz-glass inline-flex items-center gap-1 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 hover:border-sky-300 disabled:opacity-40 cursor-pointer">
                       <ChevronLeft size={15} /> Anterior
                     </button>
                     <button type="button" disabled={idx >= flat.length - 1} onClick={() => openLesson(flat[idx + 1].id)}
-                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:border-sky-300 disabled:opacity-40 cursor-pointer">
+                      className="dz-glass inline-flex items-center gap-1 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 hover:border-sky-300 disabled:opacity-40 cursor-pointer">
                       Siguiente <ChevronRight size={15} />
                     </button>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <h2 className="text-sm font-black text-slate-900">Sobre esta clase</h2>
+                <div>
+                  <h2 className="font-display text-xl font-bold text-slate-900">Sobre esta clase</h2>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">{current.description || 'Esta clase no tiene descripción.'}</p>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <h2 className="flex items-center gap-2 text-sm font-black text-slate-900"><Download size={16} className="text-sky-600" /> Material descargable</h2>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                    Esta clase no lleva material adjunto. Encontrarás todo lo descargable en{' '}
-                    <Link href="/dashboard/resources" className="font-bold text-sky-600 hover:underline">Recursos</Link>.
-                  </p>
+                <div>
+                  <h2 className="font-display mb-3 mt-2 text-xl font-bold text-slate-900">Contenido del curso</h2>
+                  <CourseContent modules={modules} progress={progress} currentId={currentId} openMods={openMods} onToggle={toggleModule} onOpen={openLesson} />
                 </div>
               </div>
 
-              <div className="space-y-3 xl:sticky xl:top-6 xl:self-start">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="space-y-5 lg:sticky lg:top-6 lg:self-start">
+                <div>
+                  <h2 className="font-display flex items-center gap-2 text-xl font-bold text-slate-900"><Download size={17} className="text-sky-600" /> Material descargable</h2>
+                  <div className="dz-drop mt-3 px-5 py-7 text-center">
+                    <p className="text-sm leading-relaxed text-slate-600">
+                      Esta clase no lleva material adjunto. Encontrarás todo lo descargable en{' '}
+                      <Link href="/dashboard/resources" className="font-bold text-amber-600 underline underline-offset-2 hover:text-amber-500">Recursos</Link>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="dz-glass rounded-2xl p-4">
                   <div className="flex items-center justify-between text-xs font-black text-slate-700">
                     <span>Tu progreso</span><span className="text-sky-600">{pct}%</span>
                   </div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div className="dz-track mt-2 h-2 overflow-hidden rounded-full">
                     <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700" style={{ width: `${pct}%` }} />
                   </div>
                   <p className="mt-1.5 text-[11px] text-slate-500">{done} de {total} clases completadas</p>
                 </div>
-                <CourseContent modules={modules} progress={progress} currentId={currentId} openMods={openMods} onToggle={toggleModule} onOpen={openLesson} />
               </div>
             </div>
           </>

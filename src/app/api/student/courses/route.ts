@@ -31,7 +31,7 @@ export async function GET() {
 
     const visible = modules
       .filter((m) => m.lessons.length > 0)
-      .map((m) => ({ id: m.id, title: m.title, description: m.description, lessons: m.lessons }))
+      .map((m) => ({ id: m.id, title: m.title, description: m.description, createdAt: m.createdAt, lessons: m.lessons }))
 
     const ids = visible.flatMap((m) => m.lessons.map((l) => l.id))
     const rows = ids.length

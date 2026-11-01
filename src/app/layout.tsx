@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Lora } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 
 const inter = Inter({ subsets: ['latin'] })
+const lora = Lora({ subsets: ['latin'], variable: '--font-lora', display: 'swap' })
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || 'https://invictus-mentoria.netlify.app'),
@@ -21,7 +22,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('inv-theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark')}}catch(e){}})();` }} />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} ${lora.variable}`}>
         <Providers>{children}</Providers>
       </body>
     </html>

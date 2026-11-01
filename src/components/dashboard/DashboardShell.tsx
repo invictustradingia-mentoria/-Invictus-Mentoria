@@ -77,47 +77,42 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
         <span className="text-sm font-black tracking-tight text-slate-900">INVICTUS <span className="text-sky-500">CAMPUS</span></span>
       </Link>
 
-      {/* Tarjeta de membresía */}
+      {/* Perfil + progreso */}
       <div className="px-4">
-        <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${m.gradient} p-4 text-white shadow-lg ${m.glow}`}>
-          <MIcon size={64} className="absolute -right-3 -top-3 opacity-20" />
-          <div className="relative flex items-center gap-3">
+        <div className="dz-glass rounded-2xl p-3.5">
+          <div className="flex items-center gap-3">
             <Avatar name={user.name} email={user.email} avatarUrl={user.avatarUrl} size={44} />
             <div className="min-w-0">
-              <p className="break-words text-sm font-black leading-tight">{user.name || 'Alumno'}</p>
-              {user.username && <p className="break-all text-[11px] font-bold text-white/90">@{user.username}</p>}
-              <p className="break-all text-[10px] leading-tight text-white/80">{user.email}</p>
+              <p className="break-words text-sm font-black leading-tight text-slate-900">{user.name || 'Alumno'}</p>
+              {user.username && <p className="break-all text-[11px] font-bold text-sky-600">@{user.username}</p>}
+              <p className="mt-0.5 text-[11px] font-medium text-slate-500">{levelText}</p>
             </div>
           </div>
-          <div className="relative mt-3 flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider backdrop-blur">
-            <MIcon size={13} /> {m.title}
+          <p className="mt-2 break-all text-[10px] leading-tight text-slate-400">{user.email}</p>
+          <div className={`mt-2.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${m.chip}`}>
+            <MIcon size={12} /> {m.title}
           </div>
-          {m.key === 'EDITOR' && <p className="relative mt-2 text-center text-[10px] font-bold text-white/85">{viewText}</p>}
+          {m.key === 'EDITOR' && <p className="mt-1.5 text-[10px] font-bold text-slate-500">{viewText}</p>}
+          {prog && prog.total > 0 && (
+            <div className="mt-3.5">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                <span>Progreso del curso</span><span className="font-black text-sky-600">{pct}%</span>
+              </div>
+              <div className="dz-track mt-1.5 h-1.5 overflow-hidden rounded-full">
+                <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700" style={{ width: `${pct}%` }} />
+              </div>
+              <p className="mt-1 text-[10px] text-slate-400">{prog.done} de {prog.total} clases</p>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Progreso del curso */}
-      {prog && prog.total > 0 && (
-        <div className="px-4 pt-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-3.5">
-            <p className="text-[10px] font-bold text-slate-500">{levelText}</p>
-            <div className="mt-2 flex items-center justify-between text-[11px] font-black text-slate-700">
-              <span>Progreso del curso</span><span className="text-sky-600">{pct}%</span>
-            </div>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-700" style={{ width: `${pct}%` }} />
-            </div>
-            <p className="mt-1.5 text-[10px] text-slate-400">{prog.done} de {prog.total} clases</p>
-          </div>
-        </div>
-      )}
 
       <nav className="mt-5 flex-1 space-y-1 px-3">
         {nav.map((n) => {
           const active = pathname?.startsWith(n.href)
           return (
             <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all ${active ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200' : 'text-slate-600 hover:bg-slate-50'}`}>
+              className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 text-xs font-bold transition-all ${active ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200' : 'text-slate-600 hover:bg-slate-100'}`}>
               <n.icon size={17} /> {n.label}
             </Link>
           )
@@ -145,7 +140,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   )
 
   return (
-    <div className="min-h-screen bg-slate-50/70 text-slate-800">
+    <div className="min-h-screen dz-bg text-slate-800">
       <ActivityTracker />
       {/* Barra móvil */}
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
@@ -167,7 +162,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
       )}
 
       {/* Menú escritorio */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white lg:block">{sidebar}</aside>
+      <aside className="dz-side fixed inset-y-0 left-0 hidden w-64 border-r backdrop-blur lg:block">{sidebar}</aside>
 
       <main className="lg:pl-64">
         <div className={padded ? 'p-3 sm:p-6' : ''}>{children}</div>

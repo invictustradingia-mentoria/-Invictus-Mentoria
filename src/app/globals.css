@@ -192,3 +192,21 @@ html[data-theme="dark"] .to-white{--tw-gradient-to:#121826!important}
 html[data-theme="dark"] .from-sky-50\/60{--tw-gradient-from:rgba(14,165,233,.12)!important}
 html[data-theme="dark"] .from-slate-900,html[data-theme="dark"] .from-\[\#111111\]{--tw-gradient-from:#0a0d14!important}
 html[data-theme="dark"] .shadow-sm,html[data-theme="dark"] .shadow-md,html[data-theme="dark"] .shadow-lg{box-shadow:0 8px 24px -12px rgba(0,0,0,.6)!important}
+
+/* ===== Estilo del campus de alumnos (tarjetas de vidrio, titulos en serif) ===== */
+.font-display{font-family:var(--font-lora),Georgia,'Times New Roman',serif}
+.dz-bg{background:linear-gradient(160deg,#f0f9ff 0%,#f8fafc 45%,#eef2ff 100%)}
+.dz-side{background:rgba(255,255,255,.82);border-color:rgba(148,163,184,.35)}
+.dz-glass{background:rgba(255,255,255,.78);border:1px solid rgba(148,163,184,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 12px 32px -20px rgba(15,23,42,.35)}
+.dz-track{background:rgba(148,163,184,.3)}
+.dz-fill-done{background:#34d399}
+.dz-fill-part{background:#f59e0b}
+.dz-fill-none{background:#38bdf8}
+.dz-cur{background:rgba(245,158,11,.12);box-shadow:inset 3px 0 0 #f59e0b}
+.dz-drop{border:1.5px dashed rgba(100,116,139,.5);border-radius:22px;background:rgba(255,255,255,.45)}
+html[data-theme="dark"] .dz-bg{background:radial-gradient(1100px 560px at 85% -10%,rgba(56,189,248,.12),transparent 60%),linear-gradient(165deg,#0a0f1f 0%,#111a38 55%,#0b0f17 100%)!important}
+html[data-theme="dark"] .dz-side{background:rgba(10,14,28,.72)!important;border-color:rgba(255,255,255,.08)!important}
+html[data-theme="dark"] .dz-glass{background:rgba(255,255,255,.055)!important;border-color:rgba(255,255,255,.12)!important;box-shadow:0 14px 34px -22px rgba(0,0,0,.8)!important}
+html[data-theme="dark"] .dz-track{background:rgba(255,255,255,.13)}
+html[data-theme="dark"] .dz-cur{background:rgba(245,158,11,.14)}
+html[data-theme="dark"] .dz-drop{border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.03)}
