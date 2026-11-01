@@ -121,6 +121,7 @@ export async function PATCH(req: Request) {
     const resendWelcome = body.resendWelcome === true
     const finalStatus = data.status || target.status
     let emailSent: boolean | null = null
+    let emailError: string | null = null
 
     if (firstApproval || (resendWelcome && finalStatus === 'APPROVED')) {
       try {
@@ -141,6 +142,7 @@ export async function PATCH(req: Request) {
       } catch (e: any) {
         console.error('No se pudo enviar el correo de bienvenida:', e?.message || e)
         emailSent = false
+        emailError = e?.message || 'Error desconocido al enviar el correo'
       }
     } else if (resendWelcome && finalStatus !== 'APPROVED') {
       return NextResponse.json({ error: 'El usuario todavía no está aprobado: no se puede reenviar el correo de bienvenida' }, { status: 400 })
@@ -156,7 +158,7 @@ export async function PATCH(req: Request) {
 
     // target (usado cuando no hay cambios de campos, solo reenvío de correo) trae la contraseña: nunca debe salir en la respuesta
     const { password: _pw, ...safeUser } = user as any
-    return NextResponse.json({ success: true, user: safeUser, emailSent })
+    return NextResponse.json({ success: true, user: safeUser, emailSent, emailError })
   } catch (err: any) {
     console.error('PATCH students:', err)
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })

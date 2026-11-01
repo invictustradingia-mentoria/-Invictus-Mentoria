@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   RefreshCw, Search, Clock, CheckCircle2, Users, AlertCircle, Check, X, Ban,
-  ShieldOff, Pencil, Trash2, Save, Lock, MailCheck, MailWarning,
+  ShieldOff, Pencil, Trash2, Save, Lock, MailCheck, MailWarning, Send,
 } from 'lucide-react'
 
 interface Student {
@@ -95,7 +95,15 @@ export default function AdminStudentsPage() {
       const data = await safeJson(res)
       if (res.ok && data.success && data.user) {
         setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data.user } : u)))
-        notify(okText, 'success')
+        if (changes.resendWelcome) {
+          // El envío del correo puede fallar aunque el resto del guardado funcione: avisamos la verdad, no un éxito genérico.
+          if (data.emailSent) notify('Correo de bienvenida enviado ✔', 'success')
+          else notify(`No se pudo enviar el correo: ${data.emailError || 'revisá la configuración de envío (SMTP)'}`, 'error')
+        } else if (changes.status === 'APPROVED' && data.emailSent === false) {
+          notify(`Usuario aprobado, pero el correo de bienvenida no se pudo enviar: ${data.emailError || 'revisá la configuración de envío (SMTP)'}`, 'error')
+        } else {
+          notify(okText, 'success')
+        }
         return true
       }
       notify(data.error || `Error al guardar (HTTP ${res.status})`, 'error')
@@ -314,13 +322,21 @@ export default function AdminStudentsPage() {
                         )}
                       </div>
                       {u.status === 'APPROVED' && (
-                        <p className={`mt-1.5 flex items-center gap-1 text-[10px] font-semibold ${u.welcomeEmailSentAt ? 'text-emerald-600' : 'text-amber-600'}`}>
-                          {u.welcomeEmailSentAt ? (
-                            <><MailCheck size={11} /> Bienvenida enviada {new Date(u.welcomeEmailSentAt).toLocaleDateString('es-AR')}</>
-                          ) : (
-                            <><MailWarning size={11} /> Correo de bienvenida sin enviar</>
-                          )}
-                        </p>
+                        u.welcomeEmailSentAt ? (
+                          <p className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
+                            <MailCheck size={11} /> Bienvenida enviada {new Date(u.welcomeEmailSentAt).toLocaleDateString('es-AR')}
+                          </p>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={busy || locked}
+                            onClick={() => patchUser(u.id, { resendWelcome: true }, 'Correo de bienvenida enviado')}
+                            title="Tocar para enviar el correo de bienvenida ahora"
+                            className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-amber-600 hover:text-amber-700 hover:underline disabled:opacity-50 cursor-pointer"
+                          >
+                            {busy ? <><Send size={11} className="animate-pulse" /> Enviando...</> : <><MailWarning size={11} /> Correo de bienvenida sin enviar · tocar para enviar</>}
+                          </button>
+                        )
                       )}
                     </td>
 
@@ -395,7 +411,7 @@ export default function AdminStudentsPage() {
                             {u.isBanned ? 'Desbanear' : 'Banear'}
                           </button>
                         )}
-                        {u.status === 'APPROVED' && !locked && (
+                        {u.status === 'APPROVED' && !locked && u.welcomeEmailSentAt && (
                           <button
                             type="button"
                             disabled={busy}
