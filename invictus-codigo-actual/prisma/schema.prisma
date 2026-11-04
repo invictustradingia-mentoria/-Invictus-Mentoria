@@ -1,0 +1,374 @@
+// Invictus Mentoria - Prisma Schema
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String?
+  email        String       @unique
+  username     String?      @unique
+  isProtected  Boolean      @default(false) // cuenta blindada: no se puede eliminar ni cambiarle el rol/estado/baneo desde el panel
+  password     String
+  role         String       @default("CLUB") // ADMIN, CLUB, MENTORIA
+  status       String       @default("PENDING") // PENDING, APPROVED, REJECTED
+  isBanned     Boolean      @default(false)
+  phone        String?
+  avatarUrl    String?
+  editorLevel  String       @default("ALL")
+  welcomeEmailSentAt DateTime?
+  registeredIp String?
+  userAgent    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  sessions        Session[]
+  activityLogs    ActivityLog[]
+  progress        LessonProgress[]
+  securityLogs    SecurityLog[]
+  journalAccounts JournalAccount[]
+
+  @@map("users")
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lessons     Lesson[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  videoUrl    String
+  duration    Int?     // in seconds
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  allowedRole String   @default("CLUB") // CLUB, MENTORIA
+  moduleId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  module       Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  activityLogs ActivityLog[]
+  progress     LessonProgress[]
+
+  @@map("lessons")
+}
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  completed   Boolean  @default(false)
+  watchedSecs Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  fileUrl     String
+  fileName    String?
+  fileSize    Int?
+  description String?
+  allowedRole String   @default("ALL") // ALL, CLUB, MENTORIA
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("resources")
+}
+
+model SecurityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  email       String?
+  action      String
+  details     String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("security_logs")
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  token         String   @unique
+  ip            String?
+  userAgent     String?
+  currentPage   String?
+  currentLesson String?
+  isActive      Boolean  @default(true)
+  lastSeen      DateTime @default(now())
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String?
+  action      String
+  page        String?
+  metadata    String?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@map("activity_logs")
+}
+// ---------- Soporte en vivo y avisos del asistente ----------
+
+model SupportThread {
+  id            String           @id @default(cuid())
+  token         String           @unique
+  name          String
+  email         String?
+  phone         String?
+  offlineContact Boolean         @default(false) // dejó sus datos con soporte fuera de línea
+  status        String           @default("OPEN") // OPEN | CLOSED
+  ipHash        String
+  unreadAdmin   Int              @default(0)
+  lastMessageAt DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+  messages      SupportMessage[]
+
+  @@index([lastMessageAt])
+  @@index([ipHash, createdAt])
+  @@map("support_threads")
+}
+
+model SupportMessage {
+  id        String        @id @default(cuid())
+  threadId  String
+  from      String // VISITOR | STAFF | BOT
+  content   String
+  createdAt DateTime      @default(now())
+  thread    SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@map("support_messages")
+}
+
+// Ajustes simples clave/valor (por ejemplo, si soporte está en línea).
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+model BotNotice {
+  id        String   @id @default(cuid())
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("bot_notices")
+}
+
+// ---------- Comunidad y llamadas ----------
+
+model ChatMessage {
+  id        String    @id @default(cuid())
+  userId    String
+  userName  String
+  userRole  String
+  content   String
+  pinned    Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("chat_messages")
+}
+
+model ChatSanction {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  kind      String // MUTE | BAN
+  reason    String?
+  until     DateTime? // null = permanente
+  createdBy String
+  createdAt DateTime  @default(now())
+
+  @@map("chat_sanctions")
+}
+
+model ZoomCall {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  startsAt     DateTime
+  durationMin  Int      @default(60)
+  joinUrl      String
+  meetingId    String?
+  passcode     String?
+  allowedRole  String   @default("ALL")
+  recordingUrl String?
+  isPublished  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([startsAt])
+  @@map("zoom_calls")
+}
+
+// ---------- Seguridad de videos ----------
+model VideoLock {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  userName    String?
+  userEmail   String?
+  locked      Boolean   @default(true)
+  reason      String?
+  lessonId    String?
+  lessonTitle String?
+  lockedAt    DateTime  @default(now())
+  unlockedAt  DateTime?
+  unlockedBy  String?
+  @@index([locked])
+  @@map("video_locks")
+}
+
+model VideoIncident {
+  id          String   @id @default(cuid())
+  userId      String
+  userName    String?
+  userEmail   String?
+  lessonId    String?
+  lessonTitle String?
+  signal      String
+  score       Int      @default(1)
+  details     String?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("video_incidents")
+}
+
+// ---------- Recuperar contraseña y bienvenida ----------
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  purpose   String    @default("RESET") // RESET | WELCOME
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  @@index([userId])
+  @@map("password_resets")
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  kind        String   @default("IMAGE") // IMAGE, TEXT, VIDEO
+  name        String?  // nombre del alumno
+  image       String?  // imagen en base64 (data URL)
+  caption     String?  // texto del testimonio
+  videoUrl    String?  // enlace de YouTube / Vimeo / mp4
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@map("testimonials")
+}
+
+// ---------- Trading Journal ----------
+
+// Cada "eval"/cuenta que tiene un alumno (puede tener varias a la vez).
+model JournalAccount {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String   // ej: "Eval 1 - FTMO 100k"
+  propFirm    String?
+  accountSize Float?
+  accountType String   @default("EVAL") // EVAL, PA (cuenta financiada)
+  status      String   @default("ACTIVE") // ACTIVE, PASSED, FAILED, FUNDED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries     JournalEntry[]
+
+  @@index([userId])
+  @@map("journal_accounts")
+}
+
+// Cada operación/registro que sube el alumno dentro de una cuenta.
+model JournalEntry {
+  id            String   @id @default(cuid())
+  accountId     String
+  date          DateTime
+  pair          String?
+  session       String? // ASIA, LONDRES, NUEVA_YORK, LONDRES_NY
+  resultMoney   Float?
+  resultPercent Float?
+  resultRR      Float?
+  dayTag        String   @default("NEUTRAL") // GOOD, BAD, NEUTRAL
+  note          String?
+  screenshotUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  account       JournalAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  comments      JournalComment[]
+
+  @@index([accountId])
+  @@index([date])
+  @@map("journal_entries")
+}
+
+// Comentarios del equipo (admin/editor) sobre una operación del alumno.
+model JournalComment {
+  id         String   @id @default(cuid())
+  entryId    String
+  authorId   String
+  authorName String?
+  authorRole String?
+  content    String
+  createdAt  DateTime @default(now())
+
+  entry      JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@map("journal_comments")
+}

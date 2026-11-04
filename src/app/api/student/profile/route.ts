@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic'
 
 const AVATAR_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/
 const MAX_AVATAR_CHARS = 300_000
+const MAX_COVER_CHARS = 600_000
 
 export async function GET() {
   try {
@@ -19,7 +20,7 @@ export async function GET() {
 
     const user = await prismaDash.user.findUnique({
       where: { id },
-      select: { name: true, username: true, email: true, phone: true, role: true, avatarUrl: true, createdAt: true },
+      select: { name: true, username: true, email: true, phone: true, role: true, avatarUrl: true, coverUrl: true, createdAt: true },
     })
     if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     return NextResponse.json({ user })
@@ -61,6 +62,15 @@ export async function PATCH(req: Request) {
       data.avatarUrl = body.avatarUrl
     }
 
+    if (body.coverUrl === null) {
+      data.coverUrl = null
+    } else if (typeof body.coverUrl === 'string') {
+      if (!AVATAR_RE.test(body.coverUrl) || body.coverUrl.length > MAX_COVER_CHARS) {
+        return NextResponse.json({ error: 'La foto de portada no es válida o es demasiado pesada' }, { status: 400 })
+      }
+      data.coverUrl = body.coverUrl
+    }
+
     if (typeof body.newPassword === 'string' && body.newPassword) {
       if (body.newPassword.length < 8) {
         return NextResponse.json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' }, { status: 400 })
@@ -78,7 +88,7 @@ export async function PATCH(req: Request) {
     const user = await prismaDash.user.update({
       where: { id },
       data,
-      select: { name: true, username: true, email: true, phone: true, role: true, avatarUrl: true },
+      select: { name: true, username: true, email: true, phone: true, role: true, avatarUrl: true, coverUrl: true },
     })
     return NextResponse.json({ success: true, user })
   } catch (err: any) {

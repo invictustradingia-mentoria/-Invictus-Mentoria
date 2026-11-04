@@ -22,6 +22,7 @@ model User {
   isBanned     Boolean      @default(false)
   phone        String?
   avatarUrl    String?
+  coverUrl     String? // foto de portada del perfil estilo Facebook
   editorLevel  String       @default("ALL")
   welcomeEmailSentAt DateTime?
   registeredIp String?
@@ -34,6 +35,9 @@ model User {
   progress        LessonProgress[]
   securityLogs    SecurityLog[]
   journalAccounts JournalAccount[]
+  posts           Post[]
+  postReactions   PostReaction[]
+  postComments    PostComment[]
 
   @@map("users")
 }
@@ -371,4 +375,57 @@ model JournalComment {
 
   @@index([entryId])
   @@map("journal_comments")
+}
+
+// ---------- Comunidad: feed de publicaciones (estilo Facebook) ----------
+
+// Publicación que hace un alumno o miembro del equipo en el feed de Comunidad.
+model Post {
+  id        String   @id @default(cuid())
+  authorId  String
+  content   String
+  imageUrl  String? // imagen opcional adjunta al post (data URL)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions PostReaction[]
+  comments  PostComment[]
+
+  @@index([createdAt])
+  @@index([authorId])
+  @@map("posts")
+}
+
+// Una reacción por usuario y post (LIKE, LOVE, FIRE, CLAP). Cambiar de tipo actualiza la fila.
+model PostReaction {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  type      String // LIKE, LOVE, FIRE, CLAP
+  createdAt DateTime @default(now())
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@map("post_reactions")
+}
+
+// Comentario de cualquier usuario autenticado sobre un post.
+model PostComment {
+  id         String   @id @default(cuid())
+  postId     String
+  authorId   String
+  authorName String?
+  authorRole String?
+  content    String
+  createdAt  DateTime @default(now())
+
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("post_comments")
 }
