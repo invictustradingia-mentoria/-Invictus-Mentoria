@@ -7,6 +7,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const STATUSES = ['ACTIVE', 'PASSED', 'FAILED', 'FUNDED']
+const ACCOUNT_TYPES = ['EVAL', 'PA']
 
 async function getUser() {
   const session: any = await getServerSession(authOptions)
@@ -53,12 +54,17 @@ export async function POST(req: Request) {
     const name = clean(body.name, 120)
     if (!name) return NextResponse.json({ error: 'Poné un nombre a la cuenta (ej: Eval 1 - FTMO 100k)' }, { status: 400 })
 
+    if (!ACCOUNT_TYPES.includes(body.accountType)) {
+      return NextResponse.json({ error: 'Elegí si la cuenta es Eval o PA' }, { status: 400 })
+    }
+    const accountType = body.accountType
+
     const propFirm = clean(body.propFirm, 80) || null
     const status = STATUSES.includes(body.status) ? body.status : 'ACTIVE'
     const accountSize = typeof body.accountSize === 'number' && body.accountSize > 0 ? body.accountSize : null
 
     const account = await prismaDash.journalAccount.create({
-      data: { userId: user.id, name, propFirm, status, accountSize },
+      data: { userId: user.id, name, propFirm, accountType, status, accountSize },
     })
 
     return NextResponse.json({ item: { ...account, totalEntries: 0, totalResultMoney: 0, winRate: 0, series: [] } })
@@ -89,6 +95,10 @@ export async function PATCH(req: Request) {
       data.name = n
     }
     if (body.propFirm !== undefined) data.propFirm = clean(body.propFirm, 80) || null
+    if (typeof body.accountType === 'string') {
+      if (!ACCOUNT_TYPES.includes(body.accountType)) return NextResponse.json({ error: 'Tipo de cuenta no válido' }, { status: 400 })
+      data.accountType = body.accountType
+    }
     if (typeof body.status === 'string') {
       if (!STATUSES.includes(body.status)) return NextResponse.json({ error: 'Estado no válido' }, { status: 400 })
       data.status = body.status

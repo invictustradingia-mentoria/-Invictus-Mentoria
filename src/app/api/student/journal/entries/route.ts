@@ -66,7 +66,16 @@ export async function POST(req: Request) {
     const date = Number.isNaN(dateRaw.getTime()) ? new Date() : dateRaw
 
     const dayTag = DAY_TAGS.includes(body.dayTag) ? body.dayTag : 'NEUTRAL'
-    const session = SESSIONS.includes(body.session) ? body.session : null
+
+    if (!SESSIONS.includes(body.session)) {
+      return NextResponse.json({ error: 'Elegí la sesión operada (es obligatorio)' }, { status: 400 })
+    }
+    const session = body.session
+
+    const screenshotUrl = clean(body.screenshotUrl, 1000)
+    if (!screenshotUrl) {
+      return NextResponse.json({ error: 'Subí una captura del trade (es obligatorio)' }, { status: 400 })
+    }
 
     const entry = await prismaDash.journalEntry.create({
       data: {
@@ -79,7 +88,7 @@ export async function POST(req: Request) {
         resultRR: num(body.resultRR),
         dayTag,
         note: clean(body.note, 2000) || null,
-        screenshotUrl: clean(body.screenshotUrl, 1000) || null,
+        screenshotUrl,
       },
     })
 
@@ -111,7 +120,7 @@ export async function PATCH(req: Request) {
     }
     if (body.pair !== undefined) data.pair = clean(body.pair, 40) || null
     if (body.session !== undefined) {
-      if (body.session !== null && !SESSIONS.includes(body.session)) return NextResponse.json({ error: 'Sesión no válida' }, { status: 400 })
+      if (!SESSIONS.includes(body.session)) return NextResponse.json({ error: 'Elegí la sesión operada (es obligatorio)' }, { status: 400 })
       data.session = body.session
     }
     if (body.resultMoney !== undefined) data.resultMoney = num(body.resultMoney)
@@ -122,7 +131,11 @@ export async function PATCH(req: Request) {
       data.dayTag = body.dayTag
     }
     if (body.note !== undefined) data.note = clean(body.note, 2000) || null
-    if (body.screenshotUrl !== undefined) data.screenshotUrl = clean(body.screenshotUrl, 1000) || null
+    if (body.screenshotUrl !== undefined) {
+      const url = clean(body.screenshotUrl, 1000)
+      if (!url) return NextResponse.json({ error: 'La captura del trade es obligatoria' }, { status: 400 })
+      data.screenshotUrl = url
+    }
 
     const item = await prismaDash.journalEntry.update({ where: { id }, data })
     return NextResponse.json({ item })

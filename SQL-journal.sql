@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS "journal_accounts" (
   "name" TEXT NOT NULL,
   "propFirm" TEXT,
   "accountSize" DOUBLE PRECISION,
+  "accountType" TEXT NOT NULL DEFAULT 'EVAL',
   "status" TEXT NOT NULL DEFAULT 'ACTIVE',
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT now(),
   "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT now(),

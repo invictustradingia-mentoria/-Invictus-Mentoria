@@ -9,6 +9,7 @@ import {
 
 type DayTag = 'GOOD' | 'BAD' | 'NEUTRAL'
 type AccountStatus = 'ACTIVE' | 'PASSED' | 'FAILED' | 'FUNDED'
+type AccountType = 'EVAL' | 'PA'
 type Session = 'APERTURA_NY' | 'NY_18HS' | 'ASIA' | 'LONDRES'
 
 interface SeriesPoint {
@@ -58,6 +59,7 @@ interface Account {
   name: string
   propFirm: string | null
   accountSize: number | null
+  accountType: AccountType
   status: AccountStatus
   entries: Entry[]
 }
@@ -72,6 +74,11 @@ const STATUS_LABEL: Record<AccountStatus, { label: string; cls: string }> = {
   PASSED: { label: 'Aprobada', cls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-400/30' },
   FAILED: { label: 'Fallida', cls: 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-400/30' },
   FUNDED: { label: 'Fondeada', cls: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-400/30' },
+}
+
+const ACCOUNT_TYPE_LABEL: Record<AccountType, { label: string; cls: string }> = {
+  EVAL: { label: 'Eval', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400/30' },
+  PA: { label: 'PA · Financiada', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/30' },
 }
 
 const DAY_TAG_LABEL: Record<DayTag, { label: string; cls: string; icon: any }> = {
@@ -174,21 +181,6 @@ function StatBox({ icon: Icon, label: lbl, value, cls }: { icon?: any; label: st
   )
 }
 
-function ScreenshotThumb({ url, onOpen }: { url: string; onOpen: () => void }) {
-  return (
-    <button type="button" onClick={onOpen}
-      className="group relative block h-32 w-full sm:w-44 shrink-0 overflow-hidden rounded-xl border border-gray-200 cursor-pointer">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="Captura del trade" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-        <span className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
-          <Maximize2 size={11} /> Ver captura
-        </span>
-      </div>
-    </button>
-  )
-}
-
 function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6" onClick={onClose}>
@@ -202,8 +194,52 @@ function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   )
 }
 
-function EntryCard({ entry, onComment, onDeleteComment, busyId, onOpenImage }: {
+// Cuadrito compacto del historial: solo lo esencial, para no mezclar visualmente la info.
+function EntryTile({ entry, onClick }: { entry: Entry; onClick: () => void }) {
+  const d = DAY_TAG_LABEL[entry.dayTag] || DAY_TAG_LABEL.NEUTRAL
+  const DIcon = d.icon
+  const money = entry.resultMoney
+  const dateObj = new Date(entry.date)
+  const day = dateObj.toLocaleDateString('es-AR', { day: '2-digit' })
+  const month = dateObj.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')
+  const weekday = dateObj.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')
+  const barColor = money !== null && money > 0 ? 'bg-emerald-500' : money !== null && money < 0 ? 'bg-rose-500' : 'bg-gray-300'
+  return (
+    <button type="button" onClick={onClick}
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-[#ededf0] dark:border-white/10 bg-white dark:bg-white/[0.04] p-3.5 text-left shadow-sm hover:border-[#0284c7]/50 hover:shadow-md transition-all cursor-pointer">
+      <div className={`absolute inset-x-0 top-0 h-1 ${barColor}`} />
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500">{weekday}</p>
+          <p className="text-lg font-black text-[#1d1d1f] dark:text-white leading-none mt-0.5">
+            {day} <span className="text-[11px] font-bold text-gray-400 dark:text-slate-500 uppercase">{month}</span>
+          </p>
+        </div>
+        <span className={`flex items-center justify-center rounded-full border p-1.5 ${d.cls} bg-white dark:bg-white/5`}>
+          <DIcon size={13} />
+        </span>
+      </div>
+      <p className={`mt-2.5 text-base font-black ${money !== null ? moneyColor(money) : 'text-gray-300 dark:text-slate-600'}`}>
+        {money !== null ? fmtMoney(money) : '—'}
+      </p>
+      <div className="mt-1 flex items-center gap-1 flex-wrap">
+        {entry.pair && <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 truncate">{entry.pair}</span>}
+        {entry.session && entry.pair && <span className="text-[9px] text-gray-300 dark:text-slate-600">·</span>}
+        {entry.session && <span className="text-[9px] font-bold text-indigo-500 dark:text-indigo-300 truncate">{sessionLabel(entry.session)}</span>}
+      </div>
+      <div className="mt-1.5 flex items-center gap-2">
+        {entry.screenshotUrl && <span className="flex items-center gap-0.5 text-[9px] font-bold text-gray-300 dark:text-slate-600"><Maximize2 size={10} /> Captura</span>}
+        {entry.comments.length > 0 && <span className="flex items-center gap-0.5 text-[9px] font-bold text-sky-400"><MessageSquare size={10} /> {entry.comments.length}</span>}
+      </div>
+    </button>
+  )
+}
+
+// Panel de detalle al pinchar una tarjeta, estilo TopStep: cabecera oscura con el resultado grande,
+// estadísticas, captura ampliable y los comentarios del equipo (con opción de comentar y borrar).
+function EntryModal({ entry, onClose, onComment, onDeleteComment, busyId, onOpenImage }: {
   entry: Entry
+  onClose: () => void
   onComment: (entryId: string, content: string) => Promise<void>
   onDeleteComment: (id: string) => void
   busyId: string | null
@@ -213,8 +249,7 @@ function EntryCard({ entry, onComment, onDeleteComment, busyId, onOpenImage }: {
   const [sending, setSending] = useState(false)
   const d = DAY_TAG_LABEL[entry.dayTag] || DAY_TAG_LABEL.NEUTRAL
   const DIcon = d.icon
-  const money = entry.resultMoney ?? 0
-  const barColor = money > 0 ? 'bg-emerald-500' : money < 0 ? 'bg-rose-500' : 'bg-gray-300'
+  const money = entry.resultMoney
 
   const send = async () => {
     if (!draft.trim()) return
@@ -225,36 +260,52 @@ function EntryCard({ entry, onComment, onDeleteComment, busyId, onOpenImage }: {
   }
 
   return (
-    <div className="relative overflow-hidden bg-white dark:bg-white/[0.04] rounded-2xl border border-[#ededf0] dark:border-white/10 shadow-sm">
-      <div className={`absolute inset-y-0 left-0 w-1.5 ${barColor}`} />
-      <div className="p-4 pl-5 space-y-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-bold text-gray-500 dark:text-slate-400">{new Date(entry.date).toLocaleDateString('es-AR')}</span>
-          {entry.pair && <span className="text-[11px] font-bold text-[#0284c7] dark:text-sky-300 bg-[#f0f9ff] dark:bg-sky-400/10 px-2 py-0.5 rounded-full border border-[#bae6fd] dark:border-sky-400/30">{entry.pair}</span>}
-          {entry.session && <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/30"><Clock size={10} /> {sessionLabel(entry.session)}</span>}
-          <span className={`flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${d.cls}`}><DIcon size={11} /> {d.label}</span>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 min-w-0 space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-              <StatBox icon={DollarSign} label="Resultado" value={entry.resultMoney !== null ? fmtMoney(entry.resultMoney) : '—'} cls={entry.resultMoney !== null ? moneyColor(entry.resultMoney) : undefined} />
-              <StatBox icon={Percent} label="Porcentaje" value={entry.resultPercent !== null ? `${entry.resultPercent > 0 ? '+' : ''}${entry.resultPercent}%` : '—'} />
-              <StatBox icon={Target} label="R:R" value={entry.resultRR !== null ? `${entry.resultRR} R` : '—'} />
-            </div>
-            {entry.note && (
-              <blockquote className="flex gap-2 rounded-xl bg-gray-50 dark:bg-white/5 border-l-2 border-[#0284c7] pl-3 pr-3 py-2.5 text-[12px] text-gray-600 dark:text-slate-300 leading-relaxed">
-                <Quote size={13} className="mt-0.5 shrink-0 text-[#0284c7]/50" />
-                <span className="whitespace-pre-wrap">{entry.note}</span>
-              </blockquote>
-            )}
+    <div className="fixed inset-0 z-40 flex items-start sm:items-center justify-center bg-black/60 p-3 sm:p-6 overflow-y-auto" onClick={onClose}>
+      <div className="relative my-6 sm:my-0 w-full max-w-xl rounded-3xl bg-white dark:bg-[#11141b] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <button type="button" onClick={onClose} aria-label="Cerrar"
+          className="absolute right-4 top-4 z-10 rounded-full bg-black/10 dark:bg-white/10 p-2 text-white hover:bg-black/20 dark:hover:bg-white/20 cursor-pointer">
+          <X size={18} />
+        </button>
+        <div className="rounded-t-3xl bg-[#0b1220] p-6">
+          <div className="flex items-center gap-2 flex-wrap pr-10">
+            <span className="text-[11px] font-bold text-slate-300">{new Date(entry.date).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+            {entry.pair && <span className="text-[11px] font-bold text-sky-300 bg-sky-400/10 px-2 py-0.5 rounded-full border border-sky-400/30">{entry.pair}</span>}
+            {entry.session && <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-400/30"><Clock size={10} /> {sessionLabel(entry.session)}</span>}
+            <span className={`flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${d.cls} bg-white/5`}><DIcon size={11} /> {d.label}</span>
           </div>
-          {entry.screenshotUrl && (
-            <ScreenshotThumb url={entry.screenshotUrl} onOpen={() => onOpenImage(entry.screenshotUrl!)} />
-          )}
+          <p className={`mt-3 text-3xl font-black ${money !== null ? (money >= 0 ? 'text-emerald-400' : 'text-rose-400') : 'text-white'}`}>
+            {money !== null ? fmtMoney(money) : '—'}
+          </p>
         </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            <StatBox icon={DollarSign} label="Resultado" value={money !== null ? fmtMoney(money) : '—'} cls={money !== null ? moneyColor(money) : undefined} />
+            <StatBox icon={Percent} label="Porcentaje" value={entry.resultPercent !== null ? `${entry.resultPercent > 0 ? '+' : ''}${entry.resultPercent}%` : '—'} />
+            <StatBox icon={Target} label="R:R" value={entry.resultRR !== null ? `${entry.resultRR} R` : '—'} />
+          </div>
 
-        {entry.comments.length > 0 && (
+          {entry.note && (
+            <blockquote className="flex gap-2 rounded-xl bg-gray-50 dark:bg-white/5 border-l-2 border-[#0284c7] pl-3 pr-3 py-2.5 text-[12px] text-gray-600 dark:text-slate-300 leading-relaxed">
+              <Quote size={13} className="mt-0.5 shrink-0 text-[#0284c7]/50" />
+              <span className="whitespace-pre-wrap">{entry.note}</span>
+            </blockquote>
+          )}
+
+          {entry.screenshotUrl ? (
+            <button type="button" onClick={() => onOpenImage(entry.screenshotUrl!)}
+              className="group relative block w-full overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10 cursor-pointer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={entry.screenshotUrl} alt="Captura del trade" className="max-h-80 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                <span className="flex items-center gap-1 rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  <Maximize2 size={13} /> Ver en grande
+                </span>
+              </div>
+            </button>
+          ) : (
+            <p className="text-[11px] text-gray-400 dark:text-slate-500">Esta operación no tiene captura.</p>
+          )}
+
           <div className="space-y-2 pt-3 border-t border-gray-100 dark:border-white/10">
             <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500"><MessageSquare size={11} /> Comentarios</p>
             {entry.comments.map((c) => (
@@ -270,21 +321,20 @@ function EntryCard({ entry, onComment, onDeleteComment, busyId, onOpenImage }: {
                 </button>
               </div>
             ))}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                className="flex-1 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#1d1d1f] dark:text-white px-3 py-2 text-xs focus:border-[#0284c7] focus:outline-none"
+                placeholder="Escribe un comentario para guiar al alumno..."
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') send() }}
+              />
+              <button type="button" onClick={send} disabled={sending || busyId === entry.id}
+                className="flex items-center gap-1 rounded-xl bg-[#1d1d1f] dark:bg-[#0284c7] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#0284c7] disabled:opacity-50 transition-all cursor-pointer">
+                {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+              </button>
+            </div>
           </div>
-        )}
-
-        <div className="flex items-center gap-2 pt-1">
-          <input
-            className="flex-1 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#1d1d1f] dark:text-white px-3 py-2 text-xs focus:border-[#0284c7] focus:outline-none"
-            placeholder="Escribe un comentario para guiar al alumno..."
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') send() }}
-          />
-          <button type="button" onClick={send} disabled={sending || busyId === entry.id}
-            className="flex items-center gap-1 rounded-xl bg-[#1d1d1f] dark:bg-[#0284c7] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#0284c7] disabled:opacity-50 transition-all cursor-pointer">
-            {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-          </button>
         </div>
       </div>
     </div>
@@ -300,6 +350,7 @@ export default function AdminJournalPage() {
   const [msg, setMsg] = useState<{ t: string; ok: boolean } | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [modalEntryId, setModalEntryId] = useState<string | null>(null)
 
   const notify = (t: string, ok: boolean) => { setMsg({ t, ok }); setTimeout(() => setMsg(null), 6000) }
 
@@ -377,10 +428,21 @@ export default function AdminJournalPage() {
     const totalTrades = detail ? detail.accounts.reduce((sum, a) => sum + a.entries.length, 0) : 0
     const totalWins = detail ? detail.accounts.reduce((sum, a) => sum + a.entries.filter((e) => (e.resultMoney || 0) > 0).length, 0) : 0
     const totalWinRate = totalTrades > 0 ? Math.round((totalWins / totalTrades) * 100) : 0
+    const modalEntry = detail ? detail.accounts.flatMap((a) => a.entries).find((e) => e.id === modalEntryId) || null : null
 
     return (
       <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6">
         {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
+        {modalEntry && (
+          <EntryModal
+            entry={modalEntry}
+            onClose={() => setModalEntryId(null)}
+            onComment={addComment}
+            onDeleteComment={deleteComment}
+            busyId={busyId}
+            onOpenImage={setLightbox}
+          />
+        )}
 
         <button type="button" onClick={() => setSelectedUserId(null)}
           className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 dark:text-slate-400 hover:text-[#0284c7] cursor-pointer">
@@ -430,9 +492,10 @@ export default function AdminJournalPage() {
                     <div className="bg-[#0b1220] rounded-3xl p-6 shadow-sm">
                       <div className="flex flex-wrap items-start justify-between gap-6">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-[10px] font-black uppercase tracking-wider text-sky-300/70">Cuenta</p>
                             <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${ACCOUNT_TYPE_LABEL[acc.accountType]?.cls || ''}`}>{ACCOUNT_TYPE_LABEL[acc.accountType]?.label || acc.accountType}</span>
                           </div>
                           <p className="text-base font-black text-white mt-0.5">{acc.name}</p>
                           {acc.propFirm && <p className="text-[11px] text-slate-400">{acc.propFirm}{acc.accountSize ? ` · $${acc.accountSize.toLocaleString('es-AR')}` : ''}</p>}
@@ -465,9 +528,9 @@ export default function AdminJournalPage() {
                     {acc.entries.length === 0 ? (
                       <p className="text-[11px] text-gray-400 dark:text-slate-500 px-2">Sin operaciones registradas todavía en esta cuenta.</p>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {acc.entries.map((en) => (
-                          <EntryCard key={en.id} entry={en} onComment={addComment} onDeleteComment={deleteComment} busyId={busyId} onOpenImage={setLightbox} />
+                          <EntryTile key={en.id} entry={en} onClick={() => setModalEntryId(en.id)} />
                         ))}
                       </div>
                     )}

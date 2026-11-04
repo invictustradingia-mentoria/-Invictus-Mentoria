@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 
 type AccountStatus = 'ACTIVE' | 'PASSED' | 'FAILED' | 'FUNDED'
+type AccountType = 'EVAL' | 'PA'
 type DayTag = 'GOOD' | 'BAD' | 'NEUTRAL'
 type Session = 'APERTURA_NY' | 'NY_18HS' | 'ASIA' | 'LONDRES'
 
@@ -22,6 +23,7 @@ interface Account {
   name: string
   propFirm: string | null
   accountSize: number | null
+  accountType: AccountType
   status: AccountStatus
   totalEntries: number
   totalResultMoney: number
@@ -63,6 +65,12 @@ const STATUS_LABEL: Record<AccountStatus, { label: string; cls: string }> = {
   FAILED: { label: 'Fallida', cls: 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-400/30' },
   FUNDED: { label: 'Fondeada', cls: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-400/30' },
 }
+
+const ACCOUNT_TYPE_LABEL: Record<AccountType, { label: string; cls: string }> = {
+  EVAL: { label: 'Eval', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400/30' },
+  PA: { label: 'PA · Financiada', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/30' },
+}
+const ACCOUNT_TYPE_OPTIONS: AccountType[] = ['EVAL', 'PA']
 
 const DAY_TAG_LABEL: Record<DayTag, { label: string; cls: string; active: string; icon: any }> = {
   GOOD: { label: 'Buen día', cls: 'border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300', active: 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-500/30', icon: Smile },
@@ -155,21 +163,6 @@ function StatBox({ icon: Icon, label: lbl, value, cls }: { icon?: any; label: st
   )
 }
 
-function ScreenshotThumb({ url, onOpen }: { url: string; onOpen: () => void }) {
-  return (
-    <button type="button" onClick={onOpen}
-      className="group relative block h-32 w-full sm:w-44 shrink-0 overflow-hidden rounded-xl border border-gray-200 cursor-pointer">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="Captura del trade" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-        <span className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
-          <Maximize2 size={11} /> Ver captura
-        </span>
-      </div>
-    </button>
-  )
-}
-
 function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6" onClick={onClose}>
@@ -183,6 +176,136 @@ function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   )
 }
 
+// Cuadrito compacto del historial: solo lo esencial, para no mezclar visualmente la info.
+function EntryTile({ entry, onClick }: { entry: Entry; onClick: () => void }) {
+  const d = DAY_TAG_LABEL[entry.dayTag] || DAY_TAG_LABEL.NEUTRAL
+  const DIcon = d.icon
+  const money = entry.resultMoney
+  const dateObj = new Date(entry.date)
+  const day = dateObj.toLocaleDateString('es-AR', { day: '2-digit' })
+  const month = dateObj.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')
+  const weekday = dateObj.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')
+  const barColor = money !== null && money > 0 ? 'bg-emerald-500' : money !== null && money < 0 ? 'bg-rose-500' : 'bg-gray-300'
+  return (
+    <button type="button" onClick={onClick}
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-[#ededf0] dark:border-white/10 bg-white dark:bg-white/[0.04] p-3.5 text-left shadow-sm hover:border-[#0284c7]/50 hover:shadow-md transition-all cursor-pointer">
+      <div className={`absolute inset-x-0 top-0 h-1 ${barColor}`} />
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500">{weekday}</p>
+          <p className="text-lg font-black text-[#1d1d1f] dark:text-white leading-none mt-0.5">
+            {day} <span className="text-[11px] font-bold text-gray-400 dark:text-slate-500 uppercase">{month}</span>
+          </p>
+        </div>
+        <span className={`flex items-center justify-center rounded-full border p-1.5 ${d.cls} bg-white dark:bg-white/5`}>
+          <DIcon size={13} />
+        </span>
+      </div>
+      <p className={`mt-2.5 text-base font-black ${money !== null ? moneyColor(money) : 'text-gray-300 dark:text-slate-600'}`}>
+        {money !== null ? fmtMoney(money) : '—'}
+      </p>
+      <div className="mt-1 flex items-center gap-1 flex-wrap">
+        {entry.pair && <span className="text-[9px] font-bold text-gray-400 dark:text-slate-500 truncate">{entry.pair}</span>}
+        {entry.session && entry.pair && <span className="text-[9px] text-gray-300 dark:text-slate-600">·</span>}
+        {entry.session && <span className="text-[9px] font-bold text-indigo-500 dark:text-indigo-300 truncate">{sessionLabel(entry.session)}</span>}
+      </div>
+      <div className="mt-1.5 flex items-center gap-2">
+        {entry.screenshotUrl && <span className="flex items-center gap-0.5 text-[9px] font-bold text-gray-300 dark:text-slate-600"><ImageIcon size={10} /> Captura</span>}
+        {entry.comments.length > 0 && <span className="flex items-center gap-0.5 text-[9px] font-bold text-sky-400"><MessageSquare size={10} /> {entry.comments.length}</span>}
+      </div>
+    </button>
+  )
+}
+
+// Panel de detalle al pinchar una tarjeta, estilo TopStep: cabecera oscura con el resultado grande,
+// estadísticas, captura ampliable y comentarios del mentor.
+function EntryModal({ entry, onClose, onEdit, onDelete, onOpenImage }: {
+  entry: Entry
+  onClose: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onOpenImage: (url: string) => void
+}) {
+  const d = DAY_TAG_LABEL[entry.dayTag] || DAY_TAG_LABEL.NEUTRAL
+  const DIcon = d.icon
+  const money = entry.resultMoney
+  return (
+    <div className="fixed inset-0 z-40 flex items-start sm:items-center justify-center bg-black/60 p-3 sm:p-6 overflow-y-auto" onClick={onClose}>
+      <div className="relative my-6 sm:my-0 w-full max-w-xl rounded-3xl bg-white dark:bg-[#11141b] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <button type="button" onClick={onClose} aria-label="Cerrar"
+          className="absolute right-4 top-4 z-10 rounded-full bg-black/10 dark:bg-white/10 p-2 text-white hover:bg-black/20 dark:hover:bg-white/20 cursor-pointer">
+          <X size={18} />
+        </button>
+        <div className="rounded-t-3xl bg-[#0b1220] p-6">
+          <div className="flex items-center gap-2 flex-wrap pr-10">
+            <span className="text-[11px] font-bold text-slate-300">{new Date(entry.date).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+            {entry.pair && <span className="text-[11px] font-bold text-sky-300 bg-sky-400/10 px-2 py-0.5 rounded-full border border-sky-400/30">{entry.pair}</span>}
+            {entry.session && <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-400/30"><Clock size={10} /> {sessionLabel(entry.session)}</span>}
+            <span className={`flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${d.cls} bg-white/5`}><DIcon size={11} /> {d.label}</span>
+          </div>
+          <p className={`mt-3 text-3xl font-black ${money !== null ? (money >= 0 ? 'text-emerald-400' : 'text-rose-400') : 'text-white'}`}>
+            {money !== null ? fmtMoney(money) : '—'}
+          </p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            <StatBox icon={DollarSign} label="Resultado" value={money !== null ? fmtMoney(money) : '—'} cls={money !== null ? moneyColor(money) : undefined} />
+            <StatBox icon={Percent} label="Porcentaje" value={entry.resultPercent !== null ? `${entry.resultPercent > 0 ? '+' : ''}${entry.resultPercent}%` : '—'} />
+            <StatBox icon={Target} label="R:R" value={entry.resultRR !== null ? `${entry.resultRR} R` : '—'} />
+          </div>
+
+          {entry.note && (
+            <blockquote className="flex gap-2 rounded-xl bg-gray-50 dark:bg-white/5 border-l-2 border-[#0284c7] pl-3 pr-3 py-2.5 text-[12px] text-gray-600 dark:text-slate-300 leading-relaxed">
+              <Quote size={13} className="mt-0.5 shrink-0 text-[#0284c7]/50" />
+              <span className="whitespace-pre-wrap">{entry.note}</span>
+            </blockquote>
+          )}
+
+          {entry.screenshotUrl ? (
+            <button type="button" onClick={() => onOpenImage(entry.screenshotUrl!)}
+              className="group relative block w-full overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10 cursor-pointer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={entry.screenshotUrl} alt="Captura del trade" className="max-h-80 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                <span className="flex items-center gap-1 rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  <Maximize2 size={13} /> Ver en grande
+                </span>
+              </div>
+            </button>
+          ) : (
+            <p className="text-[11px] text-gray-400 dark:text-slate-500">Esta operación no tiene captura.</p>
+          )}
+
+          {entry.comments.length > 0 && (
+            <div className="space-y-2 pt-3 border-t border-gray-100 dark:border-white/10">
+              <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500"><MessageSquare size={11} /> Comentarios del mentor</p>
+              {entry.comments.map((c) => (
+                <div key={c.id} className="bg-[#f0f9ff] dark:bg-sky-400/10 border border-[#bae6fd] dark:border-sky-400/30 rounded-xl p-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0284c7] dark:text-sky-300">
+                    {c.authorName || 'Mentor'} · {new Date(c.createdAt).toLocaleDateString('es-AR')}
+                  </div>
+                  <p className="text-[12px] text-[#1d1d1f] dark:text-slate-200 mt-1">{c.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onEdit}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold bg-[#1d1d1f] dark:bg-[#0284c7] text-white hover:bg-[#0284c7] transition-all cursor-pointer">
+              <Pencil size={13} /> Editar
+            </button>
+            <button type="button" onClick={onDelete}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all cursor-pointer">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function JournalPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -191,9 +314,11 @@ export default function JournalPage() {
   const [loadingEntries, setLoadingEntries] = useState(false)
   const [msg, setMsg] = useState<{ t: string; ok: boolean } | null>(null)
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [modalEntryId, setModalEntryId] = useState<string | null>(null)
 
   const [showNewAccount, setShowNewAccount] = useState(false)
   const [accName, setAccName] = useState('')
+  const [accType, setAccType] = useState<AccountType | ''>('')
   const [accPropFirm, setAccPropFirm] = useState('')
   const [accSize, setAccSize] = useState('')
   const [accBusy, setAccBusy] = useState(false)
@@ -244,12 +369,13 @@ export default function JournalPage() {
 
   const resetAccountForm = () => {
     setEditingAccountId(null)
-    setAccName(''); setAccPropFirm(''); setAccSize(''); setShowNewAccount(false)
+    setAccName(''); setAccType(''); setAccPropFirm(''); setAccSize(''); setShowNewAccount(false)
   }
 
   const startEditAccount = (a: Account) => {
     setEditingAccountId(a.id)
     setAccName(a.name)
+    setAccType(a.accountType)
     setAccPropFirm(a.propFirm || '')
     setAccSize(a.accountSize !== null ? String(a.accountSize) : '')
     setShowNewAccount(true)
@@ -261,6 +387,7 @@ export default function JournalPage() {
   const submitAccount = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!accName.trim()) return notify('Poné un nombre a la cuenta', false)
+    if (!accType) return notify('Elegí si la cuenta es Eval o PA (es obligatorio)', false)
     setAccBusy(true)
     try {
       const res = editingAccountId
@@ -270,6 +397,7 @@ export default function JournalPage() {
             body: JSON.stringify({
               id: editingAccountId,
               name: accName.trim(),
+              accountType: accType,
               propFirm: accPropFirm.trim() || null,
               accountSize: accSize ? Number(accSize) : null,
             }),
@@ -279,6 +407,7 @@ export default function JournalPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               name: accName.trim(),
+              accountType: accType,
               propFirm: accPropFirm.trim() || undefined,
               accountSize: accSize ? Number(accSize) : undefined,
             }),
@@ -394,6 +523,9 @@ export default function JournalPage() {
   const submitEntry = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedId) return notify('Creá primero una cuenta', false)
+    if (!eSession) return notify('Elegí la sesión operada: es obligatorio', false)
+    const hasExistingScreenshot = !!(editingId && eEditingScreenshot)
+    if (!eFile && !hasExistingScreenshot) return notify('Subí una captura del trade: es obligatorio', false)
     setEBusy(true)
     setEStatus('')
     try {
@@ -457,6 +589,7 @@ export default function JournalPage() {
   }
 
   const selected = accounts.find((a) => a.id === selectedId) || null
+  const modalEntry = entries.find((e) => e.id === modalEntryId) || null
 
   const globalPnl = accounts.reduce((sum, a) => sum + a.totalResultMoney, 0)
   const globalTrades = accounts.reduce((sum, a) => sum + a.totalEntries, 0)
@@ -467,6 +600,15 @@ export default function JournalPage() {
   return (
     <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8">
       {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
+      {modalEntry && (
+        <EntryModal
+          entry={modalEntry}
+          onClose={() => setModalEntryId(null)}
+          onEdit={() => { startEdit(modalEntry); setModalEntryId(null) }}
+          onDelete={() => { setModalEntryId(null); deleteEntry(modalEntry.id) }}
+          onOpenImage={(url) => setLightbox(url)}
+        />
+      )}
 
       <div>
         <span className="text-[11px] font-bold text-[#0284c7] tracking-wider uppercase block">Seguimiento personal</span>
@@ -515,7 +657,16 @@ export default function JournalPage() {
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label className={labelCls}>Tipo de cuenta *</label>
+                <select className={inputCls} value={accType} onChange={(e) => setAccType(e.target.value as AccountType | '')} required>
+                  <option value="">Elegí Eval o PA</option>
+                  {ACCOUNT_TYPE_OPTIONS.map((t) => (
+                    <option key={t} value={t}>{ACCOUNT_TYPE_LABEL[t].label}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className={labelCls}>Nombre de la cuenta</label>
                 <input className={inputCls} value={accName} onChange={(e) => setAccName(e.target.value)} placeholder="Ej. Eval 1 - FTMO 100k" required />
@@ -562,7 +713,10 @@ export default function JournalPage() {
                       </button>
                     </div>
                     <button type="button" onClick={() => setSelectedId(a.id)} className="block w-full text-left cursor-pointer">
-                      {a.propFirm && <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-0.5">{a.propFirm}{a.accountSize ? ` · $${a.accountSize.toLocaleString('es-AR')}` : ''}</p>}
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${ACCOUNT_TYPE_LABEL[a.accountType]?.cls || ''}`}>{ACCOUNT_TYPE_LABEL[a.accountType]?.label || a.accountType}</span>
+                        {a.propFirm && <span className="text-[11px] text-gray-400 dark:text-slate-500">{a.propFirm}{a.accountSize ? ` · $${a.accountSize.toLocaleString('es-AR')}` : ''}</span>}
+                      </div>
                       <div className="flex items-end justify-between mt-2.5">
                         <p className={`text-lg font-black ${moneyColor(a.totalResultMoney)}`}>{fmtMoney(a.totalResultMoney)}</p>
                         <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500">{a.totalEntries} op. · {a.winRate}% ganadas</p>
@@ -586,7 +740,10 @@ export default function JournalPage() {
             <div className="flex flex-wrap items-start justify-between gap-6 relative z-10">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-wider text-sky-300/70">Viendo ahora</p>
-                <p className="text-lg font-black text-white mt-0.5">{selected.name}</p>
+                <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                  <p className="text-lg font-black text-white">{selected.name}</p>
+                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${ACCOUNT_TYPE_LABEL[selected.accountType]?.cls || ''}`}>{ACCOUNT_TYPE_LABEL[selected.accountType]?.label || selected.accountType}</span>
+                </div>
                 {selected.propFirm && <p className="text-[11px] text-slate-400">{selected.propFirm}{selected.accountSize ? ` · $${selected.accountSize.toLocaleString('es-AR')}` : ''}</p>}
               </div>
               <div className="flex items-center gap-7">
@@ -637,9 +794,9 @@ export default function JournalPage() {
                 <input className={inputCls} value={ePair} onChange={(e) => setEPair(e.target.value)} placeholder="Ej. EURUSD" />
               </div>
               <div>
-                <label className={`${labelCls} flex items-center gap-1`}><Clock size={10} /> Sesión operada</label>
-                <select className={inputCls} value={eSession} onChange={(e) => setESession(e.target.value as Session | '')}>
-                  <option value="">Sin especificar</option>
+                <label className={`${labelCls} flex items-center gap-1`}><Clock size={10} /> Sesión operada *</label>
+                <select className={inputCls} value={eSession} onChange={(e) => setESession(e.target.value as Session | '')} required>
+                  <option value="">Elegí una sesión</option>
                   {SESSION_OPTIONS.map((s) => (
                     <option key={s} value={s}>{SESSION_LABEL[s]}</option>
                   ))}
@@ -681,7 +838,7 @@ export default function JournalPage() {
               <textarea className={inputCls} rows={3} value={eNote} onChange={(e) => setENote(e.target.value)} placeholder="Escribe tu reflexión del día..." />
             </div>
             <div>
-              <label className={labelCls}>Captura del trade (opcional)</label>
+              <label className={labelCls}>Captura del trade *{!editingId && ' (obligatoria)'}</label>
               {editingId && eEditingScreenshot && !eFile && (
                 <div className="mb-2 flex items-center gap-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-3 py-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -734,68 +891,11 @@ export default function JournalPage() {
                 Todavía no registraste ninguna operación en esta cuenta.
               </div>
             ) : (
-              entries.map((en) => {
-                const d = DAY_TAG_LABEL[en.dayTag] || DAY_TAG_LABEL.NEUTRAL
-                const DIcon = d.icon
-                const money = en.resultMoney ?? 0
-                const barColor = money > 0 ? 'bg-emerald-500' : money < 0 ? 'bg-rose-500' : 'bg-gray-300'
-                return (
-                  <div key={en.id} className="relative overflow-hidden bg-white dark:bg-white/[0.04] rounded-2xl border border-[#ededf0] dark:border-white/10 shadow-sm">
-                    <div className={`absolute inset-y-0 left-0 w-1.5 ${barColor}`} />
-                    <div className="p-4 pl-5 space-y-3">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[11px] font-bold text-gray-500 dark:text-slate-400">{new Date(en.date).toLocaleDateString('es-AR')}</span>
-                          {en.pair && <span className="text-[11px] font-bold text-[#0284c7] dark:text-sky-300 bg-[#f0f9ff] dark:bg-sky-400/10 px-2 py-0.5 rounded-full border border-[#bae6fd] dark:border-sky-400/30">{en.pair}</span>}
-                          {en.session && <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/30"><Clock size={10} /> {sessionLabel(en.session)}</span>}
-                          <span className={`flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${d.cls} bg-white dark:bg-white/5`}><DIcon size={11} /> {d.label}</span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button type="button" onClick={() => startEdit(en)} className="p-1.5 rounded-lg text-gray-300 dark:text-slate-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 hover:text-[#0284c7] transition-all cursor-pointer" title="Editar">
-                            <Pencil size={14} />
-                          </button>
-                          <button type="button" onClick={() => deleteEntry(en.id)} className="p-1.5 rounded-lg text-gray-300 dark:text-slate-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-500 transition-all cursor-pointer" title="Eliminar">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 min-w-0 space-y-3">
-                          <div className="grid grid-cols-3 gap-2">
-                            <StatBox icon={DollarSign} label="Resultado" value={en.resultMoney !== null ? fmtMoney(en.resultMoney) : '—'} cls={en.resultMoney !== null ? moneyColor(en.resultMoney) : undefined} />
-                            <StatBox icon={Percent} label="Porcentaje" value={en.resultPercent !== null ? `${en.resultPercent > 0 ? '+' : ''}${en.resultPercent}%` : '—'} />
-                            <StatBox icon={Target} label="R:R" value={en.resultRR !== null ? `${en.resultRR} R` : '—'} />
-                          </div>
-                          {en.note && (
-                            <blockquote className="flex gap-2 rounded-xl bg-gray-50 dark:bg-white/5 border-l-2 border-[#0284c7] pl-3 pr-3 py-2.5 text-[12px] text-gray-600 dark:text-slate-300 leading-relaxed">
-                              <Quote size={13} className="mt-0.5 shrink-0 text-[#0284c7]/50" />
-                              <span className="whitespace-pre-wrap">{en.note}</span>
-                            </blockquote>
-                          )}
-                        </div>
-                        {en.screenshotUrl && (
-                          <ScreenshotThumb url={en.screenshotUrl} onOpen={() => setLightbox(en.screenshotUrl!)} />
-                        )}
-                      </div>
-
-                      {en.comments.length > 0 && (
-                        <div className="space-y-2 pt-3 border-t border-gray-100 dark:border-white/10">
-                          <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500"><MessageSquare size={11} /> Comentarios del mentor</p>
-                          {en.comments.map((c) => (
-                            <div key={c.id} className="bg-[#f0f9ff] dark:bg-sky-400/10 border border-[#bae6fd] dark:border-sky-400/30 rounded-xl p-3">
-                              <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0284c7] dark:text-sky-300">
-                                {c.authorName || 'Mentor'} · {new Date(c.createdAt).toLocaleDateString('es-AR')}
-                              </div>
-                              <p className="text-[12px] text-[#1d1d1f] dark:text-slate-200 mt-1">{c.content}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {entries.map((en) => (
+                  <EntryTile key={en.id} entry={en} onClick={() => setModalEntryId(en.id)} />
+                ))}
+              </div>
             )}
           </div>
         </>

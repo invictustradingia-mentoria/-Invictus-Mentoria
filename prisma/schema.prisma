@@ -321,6 +321,7 @@ model JournalAccount {
   name        String   // ej: "Eval 1 - FTMO 100k"
   propFirm    String?
   accountSize Float?
+  accountType String   @default("EVAL") // EVAL, PA (cuenta financiada)
   status      String   @default("ACTIVE") // ACTIVE, PASSED, FAILED, FUNDED
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
