@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Send, Pin, PinOff, Trash2, RotateCcw, VolumeX, Ban, ShieldCheck, ShieldOff, X, MessageSquare, Smile, Search, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { Send, Pin, PinOff, Trash2, RotateCcw, VolumeX, Ban, ShieldCheck, ShieldOff, X, MessageSquare, Smile, Search, Image as ImageIcon, Loader2, Reply as ReplyIcon } from 'lucide-react'
 import ChatAvatar from '@/components/chat/ChatAvatar'
 import EmojiPicker from '@/components/chat/EmojiPicker'
 import ProfileHeader from '@/components/community/ProfileHeader'
 import PostCard, { type FeedPost } from '@/components/community/PostCard'
+import MentionText, { type MentionRef } from '@/components/community/MentionText'
+import MentionTextarea from '@/components/community/MentionTextarea'
+import NotificationBell from '@/components/community/NotificationBell'
 import { MAX_POST_LEN, NO_LINKS_MESSAGE } from '@/lib/community-shared'
 
 interface AMsg {
@@ -20,6 +23,8 @@ interface AMsg {
   deletedAt: string | null
   createdAt: string
   sanction: 'MUTE' | 'BAN' | null
+  replyToId?: string | null
+  replyTo?: { id: string; userName: string; content: string; deletedAt: string | null } | null
 }
 interface Sanc {
   id: string
@@ -242,6 +247,8 @@ function AdminCommunityFeed() {
 export default function AdminChatPage() {
   const [msgs, setMsgs] = useState<AMsg[]>([])
   const [sancs, setSancs] = useState<Sanc[]>([])
+  const [mentions, setMentions] = useState<MentionRef[]>([])
+  const [meId, setMeId] = useState('')
   const [text, setText] = useState('')
   const [pinNew, setPinNew] = useState(false)
   const [showDeleted, setShowDeleted] = useState(false)
@@ -253,6 +260,7 @@ export default function AdminChatPage() {
   const [q, setQ] = useState('')
   const [found, setFound] = useState<Member[]>([])
   const [searching, setSearching] = useState(false)
+  const [replyTarget, setReplyTarget] = useState<AMsg | null>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const [kind, setKind] = useState<'MUTE' | 'BAN'>('MUTE')
   const [minutes, setMinutes] = useState(60)
@@ -268,6 +276,7 @@ export default function AdminChatPage() {
       if (!r.ok) throw new Error(d.error)
       setMsgs(d.messages)
       setSancs(d.sanctions)
+      setMentions(d.mentions || [])
       setAvatars((prev) => new Set<string>([...Array.from(prev), ...(d.avatars || [])]))
     } catch (e: any) {
       setErr(e.message || 'Error al cargar')
@@ -279,6 +288,22 @@ export default function AdminChatPage() {
     const t = setInterval(() => !document.hidden && load(), 3000)
     return () => clearInterval(t)
   }, [load])
+
+  useEffect(() => {
+    fetch('/api/student/profile', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => d?.user?.id && setMeId(d.user.id))
+      .catch(() => {})
+  }, [])
+
+  function startReply(m: AMsg) {
+    setReplyTarget(m)
+    taRef.current?.focus()
+  }
+
+  function cancelReply() {
+    setReplyTarget(null)
+  }
 
   useEffect(() => {
     const el = box.current
@@ -324,13 +349,18 @@ export default function AdminChatPage() {
     if (!text.trim() || busy) return
     setBusy(true)
     setErr('')
-    const r = await fetch('/api/admin/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: text.trim(), pinned: pinNew }) })
+    const r = await fetch('/api/admin/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: text.trim(), pinned: pinNew, replyToId: replyTarget?.id }),
+    })
     const d = await r.json().catch(() => ({}))
     setBusy(false)
     if (!r.ok) return setErr(d.error || 'No se pudo enviar')
     setText('')
     setEmoji(false)
     setPinNew(false)
+    setReplyTarget(null)
     stick.current = true
     load()
   }
@@ -376,11 +406,14 @@ export default function AdminChatPage() {
       <AdminCommunityFeed />
 
       <div className="space-y-5">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white">
-            <MessageSquare className="text-[#0284c7]" size={24} /> Moderación del chat
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-white/50">Supervisa la comunidad en tiempo real, fija avisos y sanciona cuando sea necesario.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white">
+              <MessageSquare className="text-[#0284c7]" size={24} /> Moderación del chat
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-white/50">Supervisa la comunidad en tiempo real, fija avisos y sanciona cuando sea necesario.</p>
+          </div>
+          {meId && <NotificationBell meId={meId} />}
         </div>
 
         {err && (
@@ -418,8 +451,17 @@ export default function AdminChatPage() {
                       <span className="text-slate-400 dark:text-white/30">{m.userEmail}</span>
                       <span className="ml-auto text-slate-400 dark:text-white/30">{when(m.createdAt)}</span>
                     </div>
-                    <p className={`mt-1 whitespace-pre-wrap break-words text-sm ${m.deletedAt ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-white/80'}`}>{m.content}</p>
+                    {m.replyTo && (
+                      <div className="mt-1 rounded-lg border-l-2 border-sky-300 bg-sky-50/70 px-2 py-1 text-[11px] text-slate-500 dark:border-sky-400/40 dark:bg-white/5 dark:text-white/50">
+                        <p className="font-semibold">{m.replyTo.deletedAt ? 'Mensaje eliminado' : m.replyTo.userName}</p>
+                        {!m.replyTo.deletedAt && <p className="truncate opacity-80">{m.replyTo.content}</p>}
+                      </div>
+                    )}
+                    <p className={`mt-1 whitespace-pre-wrap break-words text-sm ${m.deletedAt ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-white/80'}`}>
+                      <MentionText text={m.content} mentions={mentions} meId={meId} />
+                    </p>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {!m.deletedAt && <Btn onClick={() => startReply(m)} icon={<ReplyIcon size={12} />} label="Responder" />}
                       {m.deletedAt ? (
                         <Btn onClick={() => act(m.id, 'restore')} icon={<RotateCcw size={12} />} label="Restaurar" />
                       ) : (
@@ -446,13 +488,26 @@ export default function AdminChatPage() {
                   <EmojiPicker onPick={insertEmoji} onClose={() => setEmoji(false)} />
                 </div>
               )}
+              {replyTarget && (
+                <div className="mb-2 flex items-start justify-between gap-2 rounded-lg border-l-2 border-sky-400 bg-sky-50 px-3 py-1.5 text-xs text-slate-600 dark:bg-white/5 dark:text-white/60">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#0284c7]">Respondiendo a {replyTarget.userName}</p>
+                    <p className="truncate opacity-80">{replyTarget.content}</p>
+                  </div>
+                  <button onClick={cancelReply} className="shrink-0 text-slate-400 hover:text-slate-600 dark:text-white/40">
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
               <div className="flex items-end gap-2">
                 <button type="button" onClick={() => setEmoji((v) => !v)} aria-label="Emojis" title="Emojis" className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border transition ${emoji ? 'border-sky-300 bg-sky-50 text-[#0284c7]' : 'border-slate-200 text-slate-400 hover:bg-sky-50 hover:text-[#0284c7] dark:border-white/10 dark:text-white/40'}`}>
                   <Smile size={20} />
                 </button>
-                <textarea ref={taRef} value={text} onChange={(e) => setText(e.target.value)} rows={2} maxLength={500} placeholder="Publicar como equipo (puedes incluir enlaces)…"
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-                  className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus:border-[#0284c7] focus:ring-2 focus:ring-sky-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white sm:text-sm [color-scheme:light] dark:[color-scheme:dark]" />
+                <div className="min-w-0 flex-1">
+                  <MentionTextarea ref={taRef} value={text} onChange={setText} rows={2} maxLength={500} placeholder="Publicar como equipo (puedes incluir enlaces)…"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+                    className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus:border-[#0284c7] focus:ring-2 focus:ring-sky-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white sm:text-sm [color-scheme:light] dark:[color-scheme:dark]" />
+                </div>
                 <button onClick={send} disabled={!text.trim() || busy} className="grid h-11 w-11 place-items-center rounded-xl bg-[#0284c7] text-white shadow transition hover:bg-[#0369a1] disabled:opacity-40" aria-label="Enviar">
                   <Send size={18} />
                 </button>

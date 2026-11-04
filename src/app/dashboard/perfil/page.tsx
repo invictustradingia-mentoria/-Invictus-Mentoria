@@ -10,6 +10,7 @@ import ProfileHeader from '@/components/community/ProfileHeader'
 import PostCard, { type FeedPost } from '@/components/community/PostCard'
 import ProfileInfoPanel from '@/components/community/ProfileInfoPanel'
 import FollowListPanel from '@/components/community/FollowListPanel'
+import MentionTextarea from '@/components/community/MentionTextarea'
 import { MAX_POST_LEN, NO_LINKS_MESSAGE } from '@/lib/community-shared'
 
 // Recorta al centro y reduce a 256x256 para que pese poco
@@ -258,9 +259,9 @@ export default function ProfilePage() {
       {tab === 'posts' && (
         <div className="space-y-4">
           <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <textarea
+            <MentionTextarea
               value={postText}
-              onChange={(e) => setPostText(e.target.value)}
+              onChange={setPostText}
               maxLength={MAX_POST_LEN}
               placeholder={`¿Qué estás operando hoy, ${(name || 'Alumno').split(' ')[0]}?`}
               rows={3}

@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { getStaff } from '@/lib/chat-utils'
-import { cleanPostText, containsUrl, MAX_COMMENT_LEN, NO_LINKS_MESSAGE } from '@/lib/community-shared'
+import { cleanPostText, containsUrl, shapeComment, MAX_COMMENT_LEN, NO_LINKS_MESSAGE } from '@/lib/community-shared'
+import { resolveMentionsForTexts, notifyMentions } from '@/lib/mentions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const NO_STORE = { 'Cache-Control': 'no-store' }
+const COMMENT_INCLUDE = { reactions: { select: { type: true, userId: true } } } as const
 
-// Listar comentarios de un post (vista del equipo).
+// Listar comentarios de un post (vista del equipo), con sus reacciones.
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
     const admin = await getStaff()
@@ -18,8 +20,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       where: { postId: params.id },
       orderBy: { createdAt: 'asc' },
       take: 200,
+      include: COMMENT_INCLUDE,
     })
-    return NextResponse.json({ comments, meId: admin.id }, { headers: NO_STORE })
+    const mentions = await resolveMentionsForTexts(comments.map((c: any) => c.content))
+    return NextResponse.json(
+      { comments: comments.map((c: any) => ({ ...shapeComment(c, admin.id), mentions })), meId: admin.id },
+      { headers: NO_STORE }
+    )
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500, headers: NO_STORE })
   }
@@ -41,8 +48,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     const comment = await prismaDash.postComment.create({
       data: { postId: params.id, authorId: admin.id, authorName: admin.name, authorRole: admin.role, content },
+      include: COMMENT_INCLUDE,
     })
-    return NextResponse.json({ comment })
+    const mentions = await notifyMentions({ text: content, actorId: admin.id, actorName: admin.name, actorRole: admin.role, postId: params.id, commentId: comment.id })
+    return NextResponse.json({ comment: { ...shapeComment(comment, admin.id), mentions } })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
   }

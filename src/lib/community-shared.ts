@@ -36,6 +36,18 @@ export function containsUrl(text: string): boolean {
   return URL_RE.test(text)
 }
 
+// Menciones @usuario en posts, comentarios y chat. El nombre de usuario se guarda siempre en
+// minúsculas (ver /dashboard/perfil), así que comparamos en minúsculas para que coincida siempre.
+export const MENTION_RE = /@([a-zA-Z0-9_]{2,20})/g
+
+export function extractMentionHandles(text: string): string[] {
+  const set = new Set<string>()
+  const re = new RegExp(MENTION_RE)
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) set.add(m[1].toLowerCase())
+  return Array.from(set)
+}
+
 export function cleanPostText(v: unknown, max: number): string {
   if (typeof v !== 'string') return ''
   return v.trim().slice(0, max)
@@ -102,6 +114,28 @@ export function shapePost(p: any, meId: string) {
           createdAt: p.sharedFrom.createdAt,
         }
       : null,
+  }
+}
+
+// Da forma a un comentario (con sus reacciones cargadas) para la respuesta JSON.
+export function shapeComment(c: any, meId: string) {
+  const counts: Record<string, number> = {}
+  let myReaction: string | null = null
+  for (const r of c.reactions || []) {
+    counts[r.type] = (counts[r.type] || 0) + 1
+    if (r.userId === meId) myReaction = r.type
+  }
+  return {
+    id: c.id,
+    postId: c.postId,
+    authorId: c.authorId,
+    authorName: c.authorName,
+    authorRole: c.authorRole,
+    content: c.content,
+    createdAt: c.createdAt,
+    reactionCounts: counts,
+    reactionTotal: (c.reactions || []).length,
+    myReaction,
   }
 }
 

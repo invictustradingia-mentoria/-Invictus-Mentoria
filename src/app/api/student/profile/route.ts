@@ -20,7 +20,7 @@ export async function GET() {
 
     const user = await prismaDash.user.findUnique({
       where: { id },
-      select: { name: true, username: true, email: true, phone: true, role: true, avatarUrl: true, coverUrl: true, createdAt: true },
+      select: { id: true, name: true, username: true, email: true, phone: true, role: true, avatarUrl: true, coverUrl: true, createdAt: true },
     })
     if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     return NextResponse.json({ user })

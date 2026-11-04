@@ -38,8 +38,10 @@ model User {
   posts           Post[]
   postReactions   PostReaction[]
   postComments    PostComment[]
+  commentReactions CommentReaction[]
   following       Follow[]         @relation("FollowFollower")
   followers       Follow[]         @relation("FollowFollowing")
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -217,10 +219,15 @@ model ChatMessage {
   pinned    Boolean   @default(false)
   deletedAt DateTime?
   deletedBy String?
+  replyToId String? // si este mensaje responde a otro, apunta al mensaje citado
   createdAt DateTime  @default(now())
+
+  replyTo   ChatMessage?  @relation("ChatReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[] @relation("ChatReplies")
 
   @@index([createdAt])
   @@index([userId])
+  @@index([replyToId])
   @@map("chat_messages")
 }
 
@@ -429,11 +436,50 @@ model PostComment {
   content    String
   createdAt  DateTime @default(now())
 
-  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post       Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author     User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions  CommentReaction[]
 
   @@index([postId])
   @@map("post_comments")
+}
+
+// Una reacción por usuario y comentario (mismas 4 que los posts: LIKE, LOVE, FIRE, CLAP).
+model CommentReaction {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  type      String
+  createdAt DateTime @default(now())
+
+  comment   PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@map("comment_reactions")
+}
+
+// Notificación para un usuario (por ahora: que lo mencionaron con @usuario en un post, comentario o el chat).
+model Notification {
+  id             String    @id @default(cuid())
+  userId         String // a quién le llega la notificación
+  type           String    @default("MENTION") // MENTION (se deja abierto para sumar tipos más adelante)
+  actorId        String // quién generó la notificación
+  actorName      String?
+  actorRole      String?
+  postId         String?
+  commentId      String?
+  chatMessageId  String?
+  snippet        String? // fragmento del texto donde se lo mencionó
+  read           Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
 
 // Relación de "seguir" entre dos usuarios (estilo Facebook/Instagram, no mensajería privada).

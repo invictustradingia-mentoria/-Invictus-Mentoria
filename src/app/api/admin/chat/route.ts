@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { avatarIds } from '@/lib/chat-avatars'
 import { getStaff, cleanText, MAX_LEN } from '@/lib/chat-utils'
+import { resolveMentionsForTexts, notifyMentions } from '@/lib/mentions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const NO_STORE = { 'Cache-Control': 'no-store' }
 const MAX_PINNED = 3
+const REPLY_SELECT = { id: true, userName: true, content: true, deletedAt: true }
 
 // Feed completo para moderar (incluye mensajes eliminados) + sanciones vigentes.
 export async function GET() {
@@ -15,7 +17,11 @@ export async function GET() {
     const admin = await getStaff()
     if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401, headers: NO_STORE })
 
-    const messages = await prismaDash.chatMessage.findMany({ orderBy: { createdAt: 'desc' }, take: 150 })
+    const messages = await prismaDash.chatMessage.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 150,
+      include: { replyTo: { select: REPLY_SELECT } },
+    })
     const now = new Date()
     const sanctions = await prismaDash.chatSanction.findMany({
       where: { OR: [{ until: null }, { until: { gt: now } }] },
@@ -30,10 +36,12 @@ export async function GET() {
     const sanctionByUser = new Map<string, any>(sanctions.map((s: any) => [s.userId, s]))
 
     const avatars = await avatarIds(ids)
+    const mentions = await resolveMentionsForTexts(messages.map((m: any) => m.content))
 
     return NextResponse.json(
       {
         avatars,
+        mentions,
         messages: messages.reverse().map((m: any) => ({
           ...m,
           userEmail: byId.get(m.userId)?.email || null,
@@ -57,7 +65,7 @@ export async function GET() {
   }
 }
 
-// Publicar un mensaje del equipo (opcionalmente fijado).
+// Publicar un mensaje del equipo (opcionalmente fijado, opcionalmente respondiendo a otro).
 export async function POST(req: Request) {
   try {
     const admin = await getStaff()
@@ -73,10 +81,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Ya hay ${MAX_PINNED} mensajes fijos. Quita uno para fijar otro.` }, { status: 400 })
     }
 
+    let replyToId: string | null = null
+    if (typeof body?.replyToId === 'string' && body.replyToId) {
+      const target = await prismaDash.chatMessage.findUnique({ where: { id: body.replyToId }, select: { id: true } })
+      if (target) replyToId = target.id
+    }
+
     const message = await prismaDash.chatMessage.create({
-      data: { userId: admin.id, userName: admin.name, userRole: admin.role, content, pinned },
+      data: { userId: admin.id, userName: admin.name, userRole: admin.role, content, pinned, replyToId },
+      include: { replyTo: { select: REPLY_SELECT } },
     })
-    return NextResponse.json({ message })
+
+    const mentionedUsers = await notifyMentions({
+      text: content,
+      actorId: admin.id,
+      actorName: admin.name,
+      actorRole: admin.role,
+      chatMessageId: message.id,
+    })
+
+    return NextResponse.json({ message, mentions: mentionedUsers })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
   }

@@ -3,12 +3,24 @@ import { prismaDash } from '@/lib/prisma-dashboard'
 import { avatarIds } from '@/lib/chat-avatars'
 import { isStaff as isStaffRole } from '@/lib/access'
 import { getActor, activeSanction, cleanText, MAX_LEN, LINK_RE } from '@/lib/chat-utils'
+import { resolveMentionsForTexts, notifyMentions } from '@/lib/mentions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const NO_STORE = { 'Cache-Control': 'no-store' }
-const SELECT = { id: true, userId: true, userName: true, userRole: true, content: true, pinned: true, createdAt: true }
+const REPLY_SELECT = { id: true, userName: true, content: true, deletedAt: true }
+const SELECT = {
+  id: true,
+  userId: true,
+  userName: true,
+  userRole: true,
+  content: true,
+  pinned: true,
+  createdAt: true,
+  replyToId: true,
+  replyTo: { select: REPLY_SELECT },
+}
 
 // Últimos mensajes visibles + estado del usuario (se consulta cada pocos segundos).
 export async function GET() {
@@ -23,6 +35,7 @@ export async function GET() {
     ])
 
     const avatars = await avatarIds([...rows.map((r: any) => r.userId), ...pinned.map((r: any) => r.userId)])
+    const mentions = await resolveMentionsForTexts([...rows.map((r: any) => r.content), ...pinned.map((r: any) => r.content)])
 
     return NextResponse.json(
       {
@@ -35,6 +48,7 @@ export async function GET() {
         messages: rows.reverse(),
         pinned,
         avatars,
+        mentions,
       },
       { headers: NO_STORE }
     )
@@ -43,7 +57,7 @@ export async function GET() {
   }
 }
 
-// Enviar un mensaje.
+// Enviar un mensaje. Opcionalmente puede responder a otro (replyToId).
 export async function POST(req: Request) {
   try {
     const me = await getActor()
@@ -85,11 +99,26 @@ export async function POST(req: Request) {
       }
     }
 
+    let replyToId: string | null = null
+    if (typeof body?.replyToId === 'string' && body.replyToId) {
+      const target = await prismaDash.chatMessage.findUnique({ where: { id: body.replyToId }, select: { id: true } })
+      if (target) replyToId = target.id
+    }
+
     const message = await prismaDash.chatMessage.create({
-      data: { userId: me.id, userName: me.name, userRole: me.role, content },
+      data: { userId: me.id, userName: me.name, userRole: me.role, content, replyToId },
       select: SELECT,
     })
-    return NextResponse.json({ message })
+
+    const mentionedUsers = await notifyMentions({
+      text: content,
+      actorId: me.id,
+      actorName: me.name,
+      actorRole: me.role,
+      chatMessageId: message.id,
+    })
+
+    return NextResponse.json({ message, mentions: mentionedUsers })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
   }

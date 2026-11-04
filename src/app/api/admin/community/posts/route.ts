@@ -3,6 +3,7 @@ import { prismaDash } from '@/lib/prisma-dashboard'
 import { avatarIds } from '@/lib/chat-avatars'
 import { getStaff } from '@/lib/chat-utils'
 import { cleanPostText, shapePost, containsUrl, MAX_POST_LEN, MAX_IMAGE_CHARS, IMAGE_DATA_URL_RE, NO_LINKS_MESSAGE } from '@/lib/community-shared'
+import { resolveMentionsForTexts, notifyMentions } from '@/lib/mentions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -28,8 +29,11 @@ export async function GET() {
       new Set(posts.flatMap((p: any) => [p.authorId, ...(p.sharedFrom ? [p.sharedFrom.authorId] : [])]))
     )
     const avatars = await avatarIds(ids)
+    const mentions = await resolveMentionsForTexts(
+      posts.flatMap((p: any) => [p.content, ...(p.sharedFrom ? [p.sharedFrom.content] : [])])
+    )
 
-    return NextResponse.json({ posts: posts.map((p: any) => shapePost(p, admin.id)), avatars }, { headers: NO_STORE })
+    return NextResponse.json({ posts: posts.map((p: any) => ({ ...shapePost(p, admin.id), mentions })), avatars }, { headers: NO_STORE })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500, headers: NO_STORE })
   }
@@ -55,7 +59,8 @@ export async function POST(req: Request) {
     }
 
     const post = await prismaDash.post.create({ data: { authorId: admin.id, content, imageUrl }, include: INCLUDE })
-    return NextResponse.json({ post: shapePost(post, admin.id) })
+    const mentions = await notifyMentions({ text: content, actorId: admin.id, actorName: admin.name, actorRole: admin.role, postId: post.id })
+    return NextResponse.json({ post: { ...shapePost(post, admin.id), mentions } })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
   }

@@ -3,6 +3,7 @@ import { prismaDash } from '@/lib/prisma-dashboard'
 import { avatarIds } from '@/lib/chat-avatars'
 import { getActor } from '@/lib/chat-utils'
 import { shapePost } from '@/lib/community-shared'
+import { resolveMentionsForTexts } from '@/lib/mentions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,8 +34,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       new Set([params.id, ...posts.flatMap((p: any) => (p.sharedFrom ? [p.sharedFrom.authorId] : []))])
     )
     const avatars = await avatarIds(ids)
+    const mentions = await resolveMentionsForTexts(
+      posts.flatMap((p: any) => [p.content, ...(p.sharedFrom ? [p.sharedFrom.content] : [])])
+    )
 
-    return NextResponse.json({ posts: posts.map((p: any) => shapePost(p, me.id)), avatars }, { headers: NO_STORE })
+    return NextResponse.json({ posts: posts.map((p: any) => ({ ...shapePost(p, me.id), mentions })), avatars }, { headers: NO_STORE })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500, headers: NO_STORE })
   }

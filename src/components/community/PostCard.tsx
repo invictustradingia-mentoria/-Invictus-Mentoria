@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { MessageCircle, Send, Trash2, Loader2, Share2, Check } from 'lucide-react'
 import ChatAvatar from '@/components/chat/ChatAvatar'
 import RoleBadge from './RoleBadge'
+import MentionText, { type MentionRef } from './MentionText'
+import MentionTextarea from './MentionTextarea'
 import { REACTION_TYPES, REACTION_EMOJI, REACTION_LABEL, profileHref, NO_LINKS_MESSAGE, type ReactionType } from '@/lib/community-shared'
 
 export interface FeedPost {
@@ -20,6 +22,7 @@ export interface FeedPost {
   myReaction: string | null
   commentsCount: number
   sharesCount?: number
+  mentions?: MentionRef[]
   sharedFrom?: {
     id: string
     authorId: string
@@ -38,6 +41,10 @@ interface CommentRow {
   authorRole: string | null
   content: string
   createdAt: string
+  reactionCounts?: Record<string, number>
+  reactionTotal?: number
+  myReaction?: string | null
+  mentions?: MentionRef[]
 }
 
 function when(d: string) {
@@ -48,7 +55,17 @@ function when(d: string) {
   return new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
 }
 
-function SharedPostPreview({ post, avatars, meId }: { post: NonNullable<FeedPost['sharedFrom']>; avatars: Set<string>; meId: string }) {
+function SharedPostPreview({
+  post,
+  avatars,
+  meId,
+  mentions,
+}: {
+  post: NonNullable<FeedPost['sharedFrom']>
+  avatars: Set<string>
+  meId: string
+  mentions?: MentionRef[]
+}) {
   const staff = post.authorRole === 'ADMIN' || post.authorRole === 'EDITOR'
   return (
     <Link
@@ -66,7 +83,9 @@ function SharedPostPreview({ post, avatars, meId }: { post: NonNullable<FeedPost
         </div>
       </div>
       {post.content && (
-        <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#2a2d32] dark:text-white/80">{post.content}</p>
+        <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#2a2d32] dark:text-white/80">
+          <MentionText text={post.content} mentions={mentions} meId={meId} />
+        </p>
       )}
       {post.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -177,6 +196,33 @@ export default function PostCard({
     setBusy(false)
   }
 
+  async function reactComment(commentId: string, type: ReactionType) {
+    const prev = comments
+    setComments((cs) =>
+      cs.map((c) => {
+        if (c.id !== commentId) return c
+        const counts = { ...(c.reactionCounts || {}) }
+        const prevMine = c.myReaction || null
+        if (prevMine) counts[prevMine] = Math.max(0, (counts[prevMine] || 0) - 1)
+        let nextMine: string | null = type
+        if (prevMine === type) nextMine = null
+        else counts[type] = (counts[type] || 0) + 1
+        const total = Object.values(counts).reduce((a, b) => a + b, 0)
+        return { ...c, reactionCounts: counts, reactionTotal: total, myReaction: nextMine }
+      })
+    )
+    try {
+      const r = await fetch(`${apiBase}/posts/${post.id}/comments/${commentId}/react`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      })
+      if (!r.ok) throw new Error()
+    } catch {
+      setComments(prev)
+    }
+  }
+
   async function removeComment(id: string) {
     setComments((c) => c.filter((x) => x.id !== id))
     setCommentsCount((c) => Math.max(0, c - 1))
@@ -246,13 +292,15 @@ export default function PostCard({
       </div>
 
       {post.content && (
-        <p className="mt-3 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-[#2a2d32] dark:text-white/85">{post.content}</p>
+        <p className="mt-3 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-[#2a2d32] dark:text-white/85">
+          <MentionText text={post.content} mentions={post.mentions} meId={meId} />
+        </p>
       )}
       {post.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={post.imageUrl} alt="" className="mt-3 max-h-[480px] w-full rounded-xl object-cover" />
       )}
-      {post.sharedFrom && <SharedPostPreview post={post.sharedFrom} avatars={avatars} meId={meId} />}
+      {post.sharedFrom && <SharedPostPreview post={post.sharedFrom} avatars={avatars} meId={meId} mentions={post.mentions} />}
 
       {total > 0 && (
         <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-white/50">
@@ -300,9 +348,9 @@ export default function PostCard({
 
       {shareOpen && (
         <div className="mt-3 space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/[0.03]">
-          <textarea
+          <MentionTextarea
             value={shareText}
-            onChange={(e) => setShareText(e.target.value)}
+            onChange={setShareText}
             placeholder="Agrega algo (opcional)…"
             maxLength={2000}
             rows={2}
@@ -343,21 +391,50 @@ export default function PostCard({
                     </button>
                   )}
                 </div>
-                <p className="whitespace-pre-wrap break-words text-[13px] text-slate-600 dark:text-white/70">{c.content}</p>
+                <p className="whitespace-pre-wrap break-words text-[13px] text-slate-600 dark:text-white/70">
+                  <MentionText text={c.content} mentions={c.mentions} meId={meId} />
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-0.5">
+                  {REACTION_TYPES.map((t) => {
+                    const n = (c.reactionCounts || {})[t] || 0
+                    const active = c.myReaction === t
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => reactComment(c.id, t)}
+                        title={REACTION_LABEL[t]}
+                        className={`flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] font-semibold transition ${
+                          active ? 'bg-sky-100 text-[#0284c7] dark:bg-sky-500/20 dark:text-sky-300' : 'text-slate-400 hover:bg-slate-100 dark:text-white/40 dark:hover:bg-white/10'
+                        }`}
+                      >
+                        <span>{REACTION_EMOJI[t]}</span>
+                        {n > 0 && <span>{n}</span>}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           ))}
           {commentError && <p className="text-[12px] font-medium text-red-500">{commentError}</p>}
           <p className="text-[11px] text-slate-400 dark:text-white/40">{NO_LINKS_MESSAGE}</p>
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendComment()}
-              placeholder="Escribe un comentario…"
-              maxLength={500}
-              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white [color-scheme:light] dark:[color-scheme:dark]"
-            />
+          <div className="flex items-end gap-2 pt-1">
+            <div className="flex-1">
+              <MentionTextarea
+                value={commentText}
+                onChange={setCommentText}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    sendComment()
+                  }
+                }}
+                placeholder="Escribe un comentario…"
+                maxLength={500}
+                rows={1}
+                className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white [color-scheme:light] dark:[color-scheme:dark]"
+              />
+            </div>
             <button onClick={sendComment} disabled={!commentText.trim() || busy} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#0284c7] text-white disabled:opacity-40">
               {busy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
             </button>

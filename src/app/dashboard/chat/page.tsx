@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Send, Pin, Trash2, Ban, VolumeX, Users, X, Smile, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { Send, Pin, Trash2, Ban, VolumeX, Users, X, Smile, Image as ImageIcon, Loader2, Reply as ReplyIcon } from 'lucide-react'
 import ChatAvatar from '@/components/chat/ChatAvatar'
 import EmojiPicker from '@/components/chat/EmojiPicker'
 import ProfileHeader from '@/components/community/ProfileHeader'
 import PostCard, { type FeedPost } from '@/components/community/PostCard'
+import MentionText, { type MentionRef } from '@/components/community/MentionText'
+import MentionTextarea from '@/components/community/MentionTextarea'
+import NotificationBell from '@/components/community/NotificationBell'
 import { MAX_POST_LEN, NO_LINKS_MESSAGE, profileHref } from '@/lib/community-shared'
 
 interface Msg {
@@ -18,6 +21,8 @@ interface Msg {
   pinned: boolean
   createdAt: string
   pending?: boolean
+  replyToId?: string | null
+  replyTo?: { id: string; userName: string; content: string; deletedAt: string | null } | null
 }
 interface Me {
   id: string
@@ -223,12 +228,14 @@ function GlobalChat({ me }: { me: Me | null }) {
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [pinned, setPinned] = useState<Msg[]>([])
   const [avatars, setAvatars] = useState<Set<string>>(new Set())
+  const [mentions, setMentions] = useState<MentionRef[]>([])
   const [text, setText] = useState('')
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [fatal, setFatal] = useState('')
   const [emoji, setEmoji] = useState(false)
+  const [replyTarget, setReplyTarget] = useState<Msg | null>(null)
   const box = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -244,6 +251,7 @@ function GlobalChat({ me }: { me: Me | null }) {
       if (!r.ok) throw new Error(d.error)
       setPinned(d.pinned || [])
       setAvatars(new Set<string>(d.avatars || []))
+      setMentions(d.mentions || [])
       setMsgs((prev) => {
         const pend = prev.filter((m) => m.pending)
         return [...d.messages, ...pend.filter((p) => !d.messages.some((m: Msg) => m.userId === p.userId && m.content === p.content))]
@@ -255,6 +263,15 @@ function GlobalChat({ me }: { me: Me | null }) {
       setLoading(false)
     }
   }, [])
+
+  function startReply(m: Msg) {
+    setReplyTarget(m)
+    taRef.current?.focus()
+  }
+
+  function cancelReply() {
+    setReplyTarget(null)
+  }
 
   useEffect(() => {
     load()
@@ -311,24 +328,49 @@ function GlobalChat({ me }: { me: Me | null }) {
     setErr('')
     setSending(true)
     setEmoji(false)
-    const tmp: Msg = { id: 'tmp-' + Date.now(), userId: me.id, userName: me.name, userRole: me.role, content, pinned: false, createdAt: new Date().toISOString(), pending: true }
+    const replyToId = replyTarget?.id
+    const replyToSnapshot = replyTarget
+    const tmp: Msg = {
+      id: 'tmp-' + Date.now(),
+      userId: me.id,
+      userName: me.name,
+      userRole: me.role,
+      content,
+      pinned: false,
+      createdAt: new Date().toISOString(),
+      pending: true,
+      replyToId,
+      replyTo: replyToSnapshot ? { id: replyToSnapshot.id, userName: replyToSnapshot.userName, content: replyToSnapshot.content, deletedAt: null } : null,
+    }
     stick.current = true
     setMsgs((m) => [...m, tmp])
     setText('')
+    setReplyTarget(null)
     requestAnimationFrame(autosize)
     try {
-      const r = await fetch('/api/student/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) })
+      const r = await fetch('/api/student/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, replyToId }),
+      })
       const d = await r.json()
       if (!r.ok) {
         setMsgs((m) => m.filter((x) => x.id !== tmp.id))
         setText(content)
+        setReplyTarget(replyToSnapshot)
         setErr(d.error || 'No se pudo enviar.')
       } else {
+        setMentions((prev) => {
+          const byId = new Map(prev.map((mm) => [mm.id, mm]))
+          for (const mm of d.mentions || []) byId.set(mm.id, mm)
+          return [...byId.values()]
+        })
         setMsgs((m) => m.map((x) => (x.id === tmp.id ? { ...d.message, createdAt: d.message.createdAt } : x)))
       }
     } catch {
       setMsgs((m) => m.filter((x) => x.id !== tmp.id))
       setText(content)
+      setReplyTarget(replyToSnapshot)
       setErr('Sin conexión. Inténtalo de nuevo.')
     } finally {
       setSending(false)
@@ -357,6 +399,7 @@ function GlobalChat({ me }: { me: Me | null }) {
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" /> Mensajes públicos de toda la comunidad
           </p>
         </div>
+        {me && <NotificationBell meId={me.id} />}
       </header>
 
       {pinned.length > 0 && (
@@ -413,6 +456,15 @@ function GlobalChat({ me }: { me: Me | null }) {
                     </span>
                   )}
                   <div className="flex items-center gap-1.5">
+                    {!m.pending && (
+                      <button
+                        onClick={() => startReply(m)}
+                        title="Responder"
+                        className="rounded-md p-1 text-slate-300 opacity-0 transition hover:bg-sky-50 hover:text-sky-500 group-hover:opacity-100 focus:opacity-100 max-sm:opacity-60"
+                      >
+                        <ReplyIcon size={13} />
+                      </button>
+                    )}
                     {mine && !m.pending && (
                       <button onClick={() => remove(m.id)} title="Eliminar" className="rounded-md p-1 text-slate-300 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 focus:opacity-100 max-sm:opacity-60">
                         <Trash2 size={13} />
@@ -427,7 +479,17 @@ function GlobalChat({ me }: { me: Me | null }) {
                           : 'rounded-bl-md border border-slate-100 bg-white text-slate-800 dark:border-white/10 dark:bg-white/[0.06] dark:text-white/85'
                       } ${m.pending ? 'opacity-60' : ''}`}
                     >
-                      {m.content}
+                      {m.replyTo && (
+                        <div
+                          className={`mb-1.5 rounded-lg border-l-2 px-2 py-1 text-[12px] ${
+                            mine ? 'border-white/50 bg-white/10 text-sky-50' : 'border-sky-300 bg-sky-50/70 text-slate-500 dark:border-sky-400/40 dark:bg-white/5 dark:text-white/50'
+                          }`}
+                        >
+                          <p className="font-semibold">{m.replyTo.deletedAt ? 'Mensaje eliminado' : m.replyTo.userName}</p>
+                          {!m.replyTo.deletedAt && <p className="truncate opacity-80">{m.replyTo.content}</p>}
+                        </div>
+                      )}
+                      <MentionText text={m.content} mentions={mentions} meId={me?.id || ''} />
                     </div>
                   </div>
                   <span className="mt-0.5 px-1 text-[10px] text-slate-400 dark:text-white/30">{m.pending ? 'Enviando…' : hm(m.createdAt)}</span>
@@ -459,6 +521,17 @@ function GlobalChat({ me }: { me: Me | null }) {
               <EmojiPicker onPick={insertEmoji} onClose={() => setEmoji(false)} />
             </div>
           )}
+          {replyTarget && (
+            <div className="mb-2 flex items-start justify-between gap-2 rounded-lg border-l-2 border-sky-400 bg-sky-50 px-3 py-1.5 text-xs text-slate-600 dark:bg-white/5 dark:text-white/60">
+              <div className="min-w-0">
+                <p className="font-semibold text-sky-600 dark:text-sky-300">Respondiendo a {replyTarget.userName}</p>
+                <p className="truncate opacity-80">{replyTarget.content}</p>
+              </div>
+              <button onClick={cancelReply} className="shrink-0 text-slate-400 hover:text-slate-600 dark:text-white/40">
+                <X size={14} />
+              </button>
+            </div>
+          )}
           <div className="flex items-end gap-2">
             <button
               type="button"
@@ -469,24 +542,26 @@ function GlobalChat({ me }: { me: Me | null }) {
             >
               <Smile size={20} />
             </button>
-            <textarea
-              ref={taRef}
-              value={text}
-              rows={1}
-              maxLength={MAX}
-              placeholder={isAdmin ? 'Escribe como equipo…' : 'Escribe un mensaje…'}
-              onChange={(e) => {
-                setText(e.target.value)
-                autosize()
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  send()
-                }
-              }}
-              className="max-h-[120px] min-h-[44px] flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white sm:text-sm [color-scheme:light] dark:[color-scheme:dark]"
-            />
+            <div className="min-w-0 flex-1">
+              <MentionTextarea
+                ref={taRef}
+                value={text}
+                rows={1}
+                maxLength={MAX}
+                placeholder={isAdmin ? 'Escribe como equipo…' : 'Escribe un mensaje…'}
+                onChange={(v) => {
+                  setText(v)
+                  requestAnimationFrame(autosize)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    send()
+                  }
+                }}
+                className="max-h-[120px] min-h-[44px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white sm:text-sm [color-scheme:light] dark:[color-scheme:dark]"
+              />
+            </div>
             <button onClick={send} disabled={!text.trim() || sending} aria-label="Enviar" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-600 text-white shadow transition hover:bg-sky-700 disabled:opacity-40">
               <Send size={18} />
             </button>

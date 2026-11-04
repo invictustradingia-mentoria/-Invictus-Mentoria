@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { getActor } from '@/lib/chat-utils'
 import { cleanPostText, shapePost, containsUrl, MAX_POST_LEN, NO_LINKS_MESSAGE } from '@/lib/community-shared'
+import { notifyMentions } from '@/lib/mentions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -34,7 +35,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       data: { authorId: me.id, content, sharedFromId: targetId },
       include: INCLUDE,
     })
-    return NextResponse.json({ post: shapePost(post, me.id) })
+    const mentions = content ? await notifyMentions({ text: content, actorId: me.id, actorName: me.name, actorRole: me.role, postId: post.id }) : []
+    return NextResponse.json({ post: { ...shapePost(post, me.id), mentions } })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
   }
