@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { MessageCircle, Send, Trash2, Loader2 } from 'lucide-react'
 import ChatAvatar from '@/components/chat/ChatAvatar'
 import RoleBadge from './RoleBadge'
-import { REACTION_TYPES, REACTION_EMOJI, REACTION_LABEL, type ReactionType } from '@/lib/community-shared'
+import { REACTION_TYPES, REACTION_EMOJI, REACTION_LABEL, profileHref, type ReactionType } from '@/lib/community-shared'
 
 export interface FeedPost {
   id: string
@@ -65,6 +66,7 @@ export default function PostCard({
   const staff = post.authorRole === 'ADMIN' || post.authorRole === 'EDITOR'
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
   const topTypes = REACTION_TYPES.filter((t) => counts[t] > 0).slice(0, 3)
+  const authorHref = profileHref(post.authorId, meId)
 
   async function react(type: ReactionType) {
     const prevMine = mine
@@ -144,16 +146,16 @@ export default function PostCard({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04] sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <Link href={authorHref} className="flex items-center gap-3">
           <ChatAvatar userId={post.authorId} name={post.authorName} hasPhoto={avatars.has(post.authorId)} staff={staff} size={42} />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-[#1d1d1f] dark:text-white">{post.authorName}</span>
+              <span className="text-sm font-bold text-[#1d1d1f] hover:underline dark:text-white">{post.authorName}</span>
               <RoleBadge role={post.authorRole} size="sm" />
             </div>
             <span className="text-[11px] font-medium text-slate-400 dark:text-white/40">{when(post.createdAt)}</span>
           </div>
-        </div>
+        </Link>
         {canDeletePost && (
           <button
             onClick={removePost}
@@ -211,10 +213,14 @@ export default function PostCard({
         <div className="mt-3 space-y-2.5 border-t border-slate-100 pt-3 dark:border-white/10">
           {comments.map((c) => (
             <div key={c.id} className="flex items-start gap-2">
-              <ChatAvatar userId={c.authorId} name={c.authorName || '?'} hasPhoto={avatars.has(c.authorId)} staff={c.authorRole === 'ADMIN' || c.authorRole === 'EDITOR'} size={30} />
+              <Link href={profileHref(c.authorId, meId)}>
+                <ChatAvatar userId={c.authorId} name={c.authorName || '?'} hasPhoto={avatars.has(c.authorId)} staff={c.authorRole === 'ADMIN' || c.authorRole === 'EDITOR'} size={30} />
+              </Link>
               <div className="min-w-0 flex-1 rounded-xl bg-slate-50 px-3 py-2 dark:bg-white/[0.06]">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[12.5px] font-bold text-slate-700 dark:text-white/80">{c.authorName}</span>
+                  <Link href={profileHref(c.authorId, meId)} className="text-[12.5px] font-bold text-slate-700 hover:underline dark:text-white/80">
+                    {c.authorName}
+                  </Link>
                   {(canModerate || c.authorId === meId) && (
                     <button onClick={() => removeComment(c.id)} className="text-slate-300 hover:text-red-500 dark:text-white/30">
                       <Trash2 size={12} />

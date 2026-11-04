@@ -38,6 +38,8 @@ model User {
   posts           Post[]
   postReactions   PostReaction[]
   postComments    PostComment[]
+  following       Follow[]         @relation("FollowFollower")
+  followers       Follow[]         @relation("FollowFollowing")
 
   @@map("users")
 }
@@ -428,4 +430,20 @@ model PostComment {
 
   @@index([postId])
   @@map("post_comments")
+}
+
+// Relación de "seguir" entre dos usuarios (estilo Facebook/Instagram, no mensajería privada).
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String // quien sigue
+  followingId String // a quien sigue
+  createdAt   DateTime @default(now())
+
+  follower    User     @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("FollowFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
 }

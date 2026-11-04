@@ -1,4 +1,4 @@
-// Constantes compartidas por el feed de Comunidad (posts, reacciones, comentarios).
+// Constantes compartidas por el feed de Comunidad (posts, reacciones, comentarios, perfiles).
 // Usado tanto por las rutas API (student/admin) como por las páginas de Comunidad.
 
 export const REACTION_TYPES = ['LIKE', 'LOVE', 'FIRE', 'CLAP'] as const
@@ -64,4 +64,10 @@ export function shapePost(p: any, meId: string) {
     myReaction,
     commentsCount: p._count.comments,
   }
+}
+
+// A dónde lleva el nombre/avatar de un usuario en el feed o el chat:
+// a "Mi perfil" si soy yo, o al perfil público de esa persona si no.
+export function profileHref(userId: string, meId: string) {
+  return userId === meId ? '/dashboard/perfil' : `/dashboard/perfil/${userId}`
 }

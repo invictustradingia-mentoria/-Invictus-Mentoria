@@ -1,12 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Send, Pin, Trash2, Ban, VolumeX, Users, X, Smile, Image as ImageIcon, Loader2 } from 'lucide-react'
 import ChatAvatar from '@/components/chat/ChatAvatar'
 import EmojiPicker from '@/components/chat/EmojiPicker'
 import ProfileHeader from '@/components/community/ProfileHeader'
 import PostCard, { type FeedPost } from '@/components/community/PostCard'
-import { MAX_POST_LEN } from '@/lib/community-shared'
+import { MAX_POST_LEN, profileHref } from '@/lib/community-shared'
 
 interface Msg {
   id: string
@@ -162,14 +163,16 @@ function CommunityFeed({ me }: { me: Me }) {
   return (
     <div className="space-y-4">
       {profile && (
-        <ProfileHeader
-          name={profile.name || me.name}
-          role={profile.role || me.role}
-          avatarUrl={profile.avatarUrl}
-          coverUrl={profile.coverUrl}
-          postsCount={posts.filter((p) => p.authorId === me.id).length}
-          onSave={saveProfile}
-        />
+        <Link href="/dashboard/perfil" className="block">
+          <ProfileHeader
+            name={profile.name || me.name}
+            role={profile.role || me.role}
+            avatarUrl={profile.avatarUrl}
+            coverUrl={profile.coverUrl}
+            postsCount={posts.filter((p) => p.authorId === me.id).length}
+            editable={false}
+          />
+        </Link>
       )}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]">
@@ -216,7 +219,7 @@ function CommunityFeed({ me }: { me: Me }) {
   )
 }
 
-// ---------------- Chat global (idéntico al existente, solo reubicado) ----------------
+// ---------------- Chat global (idéntico al existente, solo reubicado + nombres clicables) ----------------
 
 function GlobalChat({ me }: { me: Me | null }) {
   const [msgs, setMsgs] = useState<Msg[]>([])
@@ -388,6 +391,7 @@ function GlobalChat({ me }: { me: Me | null }) {
           const mine = m.userId === me?.id
           const staff = m.userRole === 'ADMIN' || m.userRole === 'EDITOR'
           const grouped = !newDay && prev && prev.userId === m.userId && new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 120000
+          const href = me ? profileHref(m.userId, me.id) : '/dashboard/perfil'
           return (
             <div key={m.id}>
               {newDay && (
@@ -397,12 +401,16 @@ function GlobalChat({ me }: { me: Me | null }) {
               )}
               <div className={`group flex items-end gap-2 ${mine ? 'flex-row-reverse' : ''} ${grouped ? 'mt-0.5' : 'mt-3'}`}>
                 <div className="w-9 shrink-0">
-                  {!grouped && <ChatAvatar userId={m.userId} name={m.userName} hasPhoto={avatars.has(m.userId)} staff={staff} size={36} />}
+                  {!grouped && (
+                    <Link href={href}>
+                      <ChatAvatar userId={m.userId} name={m.userName} hasPhoto={avatars.has(m.userId)} staff={staff} size={36} />
+                    </Link>
+                  )}
                 </div>
                 <div className={`flex max-w-[82%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
                   {!grouped && (
                     <span className="mb-0.5 flex items-center gap-1.5 px-1 text-xs font-semibold text-slate-600 dark:text-white/60">
-                      {m.userName}
+                      <Link href={href} className="hover:underline">{m.userName}</Link>
                       {staff && <span className="rounded bg-sky-600 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white">Equipo</span>}
                     </span>
                   )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Send, Pin, PinOff, Trash2, RotateCcw, VolumeX, Ban, ShieldCheck, ShieldOff, X, MessageSquare, Smile, Search, Image as ImageIcon, Loader2 } from 'lucide-react'
 import ChatAvatar from '@/components/chat/ChatAvatar'
 import EmojiPicker from '@/components/chat/EmojiPicker'
@@ -172,14 +173,19 @@ function AdminCommunityFeed() {
   return (
     <div className="space-y-4">
       {profile && (
-        <ProfileHeader
-          name={profile.name}
-          role={profile.role}
-          avatarUrl={profile.avatarUrl}
-          coverUrl={profile.coverUrl}
-          postsCount={posts.filter((p) => p.authorRole === profile.role && p.authorName === profile.name).length}
-          onSave={saveProfile}
-        />
+        <div>
+          <ProfileHeader
+            name={profile.name}
+            role={profile.role}
+            avatarUrl={profile.avatarUrl}
+            coverUrl={profile.coverUrl}
+            postsCount={posts.filter((p) => p.authorRole === profile.role && p.authorName === profile.name).length}
+            onSave={saveProfile}
+          />
+          <Link href="/dashboard/perfil" className="mt-2 inline-block text-xs font-bold text-[#0284c7] hover:underline">
+            Ver mi perfil completo →
+          </Link>
+        </div>
       )}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]">
@@ -226,7 +232,7 @@ function AdminCommunityFeed() {
   )
 }
 
-// ---------------- Panel de moderación del chat (idéntico al existente) ----------------
+// ---------------- Panel de moderación del chat (idéntico al existente, + nombres clicables) ----------------
 
 export default function AdminChatPage() {
   const [msgs, setMsgs] = useState<AMsg[]>([])
@@ -397,8 +403,10 @@ export default function AdminChatPage() {
                 return (
                   <div key={m.id} className={`group rounded-xl border px-3 py-2 transition ${m.deletedAt ? 'border-dashed border-slate-200 bg-slate-50 opacity-70 dark:border-white/10 dark:bg-white/5' : m.pinned ? 'border-amber-200 bg-amber-50 dark:border-amber-400/30 dark:bg-amber-400/10' : 'border-transparent hover:border-sky-100 hover:bg-[#f8fcff] dark:hover:border-white/10 dark:hover:bg-white/5'}`}>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                      <ChatAvatar userId={m.userId} name={m.userName} hasPhoto={avatars.has(m.userId)} staff={staff} size={28} />
-                      <b className="text-sm text-slate-800 dark:text-white/85">{m.userName}</b>
+                      <Link href={`/dashboard/perfil/${m.userId}`} className="flex items-center gap-2">
+                        <ChatAvatar userId={m.userId} name={m.userName} hasPhoto={avatars.has(m.userId)} staff={staff} size={28} />
+                        <b className="text-sm text-slate-800 hover:underline dark:text-white/85">{m.userName}</b>
+                      </Link>
                       {staff && <span className="rounded bg-[#0284c7] px-1.5 py-px text-[9px] font-bold uppercase text-white">Equipo</span>}
                       {m.sanction && <span className={`rounded px-1.5 py-px text-[9px] font-bold uppercase ${m.sanction === 'BAN' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'}`}>{m.sanction === 'BAN' ? 'Baneado' : 'Silenciado'}</span>}
                       {m.pinned && !m.deletedAt && <Pin size={12} className="text-amber-600" />}
@@ -460,11 +468,13 @@ export default function AdminChatPage() {
                 {found.map((u) => (
                   <li key={u.id} className="rounded-xl border border-slate-100 p-2.5 dark:border-white/10">
                     <div className="flex items-center gap-2.5">
-                      <ChatAvatar userId={u.id} name={u.name || u.email || '?'} hasPhoto={avatars.has(u.id)} size={34} />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-800 dark:text-white/85">{u.name || u.email}</p>
-                        <p className="truncate text-xs text-slate-400 dark:text-white/40">{u.email}</p>
-                      </div>
+                      <Link href={`/dashboard/perfil/${u.id}`} className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <ChatAvatar userId={u.id} name={u.name || u.email || '?'} hasPhoto={avatars.has(u.id)} size={34} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-slate-800 hover:underline dark:text-white/85">{u.name || u.email}</p>
+                          <p className="truncate text-xs text-slate-400 dark:text-white/40">{u.email}</p>
+                        </div>
+                      </Link>
                       {u.sanction && <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase text-white ${u.sanction === 'BAN' ? 'bg-red-600' : 'bg-amber-500'}`}>{u.sanction === 'BAN' ? 'Ban' : 'Mute'}</span>}
                     </div>
                     <div className="mt-2 flex gap-1.5">

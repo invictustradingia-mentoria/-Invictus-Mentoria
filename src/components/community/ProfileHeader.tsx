@@ -44,11 +44,14 @@ interface Props {
   avatarUrl: string | null
   coverUrl: string | null
   followers?: number
+  following?: number
   postsCount?: number
-  onSave: (patch: { avatarUrl?: string | null; coverUrl?: string | null }) => Promise<void>
+  editable?: boolean
+  onSave?: (patch: { avatarUrl?: string | null; coverUrl?: string | null }) => Promise<void>
+  rightSlot?: React.ReactNode
 }
 
-export default function ProfileHeader({ name, role, avatarUrl, coverUrl, followers, postsCount, onSave }: Props) {
+export default function ProfileHeader({ name, role, avatarUrl, coverUrl, followers, following, postsCount, editable = true, onSave, rightSlot }: Props) {
   const [busyAvatar, setBusyAvatar] = useState(false)
   const [busyCover, setBusyCover] = useState(false)
   const [err, setErr] = useState('')
@@ -56,7 +59,7 @@ export default function ProfileHeader({ name, role, avatarUrl, coverUrl, followe
   const coverInput = useRef<HTMLInputElement>(null)
 
   async function pick(kind: 'avatar' | 'cover', file: File | undefined) {
-    if (!file) return
+    if (!file || !onSave) return
     setErr('')
     const setBusy = kind === 'avatar' ? setBusyAvatar : setBusyCover
     setBusy(true)
@@ -79,15 +82,19 @@ export default function ProfileHeader({ name, role, avatarUrl, coverUrl, followe
         {!coverUrl && (
           <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 80% 20%, rgba(56,189,248,.35), transparent 55%)' }} />
         )}
-        <input ref={coverInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => pick('cover', e.target.files?.[0])} />
-        <button
-          type="button"
-          onClick={() => coverInput.current?.click()}
-          disabled={busyCover}
-          className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg border border-white/30 bg-black/35 px-3 py-1.5 text-[11.5px] font-bold text-white backdrop-blur transition hover:bg-black/50 disabled:opacity-60"
-        >
-          {busyCover ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} Editar portada
-        </button>
+        {editable && (
+          <>
+            <input ref={coverInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => pick('cover', e.target.files?.[0])} />
+            <button
+              type="button"
+              onClick={() => coverInput.current?.click()}
+              disabled={busyCover}
+              className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg border border-white/30 bg-black/35 px-3 py-1.5 text-[11.5px] font-bold text-white backdrop-blur transition hover:bg-black/50 disabled:opacity-60"
+            >
+              {busyCover ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} Editar portada
+            </button>
+          </>
+        )}
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-4 px-4 pb-4 pt-0 sm:px-6">
@@ -101,31 +108,38 @@ export default function ProfileHeader({ name, role, avatarUrl, coverUrl, followe
                 {initialsOf(name)}
               </span>
             )}
-            <input ref={avatarInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => pick('avatar', e.target.files?.[0])} />
-            <button
-              type="button"
-              onClick={() => avatarInput.current?.click()}
-              disabled={busyAvatar}
-              aria-label="Cambiar foto de perfil"
-              className="absolute bottom-0 right-0 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-[#0284c7] text-white disabled:opacity-60 dark:border-[#0b0f17]"
-            >
-              {busyAvatar ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
-            </button>
+            {editable && (
+              <>
+                <input ref={avatarInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => pick('avatar', e.target.files?.[0])} />
+                <button
+                  type="button"
+                  onClick={() => avatarInput.current?.click()}
+                  disabled={busyAvatar}
+                  aria-label="Cambiar foto de perfil"
+                  className="absolute bottom-0 right-0 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-[#0284c7] text-white disabled:opacity-60 dark:border-[#0b0f17]"
+                >
+                  {busyAvatar ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
+                </button>
+              </>
+            )}
           </div>
           <div className="pb-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg font-black text-[#1d1d1f] dark:text-white sm:text-xl">{name}</h1>
               <RoleBadge role={role} />
             </div>
-            {(followers !== undefined || postsCount !== undefined) && (
+            {(followers !== undefined || following !== undefined || postsCount !== undefined) && (
               <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-white/50">
                 {followers !== undefined && <>{followers} seguidores</>}
-                {followers !== undefined && postsCount !== undefined && ' · '}
+                {followers !== undefined && following !== undefined && ' · '}
+                {following !== undefined && <>{following} siguiendo</>}
+                {(followers !== undefined || following !== undefined) && postsCount !== undefined && ' · '}
                 {postsCount !== undefined && <>{postsCount} publicaciones</>}
               </p>
             )}
           </div>
         </div>
+        {rightSlot && <div className="pb-1">{rightSlot}</div>}
       </div>
       {err && <p className="px-4 pb-3 text-xs font-semibold text-red-500 sm:px-6">{err}</p>}
     </div>
