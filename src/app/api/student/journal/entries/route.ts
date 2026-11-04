@@ -7,6 +7,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const DAY_TAGS = ['GOOD', 'BAD', 'NEUTRAL']
+const SESSIONS = ['ASIA', 'LONDRES', 'NUEVA_YORK', 'LONDRES_NY']
 
 async function getUser() {
   const session: any = await getServerSession(authOptions)
@@ -65,12 +66,14 @@ export async function POST(req: Request) {
     const date = Number.isNaN(dateRaw.getTime()) ? new Date() : dateRaw
 
     const dayTag = DAY_TAGS.includes(body.dayTag) ? body.dayTag : 'NEUTRAL'
+    const session = SESSIONS.includes(body.session) ? body.session : null
 
     const entry = await prismaDash.journalEntry.create({
       data: {
         accountId,
         date,
         pair: clean(body.pair, 40) || null,
+        session,
         resultMoney: num(body.resultMoney),
         resultPercent: num(body.resultPercent),
         resultRR: num(body.resultRR),
@@ -107,6 +110,10 @@ export async function PATCH(req: Request) {
       if (!Number.isNaN(d.getTime())) data.date = d
     }
     if (body.pair !== undefined) data.pair = clean(body.pair, 40) || null
+    if (body.session !== undefined) {
+      if (body.session !== null && !SESSIONS.includes(body.session)) return NextResponse.json({ error: 'Sesión no válida' }, { status: 400 })
+      data.session = body.session
+    }
     if (body.resultMoney !== undefined) data.resultMoney = num(body.resultMoney)
     if (body.resultPercent !== undefined) data.resultPercent = num(body.resultPercent)
     if (body.resultRR !== undefined) data.resultRR = num(body.resultRR)

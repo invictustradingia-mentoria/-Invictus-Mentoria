@@ -338,6 +338,7 @@ model JournalEntry {
   accountId     String
   date          DateTime
   pair          String?
+  session       String? // ASIA, LONDRES, NUEVA_YORK, LONDRES_NY
   resultMoney   Float?
   resultPercent Float?
   resultRR      Float?

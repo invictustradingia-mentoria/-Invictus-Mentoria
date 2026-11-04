@@ -5,11 +5,12 @@ import { createClient } from '@supabase/supabase-js'
 import {
   LineChart, Plus, Trash2, Image as ImageIcon,
   Smile, Frown, Meh, MessageSquare, Loader2, Target, Percent, DollarSign, Flame,
-  Wallet, Activity, Trophy, Maximize2, X, Quote,
+  Wallet, Activity, Trophy, Maximize2, X, Quote, Clock,
 } from 'lucide-react'
 
 type AccountStatus = 'ACTIVE' | 'PASSED' | 'FAILED' | 'FUNDED'
 type DayTag = 'GOOD' | 'BAD' | 'NEUTRAL'
+type Session = 'ASIA' | 'LONDRES' | 'NUEVA_YORK' | 'LONDRES_NY'
 
 interface SeriesPoint {
   date: string
@@ -42,6 +43,7 @@ interface Entry {
   accountId: string
   date: string
   pair: string | null
+  session: Session | null
   resultMoney: number | null
   resultPercent: number | null
   resultRR: number | null
@@ -67,6 +69,14 @@ const DAY_TAG_LABEL: Record<DayTag, { label: string; cls: string; active: string
   BAD: { label: 'Mal día', cls: 'border-rose-200 text-rose-600', active: 'bg-rose-500 border-rose-500 text-white shadow-md shadow-rose-500/30', icon: Frown },
   NEUTRAL: { label: 'Neutral', cls: 'border-gray-200 text-gray-500', active: 'bg-gray-600 border-gray-600 text-white shadow-md shadow-gray-500/30', icon: Meh },
 }
+
+const SESSION_LABEL: Record<Session, string> = {
+  ASIA: 'Sesión Asia',
+  LONDRES: 'Sesión Londres',
+  NUEVA_YORK: 'Sesión Nueva York',
+  LONDRES_NY: 'Londres / Nueva York',
+}
+const SESSION_OPTIONS: Session[] = ['ASIA', 'LONDRES', 'NUEVA_YORK', 'LONDRES_NY']
 
 const inputCls = 'w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs font-medium focus:border-[#0284c7] focus:bg-white focus:outline-none transition-colors'
 const labelCls = 'mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-400'
@@ -186,6 +196,7 @@ export default function JournalPage() {
 
   const [eDate, setEDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [ePair, setEPair] = useState('')
+  const [eSession, setESession] = useState<Session | ''>('')
   const [eMoney, setEMoney] = useState('')
   const [ePercent, setEPercent] = useState('')
   const [eRR, setERR] = useState('')
@@ -339,6 +350,7 @@ export default function JournalPage() {
           accountId: selectedId,
           date: eDate,
           pair: ePair.trim() || undefined,
+          session: eSession || undefined,
           resultMoney: eMoney !== '' ? Number(eMoney) : undefined,
           resultPercent: ePercent !== '' ? Number(ePercent) : undefined,
           resultRR: eRR !== '' ? Number(eRR) : undefined,
@@ -350,7 +362,7 @@ export default function JournalPage() {
       const data = await safeJson(res)
       if (res.ok && data.item) {
         notify('Operación guardada', true)
-        setEPair(''); setEMoney(''); setEPercent(''); setERR(''); setENote(''); setEFile(null); setEDayTag('NEUTRAL')
+        setEPair(''); setESession(''); setEMoney(''); setEPercent(''); setERR(''); setENote(''); setEFile(null); setEDayTag('NEUTRAL')
         setEDate(new Date().toISOString().slice(0, 10))
         if (fileRef.current) fileRef.current.value = ''
         loadEntries(selectedId)
@@ -529,20 +541,29 @@ export default function JournalPage() {
                 <input className={inputCls} value={ePair} onChange={(e) => setEPair(e.target.value)} placeholder="Ej. EURUSD" />
               </div>
               <div>
-                <label className={`${labelCls} flex items-center gap-1`}><DollarSign size={10} /> Resultado ($)</label>
-                <input className={inputCls} type="number" step="0.01" value={eMoney} onChange={(e) => setEMoney(e.target.value)} placeholder="150" />
+                <label className={`${labelCls} flex items-center gap-1`}><Clock size={10} /> Sesión operada</label>
+                <select className={inputCls} value={eSession} onChange={(e) => setESession(e.target.value as Session | '')}>
+                  <option value="">Sin especificar</option>
+                  {SESSION_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{SESSION_LABEL[s]}</option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className={`${labelCls} flex items-center gap-1`}><Percent size={10} /> Resultado (%)</label>
-                <input className={inputCls} type="number" step="0.01" value={ePercent} onChange={(e) => setEPercent(e.target.value)} placeholder="1.5" />
+                <label className={`${labelCls} flex items-center gap-1`}><DollarSign size={10} /> Resultado ($)</label>
+                <input className={inputCls} type="number" step="0.01" value={eMoney} onChange={(e) => setEMoney(e.target.value)} placeholder="150" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
+                <label className={`${labelCls} flex items-center gap-1`}><Percent size={10} /> Resultado (%)</label>
+                <input className={inputCls} type="number" step="0.01" value={ePercent} onChange={(e) => setEPercent(e.target.value)} placeholder="1.5" />
+              </div>
+              <div>
                 <label className={`${labelCls} flex items-center gap-1`}><Target size={10} /> R:R</label>
                 <input className={inputCls} type="number" step="0.01" value={eRR} onChange={(e) => setERR(e.target.value)} placeholder="2" />
               </div>
-              <div className="sm:col-span-3">
+              <div className="sm:col-span-2">
                 <label className={labelCls}>¿Cómo fue el día?</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(Object.keys(DAY_TAG_LABEL) as DayTag[]).map((k) => {
@@ -615,6 +636,7 @@ export default function JournalPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-[11px] font-bold text-gray-500">{new Date(en.date).toLocaleDateString('es-AR')}</span>
                           {en.pair && <span className="text-[11px] font-bold text-[#0284c7] bg-[#f0f9ff] px-2 py-0.5 rounded-full border border-[#bae6fd]">{en.pair}</span>}
+                          {en.session && <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200"><Clock size={10} /> {SESSION_LABEL[en.session]}</span>}
                           <span className={`flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${d.cls} bg-white`}><DIcon size={11} /> {d.label}</span>
                         </div>
                         <button type="button" onClick={() => deleteEntry(en.id)} className="p-1.5 rounded-lg text-gray-300 hover:bg-rose-50 hover:text-rose-500 transition-all cursor-pointer" title="Eliminar">

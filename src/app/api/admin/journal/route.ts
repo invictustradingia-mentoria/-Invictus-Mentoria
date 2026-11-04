@@ -69,7 +69,7 @@ export async function GET(req: Request) {
         journalAccounts: {
           select: {
             id: true,
-            entries: { select: { resultMoney: true, date: true }, orderBy: { date: 'asc' } },
+            entries: { select: { resultMoney: true, date: true, session: true }, orderBy: { date: 'asc' } },
           },
         },
       },
@@ -88,7 +88,17 @@ export async function GET(req: Request) {
         const t = new Date(e.date).toISOString()
         return !latest || t > latest ? t : latest
       }, null)
-      return { id: s.id, name: s.name, email: s.email, role: s.role, totalAccounts, totalEntries, totalResultMoney, winRate, series, lastEntryAt }
+      const sessionCounts: Record<string, number> = {}
+      for (const e of allEntries) {
+        if (!e.session) continue
+        sessionCounts[e.session] = (sessionCounts[e.session] || 0) + 1
+      }
+      let mostSession: string | null = null
+      let mostSessionCount = 0
+      for (const [sess, count] of Object.entries(sessionCounts)) {
+        if (count > mostSessionCount) { mostSession = sess; mostSessionCount = count }
+      }
+      return { id: s.id, name: s.name, email: s.email, role: s.role, totalAccounts, totalEntries, totalResultMoney, winRate, series, lastEntryAt, mostSession }
     })
 
     return NextResponse.json({ items })

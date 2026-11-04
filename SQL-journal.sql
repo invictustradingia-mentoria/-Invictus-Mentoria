@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS "journal_entries" (
   "accountId" TEXT NOT NULL,
   "date" TIMESTAMP(3) NOT NULL,
   "pair" TEXT,
+  "session" TEXT,
   "resultMoney" DOUBLE PRECISION,
   "resultPercent" DOUBLE PRECISION,
   "resultRR" DOUBLE PRECISION,

@@ -4,11 +4,12 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   LineChart, ArrowLeft, Search, Smile, Frown, Meh,
   MessageSquare, Send, Trash2, Loader2, Target, Trophy, Wallet, Activity, Users2,
-  DollarSign, Percent, Maximize2, X, Quote,
+  DollarSign, Percent, Maximize2, X, Quote, Clock,
 } from 'lucide-react'
 
 type DayTag = 'GOOD' | 'BAD' | 'NEUTRAL'
 type AccountStatus = 'ACTIVE' | 'PASSED' | 'FAILED' | 'FUNDED'
+type Session = 'ASIA' | 'LONDRES' | 'NUEVA_YORK' | 'LONDRES_NY'
 
 interface SeriesPoint {
   date: string
@@ -26,6 +27,7 @@ interface StudentRow {
   winRate: number
   series: SeriesPoint[]
   lastEntryAt: string | null
+  mostSession: Session | null
 }
 
 interface Comment {
@@ -41,6 +43,7 @@ interface Entry {
   id: string
   date: string
   pair: string | null
+  session: Session | null
   resultMoney: number | null
   resultPercent: number | null
   resultRR: number | null
@@ -75,6 +78,27 @@ const DAY_TAG_LABEL: Record<DayTag, { label: string; cls: string; icon: any }> =
   GOOD: { label: 'Buen día', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: Smile },
   BAD: { label: 'Mal día', cls: 'bg-rose-50 text-rose-700 border-rose-200', icon: Frown },
   NEUTRAL: { label: 'Neutral', cls: 'bg-gray-100 text-gray-600 border-gray-200', icon: Meh },
+}
+
+const SESSION_LABEL: Record<Session, string> = {
+  ASIA: 'Sesión Asia',
+  LONDRES: 'Sesión Londres',
+  NUEVA_YORK: 'Sesión Nueva York',
+  LONDRES_NY: 'Londres / Nueva York',
+}
+
+function mostTradedSession(entries: { session: Session | null }[]): Session | null {
+  const counts: Record<string, number> = {}
+  for (const e of entries) {
+    if (!e.session) continue
+    counts[e.session] = (counts[e.session] || 0) + 1
+  }
+  let best: Session | null = null
+  let bestCount = 0
+  for (const [sess, count] of Object.entries(counts)) {
+    if (count > bestCount) { best = sess as Session; bestCount = count }
+  }
+  return best
 }
 
 function fmtMoney(n: number) {
@@ -203,6 +227,7 @@ function EntryCard({ entry, onComment, onDeleteComment, busyId, onOpenImage }: {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[11px] font-bold text-gray-500">{new Date(entry.date).toLocaleDateString('es-AR')}</span>
           {entry.pair && <span className="text-[11px] font-bold text-[#0284c7] bg-[#f0f9ff] px-2 py-0.5 rounded-full border border-[#bae6fd]">{entry.pair}</span>}
+          {entry.session && <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200"><Clock size={10} /> {SESSION_LABEL[entry.session]}</span>}
           <span className={`flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${d.cls}`}><DIcon size={11} /> {d.label}</span>
         </div>
 
@@ -395,6 +420,7 @@ export default function AdminJournalPage() {
                 const wins = acc.entries.filter((e) => (e.resultMoney || 0) > 0).length
                 const winRate = trades > 0 ? Math.round((wins / trades) * 100) : 0
                 const series = [...acc.entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((e) => ({ date: e.date, resultMoney: e.resultMoney }))
+                const topSession = mostTradedSession(acc.entries)
                 return (
                   <div key={acc.id} className="space-y-3">
                     <div className="bg-[#0b1220] rounded-3xl p-6 shadow-sm">
@@ -406,6 +432,11 @@ export default function AdminJournalPage() {
                           </div>
                           <p className="text-base font-black text-white mt-0.5">{acc.name}</p>
                           {acc.propFirm && <p className="text-[11px] text-slate-400">{acc.propFirm}{acc.accountSize ? ` · $${acc.accountSize.toLocaleString('es-AR')}` : ''}</p>}
+                          {topSession && (
+                            <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-sky-300 bg-sky-400/10 px-2 py-0.5 rounded-full border border-sky-400/30">
+                              <Clock size={10} /> Opera más en: {SESSION_LABEL[topSession]}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-7">
                           <div>
@@ -495,6 +526,11 @@ export default function AdminJournalPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-bold text-[#1d1d1f] truncate">{s.name || s.email}</p>
                 <p className="text-[11px] text-gray-400">{s.email} · {s.totalAccounts} cuenta{s.totalAccounts === 1 ? '' : 's'} · {s.totalEntries} operación{s.totalEntries === 1 ? '' : 'es'} · {s.winRate}% ganadas</p>
+                {s.mostSession && (
+                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                    <Clock size={10} /> Opera más en: {SESSION_LABEL[s.mostSession]}
+                  </span>
+                )}
               </div>
               <div className="w-24 h-10 hidden sm:block shrink-0"><EquityCurve series={s.series} height={40} /></div>
               <div className="text-right shrink-0 w-28">
