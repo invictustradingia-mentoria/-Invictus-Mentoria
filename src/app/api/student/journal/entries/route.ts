@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
     const body = await req.json()
     const accountId = clean(body.accountId, 100)
-    if (!accountId) return NextResponse.json({ error: 'Falta la cuenta de la operaciÃ³n' }, { status: 400 })
+    if (!accountId) return NextResponse.json({ error: 'Falta la cuenta de la operación' }, { status: 400 })
 
     const acc = await ownAccount(accountId, user.id)
     if (!acc) return NextResponse.json({ error: 'Cuenta no encontrada' }, { status: 404 })
@@ -94,11 +94,11 @@ export async function PATCH(req: Request) {
 
     const body = await req.json()
     const id = clean(body.id, 100)
-    if (!id) return NextResponse.json({ error: 'Falta el id de la operaciÃ³n' }, { status: 400 })
+    if (!id) return NextResponse.json({ error: 'Falta el id de la operación' }, { status: 400 })
 
     const existing = await prismaDash.journalEntry.findUnique({ where: { id }, include: { account: true } })
     if (!existing || existing.account.userId !== user.id) {
-      return NextResponse.json({ error: 'OperaciÃ³n no encontrada' }, { status: 404 })
+      return NextResponse.json({ error: 'Operación no encontrada' }, { status: 404 })
     }
 
     const data: Record<string, any> = {}
@@ -111,7 +111,7 @@ export async function PATCH(req: Request) {
     if (body.resultPercent !== undefined) data.resultPercent = num(body.resultPercent)
     if (body.resultRR !== undefined) data.resultRR = num(body.resultRR)
     if (typeof body.dayTag === 'string') {
-      if (!DAY_TAGS.includes(body.dayTag)) return NextResponse.json({ error: 'Etiqueta no vÃ¡lida' }, { status: 400 })
+      if (!DAY_TAGS.includes(body.dayTag)) return NextResponse.json({ error: 'Etiqueta no válida' }, { status: 400 })
       data.dayTag = body.dayTag
     }
     if (body.note !== undefined) data.note = clean(body.note, 2000) || null
@@ -136,7 +136,7 @@ export async function DELETE(req: Request) {
 
     const existing = await prismaDash.journalEntry.findUnique({ where: { id }, include: { account: true } })
     if (!existing || existing.account.userId !== user.id) {
-      return NextResponse.json({ error: 'OperaciÃ³n no encontrada' }, { status: 404 })
+      return NextResponse.json({ error: 'Operación no encontrada' }, { status: 404 })
     }
 
     await prismaDash.journalEntry.delete({ where: { id } })

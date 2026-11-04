@@ -35,7 +35,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   const [open, setOpen] = useState(false)
   const m = getMembership(user.role)
   const MIcon = m.key === 'MENTORIA' ? Crown : m.key === 'ADMIN' ? ShieldCheck : m.key === 'EDITOR' ? Pencil : Star
-  const viewText = user.viewLevel === 'CLUB' ? 'Ves: contenido Club' : user.viewLevel === 'MENTORIA' ? 'Ves: contenido MentorÃ­a' : 'Ves: todo el contenido'
+  const viewText = user.viewLevel === 'CLUB' ? 'Ves: contenido Club' : user.viewLevel === 'MENTORIA' ? 'Ves: contenido Mentoría' : 'Ves: todo el contenido'
 
   // Progreso del curso para la tarjeta lateral
   const [prog, setProg] = useState<{ done: number; total: number } | null>(null)
@@ -58,7 +58,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
     return () => { alive = false; clearInterval(t); window.removeEventListener('focus', on) }
   }, [pathname])
   const pct = prog && prog.total > 0 ? Math.round((prog.done / prog.total) * 100) : 0
-  const levelText = m.key === 'MENTORIA' ? 'Nivel 2 Â· Programa + MentorÃ­a' : m.key === 'CLUB' ? 'Nivel 1 Â· Club' : m.key === 'ADMIN' ? 'Acceso total' : 'Equipo de ediciÃ³n'
+  const levelText = m.key === 'MENTORIA' ? 'Nivel 2 · Programa + Mentoría' : m.key === 'CLUB' ? 'Nivel 1 · Club' : m.key === 'ADMIN' ? 'Acceso total' : 'Equipo de edición'
 
   const nav = [
     { href: '/dashboard/clases', label: 'Mis clases', icon: PlayCircle },
@@ -68,7 +68,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
     { href: '/dashboard/perfil', label: 'Mi perfil', icon: UserCircle2 },
   ]
 
-  // Las pÃ¡ginas nuevas (chat y llamadas) llevan un margen alrededor.
+  // Las páginas nuevas (chat y llamadas) llevan un margen alrededor.
   const padded = !!pathname && (pathname.startsWith('/dashboard/chat') || pathname.startsWith('/dashboard/llamadas'))
 
   const sidebar = (
@@ -118,12 +118,12 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
         })}
         {user.role === 'ADMIN' && (
           <Link href="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-sky-600 hover:bg-sky-50">
-            <ShieldCheck size={17} /> Panel de AdministraciÃ³n
+            <ShieldCheck size={17} /> Panel de Administración
           </Link>
         )}
         {user.role === 'EDITOR' && (
           <Link href="/admin/content" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50">
-            <Pencil size={17} /> Panel de EdiciÃ³n
+            <Pencil size={17} /> Panel de Edición
           </Link>
         )}
       </nav>
@@ -132,7 +132,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
         <ThemeToggle />
         <button type="button" onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer">
-          <LogOut size={17} /> Cerrar sesiÃ³n
+          <LogOut size={17} /> Cerrar sesión
         </button>
       </div>
     </div>
@@ -141,18 +141,18 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   return (
     <div className="min-h-screen dz-bg text-slate-800">
       <ActivityTracker />
-      {/* Barra mÃ³vil */}
+      {/* Barra móvil */}
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
         <span className="text-sm font-black text-slate-900">INVICTUS <span className="text-sky-500">CAMPUS</span></span>
         <div className="flex items-center gap-1">
           <ThemeToggle variant="icon" />
-          <button type="button" onClick={() => setOpen(!open)} aria-label="MenÃº" className="rounded-lg p-1.5 text-slate-700 cursor-pointer">
+          <button type="button" onClick={() => setOpen(!open)} aria-label="Menú" className="rounded-lg p-1.5 text-slate-700 cursor-pointer">
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </div>
 
-      {/* MenÃº mÃ³vil */}
+      {/* Menú móvil */}
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
@@ -160,7 +160,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
         </div>
       )}
 
-      {/* MenÃº escritorio */}
+      {/* Menú escritorio */}
       <aside className="dz-side fixed inset-y-0 left-0 hidden w-64 border-r backdrop-blur lg:block">{sidebar}</aside>
 
       <main className="lg:pl-64">

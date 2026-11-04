@@ -9,7 +9,7 @@ import { EDITOR_PATHS } from '@/lib/access'
 import ThemeToggle from '@/components/ThemeToggle'
 
 const NAV = [
-  { href: '/admin', label: 'GestiÃ³n de Alumnos', icon: Users, exact: true },
+  { href: '/admin', label: 'Gestión de Alumnos', icon: Users, exact: true },
   { href: '/admin/live', label: 'Live Activity', icon: Radio },
   { href: '/admin/content', label: 'Gestor de Contenido', icon: BookOpen },
   { href: '/admin/chat', label: 'Chat de la Comunidad', icon: MessageSquare },
@@ -37,7 +37,7 @@ export default function AdminShell({ name, role, children }: { name: string; rol
     <div className="flex h-full flex-col">
       <div className="px-6 py-6">
         <p className="text-lg font-black tracking-tight text-[#1d1d1f]">INVICTUS <span className="text-[#0284c7]">{isEditor ? 'EDITOR' : 'ADMIN'}</span></p>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{isEditor ? 'Panel de ediciÃ³n' : 'Panel de administraciÃ³n'}</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{isEditor ? 'Panel de edición' : 'Panel de administración'}</p>
       </div>
       <nav className="flex-1 space-y-1 px-3">
         {nav.map((n) => {
@@ -54,7 +54,7 @@ export default function AdminShell({ name, role, children }: { name: string; rol
         <Link href="/dashboard/clases" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-500 hover:bg-gray-50"><ExternalLink size={16} /> Ver modo alumno</Link>
         <p className="truncate px-3 pt-1 text-[11px] font-bold text-gray-700">{name}{isEditor && <span className="ml-1.5 rounded-md bg-indigo-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-indigo-700">Editor</span>}</p>
         <ThemeToggle />
-        <button type="button" onClick={() => signOut({ callbackUrl: '/login' })} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-500 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"><LogOut size={16} /> Cerrar sesiÃ³n</button>
+        <button type="button" onClick={() => signOut({ callbackUrl: '/login' })} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-500 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"><LogOut size={16} /> Cerrar sesión</button>
       </div>
     </div>
   )
@@ -63,7 +63,7 @@ export default function AdminShell({ name, role, children }: { name: string; rol
     <div className="min-h-screen bg-[#fdfdfd]">
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
         <span className="text-sm font-black text-[#1d1d1f]">INVICTUS <span className="text-[#0284c7]">{isEditor ? 'EDITOR' : 'ADMIN'}</span></span>
-        <div className="flex items-center gap-1"><ThemeToggle variant="icon" /><button type="button" onClick={() => setOpen(!open)} aria-label="MenÃº" className="rounded-lg p-1.5 cursor-pointer">{open ? <X size={22} /> : <Menu size={22} />}</button></div>
+        <div className="flex items-center gap-1"><ThemeToggle variant="icon" /><button type="button" onClick={() => setOpen(!open)} aria-label="Menú" className="rounded-lg p-1.5 cursor-pointer">{open ? <X size={22} /> : <Menu size={22} />}</button></div>
       </div>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">

@@ -13,7 +13,7 @@ async function getStaff() {
   return session.user as { id: string; role: string; viewLevel?: string | null }
 }
 
-// Para un EDITOR, quÃ© roles de alumno puede ver, segÃºn el nivel que le dio el admin.
+// Para un EDITOR, qué roles de alumno puede ver, según el nivel que le dio el admin.
 function allowedStudentRoles(staff: { role: string; viewLevel?: string | null }): string[] | null {
   if (staff.role !== 'EDITOR') return null // ADMIN ve todo
   if (staff.viewLevel === 'CLUB') return ['CLUB']
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
       })
       if (!student) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
       if (roles && !roles.includes(student.role)) {
-        return NextResponse.json({ error: 'No tenÃ©s permiso para ver el journal de este alumno' }, { status: 403 })
+        return NextResponse.json({ error: 'No tenés permiso para ver el journal de este alumno' }, { status: 403 })
       }
 
       const accounts = await prismaDash.journalAccount.findMany({
@@ -69,7 +69,7 @@ export async function GET(req: Request) {
         journalAccounts: {
           select: {
             id: true,
-            entries: { select: { resultMoney: true, createdAt: true } },
+            entries: { select: { resultMoney: true, date: true }, orderBy: { date: 'asc' } },
           },
         },
       },
@@ -80,11 +80,15 @@ export async function GET(req: Request) {
       const allEntries = s.journalAccounts.flatMap((a) => a.entries)
       const totalEntries = allEntries.length
       const totalResultMoney = allEntries.reduce((sum, e) => sum + (e.resultMoney || 0), 0)
+      const wins = allEntries.filter((e) => (e.resultMoney || 0) > 0).length
+      const winRate = totalEntries > 0 ? Math.round((wins / totalEntries) * 100) : 0
+      const sorted = [...allEntries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      const series = sorted.map((e) => ({ date: e.date, resultMoney: e.resultMoney }))
       const lastEntryAt = allEntries.reduce<string | null>((latest, e) => {
-        const t = e.createdAt.toISOString()
+        const t = new Date(e.date).toISOString()
         return !latest || t > latest ? t : latest
       }, null)
-      return { id: s.id, name: s.name, email: s.email, role: s.role, totalAccounts, totalEntries, totalResultMoney, lastEntryAt }
+      return { id: s.id, name: s.name, email: s.email, role: s.role, totalAccounts, totalEntries, totalResultMoney, winRate, series, lastEntryAt }
     })
 
     return NextResponse.json({ items })

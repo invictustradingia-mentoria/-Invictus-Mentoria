@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   try {
     const session: any = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'No autorizado: iniciÃ¡ sesiÃ³n para subir una captura.' }, { status: 401 })
+      return NextResponse.json({ error: 'No autorizado: iniciá sesión para subir una captura.' }, { status: 401 })
     }
 
     const { fileName, fileSize } = await req.json()
@@ -24,10 +24,10 @@ export async function POST(req: Request) {
 
     const ext = fileName.split('.').pop()?.toLowerCase() || ''
     if (!ALLOWED_EXT.includes(ext)) {
-      return NextResponse.json({ error: `Formato .${ext} no admitido. UsÃ¡ PNG, JPG o WEBP.` }, { status: 400 })
+      return NextResponse.json({ error: `Formato .${ext} no admitido. Usá PNG, JPG o WEBP.` }, { status: 400 })
     }
     if (typeof fileSize === 'number' && fileSize > MAX_MB * 1024 * 1024) {
-      return NextResponse.json({ error: `La imagen pesa ${(fileSize / 1024 / 1024).toFixed(0)} MB y el mÃ¡ximo es ${MAX_MB} MB.` }, { status: 413 })
+      return NextResponse.json({ error: `La imagen pesa ${(fileSize / 1024 / 1024).toFixed(0)} MB y el máximo es ${MAX_MB} MB.` }, { status: 413 })
     }
 
     const supabaseUrl = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     if (!serviceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY')
     if (missing.length > 0) {
       return NextResponse.json(
-        { error: `Falta configurar en Netlify: ${missing.join(', ')}. AgrÃ©gala en Environment variables y haz un redeploy.` },
+        { error: `Falta configurar en Netlify: ${missing.join(', ')}. Agrégala en Environment variables y haz un redeploy.` },
         { status: 500 }
       )
     }
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     if (error || !data) {
       const m = error?.message || ''
       const friendly = /bucket/i.test(m) && /not found/i.test(m)
-        ? 'No existe el bucket "journal" en Supabase Storage. CreÃ¡lo (pÃºblico) con ese nombre exacto.'
+        ? 'No existe el bucket "journal" en Supabase Storage. Creálo (público) con ese nombre exacto.'
         : `Supabase no pudo preparar la subida: ${m || 'error desconocido'}`
       return NextResponse.json({ error: friendly }, { status: 500 })
     }

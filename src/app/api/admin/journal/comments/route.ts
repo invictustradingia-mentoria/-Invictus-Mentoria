@@ -30,18 +30,18 @@ export async function POST(req: Request) {
     const body = await req.json()
     const entryId = clean(body.entryId, 100)
     const content = clean(body.content, 1500)
-    if (!entryId) return NextResponse.json({ error: 'Falta la operaciÃ³n a comentar' }, { status: 400 })
-    if (!content) return NextResponse.json({ error: 'EscribÃ­ un comentario' }, { status: 400 })
+    if (!entryId) return NextResponse.json({ error: 'Falta la operación a comentar' }, { status: 400 })
+    if (!content) return NextResponse.json({ error: 'Escribí un comentario' }, { status: 400 })
 
     const entry = await prismaDash.journalEntry.findUnique({
       where: { id: entryId },
       include: { account: { include: { user: { select: { role: true } } } } },
     })
-    if (!entry) return NextResponse.json({ error: 'OperaciÃ³n no encontrada' }, { status: 404 })
+    if (!entry) return NextResponse.json({ error: 'Operación no encontrada' }, { status: 404 })
 
     const roles = allowedStudentRoles(staff)
     if (roles && !roles.includes(entry.account.user.role)) {
-      return NextResponse.json({ error: 'No tenÃ©s permiso para comentar en este journal' }, { status: 403 })
+      return NextResponse.json({ error: 'No tenés permiso para comentar en este journal' }, { status: 403 })
     }
 
     const comment = await prismaDash.journalComment.create({
@@ -75,7 +75,7 @@ export async function DELETE(req: Request) {
 
     // El admin puede borrar cualquier comentario; el editor solo los suyos.
     if (!isAdminRole(staff.role) && comment.authorId !== staff.id) {
-      return NextResponse.json({ error: 'Solo podÃ©s borrar tus propios comentarios' }, { status: 403 })
+      return NextResponse.json({ error: 'Solo podés borrar tus propios comentarios' }, { status: 403 })
     }
 
     await prismaDash.journalComment.delete({ where: { id } })

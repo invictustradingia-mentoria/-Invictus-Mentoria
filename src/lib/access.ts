@@ -15,7 +15,7 @@ export function isStaff(role?: string | null): boolean {
   return role === 'ADMIN' || role === 'EDITOR'
 }
 
-// QuÃ© niveles de contenido puede ver cada rol.
+// Qué niveles de contenido puede ver cada rol.
 // null = ve todo (administrador).
 // El editor ve lo que el administrador le habilite: 'ALL' (todo), 'CLUB' o 'MENTORIA'.
 export function visibleLevels(role?: string | null, viewLevel?: string | null): string[] | null {

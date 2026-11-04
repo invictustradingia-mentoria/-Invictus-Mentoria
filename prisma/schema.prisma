@@ -157,7 +157,7 @@ model SupportThread {
   name          String
   email         String?
   phone         String?
-  offlineContact Boolean         @default(false) // dejÃ³ sus datos con soporte fuera de lÃ­nea
+  offlineContact Boolean         @default(false) // dejó sus datos con soporte fuera de línea
   status        String           @default("OPEN") // OPEN | CLOSED
   ipHash        String
   unreadAdmin   Int              @default(0)
@@ -182,7 +182,7 @@ model SupportMessage {
   @@map("support_messages")
 }
 
-// Ajustes simples clave/valor (por ejemplo, si soporte estÃ¡ en lÃ­nea).
+// Ajustes simples clave/valor (por ejemplo, si soporte está en línea).
 model AppSetting {
   key       String   @id
   value     String
@@ -284,7 +284,7 @@ model VideoIncident {
   @@map("video_incidents")
 }
 
-// ---------- Recuperar contraseÃ±a y bienvenida ----------
+// ---------- Recuperar contraseña y bienvenida ----------
 model PasswordReset {
   id        String    @id @default(cuid())
   userId    String
@@ -332,7 +332,7 @@ model JournalAccount {
   @@map("journal_accounts")
 }
 
-// Cada operaciÃ³n/registro que sube el alumno dentro de una cuenta.
+// Cada operación/registro que sube el alumno dentro de una cuenta.
 model JournalEntry {
   id            String   @id @default(cuid())
   accountId     String
@@ -355,7 +355,7 @@ model JournalEntry {
   @@map("journal_entries")
 }
 
-// Comentarios del equipo (admin/editor) sobre una operaciÃ³n del alumno.
+// Comentarios del equipo (admin/editor) sobre una operación del alumno.
 model JournalComment {
   id         String   @id @default(cuid())
   entryId    String

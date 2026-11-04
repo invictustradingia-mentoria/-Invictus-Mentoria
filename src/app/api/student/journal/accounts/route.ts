@@ -24,14 +24,17 @@ export async function GET() {
     const accounts = await prismaDash.journalAccount.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
-      include: { entries: { select: { resultMoney: true } } },
+      include: { entries: { select: { resultMoney: true, date: true }, orderBy: { date: 'asc' } } },
     })
 
     const items = accounts.map((a) => {
       const totalEntries = a.entries.length
       const totalResultMoney = a.entries.reduce((sum, e) => sum + (e.resultMoney || 0), 0)
+      const wins = a.entries.filter((e) => (e.resultMoney || 0) > 0).length
+      const winRate = totalEntries > 0 ? Math.round((wins / totalEntries) * 100) : 0
+      const series = a.entries.map((e) => ({ date: e.date, resultMoney: e.resultMoney }))
       const { entries, ...rest } = a
-      return { ...rest, totalEntries, totalResultMoney }
+      return { ...rest, totalEntries, totalResultMoney, winRate, series }
     })
 
     return NextResponse.json({ items })
@@ -48,7 +51,7 @@ export async function POST(req: Request) {
 
     const body = await req.json()
     const name = clean(body.name, 120)
-    if (!name) return NextResponse.json({ error: 'PonÃ©le un nombre a la cuenta (ej: Eval 1 - FTMO 100k)' }, { status: 400 })
+    if (!name) return NextResponse.json({ error: 'Poné un nombre a la cuenta (ej: Eval 1 - FTMO 100k)' }, { status: 400 })
 
     const propFirm = clean(body.propFirm, 80) || null
     const status = STATUSES.includes(body.status) ? body.status : 'ACTIVE'
@@ -58,7 +61,7 @@ export async function POST(req: Request) {
       data: { userId: user.id, name, propFirm, status, accountSize },
     })
 
-    return NextResponse.json({ item: { ...account, totalEntries: 0, totalResultMoney: 0 } })
+    return NextResponse.json({ item: { ...account, totalEntries: 0, totalResultMoney: 0, winRate: 0, series: [] } })
   } catch (err: any) {
     console.error('POST student/journal/accounts:', err)
     return NextResponse.json({ error: err?.message || 'Error interno' }, { status: 500 })
@@ -82,12 +85,12 @@ export async function PATCH(req: Request) {
     const data: Record<string, any> = {}
     if (typeof body.name === 'string') {
       const n = clean(body.name, 120)
-      if (!n) return NextResponse.json({ error: 'El nombre no puede quedar vacÃ­o' }, { status: 400 })
+      if (!n) return NextResponse.json({ error: 'El nombre no puede quedar vacío' }, { status: 400 })
       data.name = n
     }
     if (body.propFirm !== undefined) data.propFirm = clean(body.propFirm, 80) || null
     if (typeof body.status === 'string') {
-      if (!STATUSES.includes(body.status)) return NextResponse.json({ error: 'Estado no vÃ¡lido' }, { status: 400 })
+      if (!STATUSES.includes(body.status)) return NextResponse.json({ error: 'Estado no válido' }, { status: 400 })
       data.status = body.status
     }
     if (body.accountSize !== undefined) {
