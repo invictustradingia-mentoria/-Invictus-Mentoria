@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const DAY_TAGS = ['GOOD', 'BAD', 'NEUTRAL']
-const SESSIONS = ['ASIA', 'LONDRES', 'NUEVA_YORK', 'LONDRES_NY']
+const SESSIONS = ['APERTURA_NY', 'NY_18HS', 'ASIA', 'LONDRES']
 
 async function getUser() {
   const session: any = await getServerSession(authOptions)

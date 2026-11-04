@@ -9,7 +9,7 @@ import {
 
 type DayTag = 'GOOD' | 'BAD' | 'NEUTRAL'
 type AccountStatus = 'ACTIVE' | 'PASSED' | 'FAILED' | 'FUNDED'
-type Session = 'ASIA' | 'LONDRES' | 'NUEVA_YORK' | 'LONDRES_NY'
+type Session = 'APERTURA_NY' | 'NY_18HS' | 'ASIA' | 'LONDRES'
 
 interface SeriesPoint {
   date: string
@@ -68,23 +68,27 @@ interface StudentDetail {
 }
 
 const STATUS_LABEL: Record<AccountStatus, { label: string; cls: string }> = {
-  ACTIVE: { label: 'Activa', cls: 'bg-sky-500/15 text-sky-600 border-sky-400/30' },
-  PASSED: { label: 'Aprobada', cls: 'bg-emerald-500/15 text-emerald-600 border-emerald-400/30' },
-  FAILED: { label: 'Fallida', cls: 'bg-rose-500/15 text-rose-600 border-rose-400/30' },
-  FUNDED: { label: 'Fondeada', cls: 'bg-indigo-500/15 text-indigo-600 border-indigo-400/30' },
+  ACTIVE: { label: 'Activa', cls: 'bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-400/30' },
+  PASSED: { label: 'Aprobada', cls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-400/30' },
+  FAILED: { label: 'Fallida', cls: 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-400/30' },
+  FUNDED: { label: 'Fondeada', cls: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-400/30' },
 }
 
 const DAY_TAG_LABEL: Record<DayTag, { label: string; cls: string; icon: any }> = {
-  GOOD: { label: 'Buen día', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: Smile },
-  BAD: { label: 'Mal día', cls: 'bg-rose-50 text-rose-700 border-rose-200', icon: Frown },
-  NEUTRAL: { label: 'Neutral', cls: 'bg-gray-100 text-gray-600 border-gray-200', icon: Meh },
+  GOOD: { label: 'Buen día', cls: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30', icon: Smile },
+  BAD: { label: 'Mal día', cls: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30', icon: Frown },
+  NEUTRAL: { label: 'Neutral', cls: 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-slate-300 border-gray-200 dark:border-white/10', icon: Meh },
 }
 
 const SESSION_LABEL: Record<Session, string> = {
+  APERTURA_NY: 'Apertura NY',
+  NY_18HS: 'NY 18hs',
   ASIA: 'Sesión Asia',
   LONDRES: 'Sesión Londres',
-  NUEVA_YORK: 'Sesión Nueva York',
-  LONDRES_NY: 'Londres / Nueva York',
+}
+function sessionLabel(s: string | null) {
+  if (!s) return ''
+  return (SESSION_LABEL as Record<string, string>)[s] || s
 }
 
 function mostTradedSession(entries: { session: Session | null }[]): Session | null {
@@ -150,22 +154,22 @@ function EquityCurve({ series, height = 40 }: { series: SeriesPoint[]; height?: 
 
 function Kpi({ icon: Icon, label: lbl, value, valueCls }: { icon: any; label: string; value: string; valueCls?: string }) {
   return (
-    <div className="rounded-2xl border border-[#ededf0] bg-white p-4">
-      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-400">
+    <div className="rounded-2xl border border-[#ededf0] dark:border-white/10 bg-white dark:bg-white/[0.04] p-4">
+      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500">
         <Icon size={12} /> {lbl}
       </div>
-      <p className={`mt-1.5 text-xl font-black ${valueCls || 'text-[#1d1d1f]'}`}>{value}</p>
+      <p className={`mt-1.5 text-xl font-black ${valueCls || 'text-[#1d1d1f] dark:text-white'}`}>{value}</p>
     </div>
   )
 }
 
 function StatBox({ icon: Icon, label: lbl, value, cls }: { icon?: any; label: string; value: string; cls?: string }) {
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
-      <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-gray-400">
+    <div className="rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-3 py-2">
+      <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-gray-400 dark:text-slate-500">
         {Icon && <Icon size={10} />} {lbl}
       </div>
-      <p className={`mt-0.5 text-[13px] font-black ${cls || 'text-[#1d1d1f]'}`}>{value}</p>
+      <p className={`mt-0.5 text-[13px] font-black ${cls || 'text-[#1d1d1f] dark:text-white'}`}>{value}</p>
     </div>
   )
 }
@@ -221,13 +225,13 @@ function EntryCard({ entry, onComment, onDeleteComment, busyId, onOpenImage }: {
   }
 
   return (
-    <div className="relative overflow-hidden bg-white rounded-2xl border border-[#ededf0] shadow-sm">
+    <div className="relative overflow-hidden bg-white dark:bg-white/[0.04] rounded-2xl border border-[#ededf0] dark:border-white/10 shadow-sm">
       <div className={`absolute inset-y-0 left-0 w-1.5 ${barColor}`} />
       <div className="p-4 pl-5 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-bold text-gray-500">{new Date(entry.date).toLocaleDateString('es-AR')}</span>
-          {entry.pair && <span className="text-[11px] font-bold text-[#0284c7] bg-[#f0f9ff] px-2 py-0.5 rounded-full border border-[#bae6fd]">{entry.pair}</span>}
-          {entry.session && <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200"><Clock size={10} /> {SESSION_LABEL[entry.session]}</span>}
+          <span className="text-[11px] font-bold text-gray-500 dark:text-slate-400">{new Date(entry.date).toLocaleDateString('es-AR')}</span>
+          {entry.pair && <span className="text-[11px] font-bold text-[#0284c7] dark:text-sky-300 bg-[#f0f9ff] dark:bg-sky-400/10 px-2 py-0.5 rounded-full border border-[#bae6fd] dark:border-sky-400/30">{entry.pair}</span>}
+          {entry.session && <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/30"><Clock size={10} /> {sessionLabel(entry.session)}</span>}
           <span className={`flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${d.cls}`}><DIcon size={11} /> {d.label}</span>
         </div>
 
@@ -239,7 +243,7 @@ function EntryCard({ entry, onComment, onDeleteComment, busyId, onOpenImage }: {
               <StatBox icon={Target} label="R:R" value={entry.resultRR !== null ? `${entry.resultRR} R` : '—'} />
             </div>
             {entry.note && (
-              <blockquote className="flex gap-2 rounded-xl bg-gray-50 border-l-2 border-[#0284c7] pl-3 pr-3 py-2.5 text-[12px] text-gray-600 leading-relaxed">
+              <blockquote className="flex gap-2 rounded-xl bg-gray-50 dark:bg-white/5 border-l-2 border-[#0284c7] pl-3 pr-3 py-2.5 text-[12px] text-gray-600 dark:text-slate-300 leading-relaxed">
                 <Quote size={13} className="mt-0.5 shrink-0 text-[#0284c7]/50" />
                 <span className="whitespace-pre-wrap">{entry.note}</span>
               </blockquote>
@@ -251,17 +255,17 @@ function EntryCard({ entry, onComment, onDeleteComment, busyId, onOpenImage }: {
         </div>
 
         {entry.comments.length > 0 && (
-          <div className="space-y-2 pt-3 border-t border-gray-100">
-            <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-gray-400"><MessageSquare size={11} /> Comentarios</p>
+          <div className="space-y-2 pt-3 border-t border-gray-100 dark:border-white/10">
+            <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500"><MessageSquare size={11} /> Comentarios</p>
             {entry.comments.map((c) => (
-              <div key={c.id} className="bg-[#f0f9ff] border border-[#bae6fd] rounded-xl p-3 flex items-start justify-between gap-2">
+              <div key={c.id} className="bg-[#f0f9ff] dark:bg-sky-400/10 border border-[#bae6fd] dark:border-sky-400/30 rounded-xl p-3 flex items-start justify-between gap-2">
                 <div>
-                  <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0284c7]">
+                  <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0284c7] dark:text-sky-300">
                     {c.authorName || 'Equipo'} · {new Date(c.createdAt).toLocaleDateString('es-AR')}
                   </div>
-                  <p className="text-[12px] text-[#1d1d1f] mt-1">{c.content}</p>
+                  <p className="text-[12px] text-[#1d1d1f] dark:text-slate-200 mt-1">{c.content}</p>
                 </div>
-                <button type="button" onClick={() => onDeleteComment(c.id)} className="p-1 rounded-lg text-rose-400 hover:bg-rose-50 transition-all cursor-pointer shrink-0" title="Eliminar comentario">
+                <button type="button" onClick={() => onDeleteComment(c.id)} className="p-1 rounded-lg text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all cursor-pointer shrink-0" title="Eliminar comentario">
                   <Trash2 size={12} />
                 </button>
               </div>
@@ -271,14 +275,14 @@ function EntryCard({ entry, onComment, onDeleteComment, busyId, onOpenImage }: {
 
         <div className="flex items-center gap-2 pt-1">
           <input
-            className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs focus:border-[#0284c7] focus:outline-none"
+            className="flex-1 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-[#1d1d1f] dark:text-white px-3 py-2 text-xs focus:border-[#0284c7] focus:outline-none"
             placeholder="Escribe un comentario para guiar al alumno..."
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') send() }}
           />
           <button type="button" onClick={send} disabled={sending || busyId === entry.id}
-            className="flex items-center gap-1 rounded-xl bg-[#1d1d1f] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#0284c7] disabled:opacity-50 transition-all cursor-pointer">
+            className="flex items-center gap-1 rounded-xl bg-[#1d1d1f] dark:bg-[#0284c7] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#0284c7] disabled:opacity-50 transition-all cursor-pointer">
             {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
           </button>
         </div>
@@ -379,18 +383,18 @@ export default function AdminJournalPage() {
         {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
 
         <button type="button" onClick={() => setSelectedUserId(null)}
-          className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 hover:text-[#0284c7] cursor-pointer">
+          className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 dark:text-slate-400 hover:text-[#0284c7] cursor-pointer">
           <ArrowLeft size={14} /> Volver al listado
         </button>
 
         {msg && (
-          <div className={`p-4 rounded-2xl text-xs font-bold ${msg.ok ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-rose-50 border border-rose-200 text-rose-700'}`}>
+          <div className={`p-4 rounded-2xl text-xs font-bold ${msg.ok ? 'bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300'}`}>
             {msg.t}
           </div>
         )}
 
         {loadingDetail || !detail ? (
-          <div className="bg-white rounded-3xl p-8 text-center border border-gray-100 text-xs text-gray-400 flex items-center justify-center gap-2">
+          <div className="bg-white dark:bg-white/[0.04] rounded-3xl p-8 text-center border border-gray-100 dark:border-white/10 text-xs text-gray-400 dark:text-slate-500 flex items-center justify-center gap-2">
             <Loader2 size={14} className="animate-spin" /> Cargando journal...
           </div>
         ) : (
@@ -409,7 +413,7 @@ export default function AdminJournalPage() {
             </div>
 
             {detail.accounts.length === 0 ? (
-              <div className="bg-white rounded-3xl p-10 text-center border border-dashed border-gray-200 text-xs text-gray-400">
+              <div className="bg-white dark:bg-white/[0.04] rounded-3xl p-10 text-center border border-dashed border-gray-200 dark:border-white/10 text-xs text-gray-400 dark:text-slate-500">
                 Este alumno todavía no creó ninguna cuenta en su journal.
               </div>
             ) : (
@@ -433,8 +437,8 @@ export default function AdminJournalPage() {
                           <p className="text-base font-black text-white mt-0.5">{acc.name}</p>
                           {acc.propFirm && <p className="text-[11px] text-slate-400">{acc.propFirm}{acc.accountSize ? ` · $${acc.accountSize.toLocaleString('es-AR')}` : ''}</p>}
                           {topSession && (
-                            <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-sky-300 bg-sky-400/10 px-2 py-0.5 rounded-full border border-sky-400/30">
-                              <Clock size={10} /> Opera más en: {SESSION_LABEL[topSession]}
+                            <span className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-black text-sky-200 bg-sky-400/20 px-3 py-1 rounded-lg border border-sky-400/50">
+                              <Clock size={12} /> Sesión más operada: {sessionLabel(topSession)}
                             </span>
                           )}
                         </div>
@@ -459,7 +463,7 @@ export default function AdminJournalPage() {
                     </div>
 
                     {acc.entries.length === 0 ? (
-                      <p className="text-[11px] text-gray-400 px-2">Sin operaciones registradas todavía en esta cuenta.</p>
+                      <p className="text-[11px] text-gray-400 dark:text-slate-500 px-2">Sin operaciones registradas todavía en esta cuenta.</p>
                     ) : (
                       <div className="space-y-3">
                         {acc.entries.map((en) => (
@@ -481,16 +485,16 @@ export default function AdminJournalPage() {
     <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6">
       <div>
         <span className="text-[11px] font-bold text-[#0284c7] tracking-wider uppercase block">Panel de gestión</span>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1d1d1f] flex items-center gap-2.5 mt-0.5">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1d1d1f] dark:text-white flex items-center gap-2.5 mt-0.5">
           <LineChart size={22} className="text-[#0284c7]" /> Trading Journal de los alumnos
         </h1>
-        <p className="text-[#86868b] text-[13px] mt-1">
+        <p className="text-[#86868b] dark:text-slate-400 text-[13px] mt-1">
           Mirá el progreso de cada alumno (sus cuentas, operaciones y capturas) y dejales comentarios para guiarlos.
         </p>
       </div>
 
       {msg && (
-        <div className={`p-4 rounded-2xl text-xs font-bold ${msg.ok ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-rose-50 border border-rose-200 text-rose-700'}`}>
+        <div className={`p-4 rounded-2xl text-xs font-bold ${msg.ok ? 'bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300'}`}>
           {msg.t}
         </div>
       )}
@@ -503,9 +507,9 @@ export default function AdminJournalPage() {
       </div>
 
       <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
         <input
-          className="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 py-2.5 text-xs focus:border-[#0284c7] focus:outline-none"
+          className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[#1d1d1f] dark:text-white pl-10 pr-3 py-2.5 text-xs focus:border-[#0284c7] focus:outline-none"
           placeholder="Buscar alumno por nombre o correo..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -513,29 +517,33 @@ export default function AdminJournalPage() {
       </div>
 
       {students === null ? (
-        <div className="bg-white rounded-3xl p-8 text-center border border-gray-100 text-xs text-gray-400">Cargando...</div>
+        <div className="bg-white dark:bg-white/[0.04] rounded-3xl p-8 text-center border border-gray-100 dark:border-white/10 text-xs text-gray-400 dark:text-slate-500">Cargando...</div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-3xl p-10 text-center border border-dashed border-gray-200 text-xs text-gray-400">
+        <div className="bg-white dark:bg-white/[0.04] rounded-3xl p-10 text-center border border-dashed border-gray-200 dark:border-white/10 text-xs text-gray-400 dark:text-slate-500">
           Todavía ningún alumno registró operaciones en su journal.
         </div>
       ) : (
         <div className="space-y-2">
           {filtered.map((s) => (
             <button key={s.id} type="button" onClick={() => setSelectedUserId(s.id)}
-              className="w-full flex items-center justify-between gap-4 rounded-2xl bg-white p-4 border border-[#ededf0] hover:border-[#bae6fd] shadow-sm transition-all cursor-pointer text-left">
+              className="w-full flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-white/[0.04] p-4 border border-[#ededf0] dark:border-white/10 hover:border-[#bae6fd] dark:hover:border-sky-400/40 shadow-sm transition-all cursor-pointer text-left">
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-[#1d1d1f] truncate">{s.name || s.email}</p>
-                <p className="text-[11px] text-gray-400">{s.email} · {s.totalAccounts} cuenta{s.totalAccounts === 1 ? '' : 's'} · {s.totalEntries} operación{s.totalEntries === 1 ? '' : 'es'} · {s.winRate}% ganadas</p>
-                {s.mostSession && (
-                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                    <Clock size={10} /> Opera más en: {SESSION_LABEL[s.mostSession]}
+                <p className="text-[13px] font-bold text-[#1d1d1f] dark:text-white truncate">{s.name || s.email}</p>
+                <p className="text-[11px] text-gray-400 dark:text-slate-500">{s.email} · {s.totalAccounts} cuenta{s.totalAccounts === 1 ? '' : 's'} · {s.totalEntries} operación{s.totalEntries === 1 ? '' : 'es'} · {s.winRate}% ganadas</p>
+                {s.mostSession ? (
+                  <span className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-black text-indigo-700 dark:text-indigo-200 bg-indigo-100 dark:bg-indigo-500/20 px-2.5 py-1 rounded-lg border border-indigo-300 dark:border-indigo-400/40">
+                    <Clock size={12} /> Sesión más operada: {sessionLabel(s.mostSession)}
+                  </span>
+                ) : (
+                  <span className="mt-1.5 inline-flex items-center gap-1.5 text-[10px] font-bold text-gray-300 dark:text-slate-600">
+                    <Clock size={11} /> Sin sesión registrada
                   </span>
                 )}
               </div>
               <div className="w-24 h-10 hidden sm:block shrink-0"><EquityCurve series={s.series} height={40} /></div>
               <div className="text-right shrink-0 w-28">
                 <p className={`text-sm font-black ${moneyColor(s.totalResultMoney)}`}>{fmtMoney(s.totalResultMoney)}</p>
-                {s.lastEntryAt && <p className="text-[10px] text-gray-400">Última: {new Date(s.lastEntryAt).toLocaleDateString('es-AR')}</p>}
+                {s.lastEntryAt && <p className="text-[10px] text-gray-400 dark:text-slate-500">Última: {new Date(s.lastEntryAt).toLocaleDateString('es-AR')}</p>}
               </div>
             </button>
           ))}
