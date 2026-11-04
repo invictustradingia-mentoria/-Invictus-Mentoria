@@ -5,7 +5,7 @@ export const ACCESS_LEVELS = ['ALL', 'CLUB', 'MENTORIA']
 export const STAFF_ROLES = ['ADMIN', 'EDITOR']
 
 // Secciones del panel que puede usar un editor.
-export const EDITOR_PATHS = ['/admin/content', '/admin/chat', '/admin/llamadas', '/admin/soporte', '/admin/testimonios', '/admin/recursos']
+export const EDITOR_PATHS = ['/admin/content', '/admin/chat', '/admin/llamadas', '/admin/soporte', '/admin/testimonios', '/admin/recursos', '/admin/journal']
 
 export function isAdminRole(role?: string | null): boolean {
   return role === 'ADMIN'
@@ -15,7 +15,7 @@ export function isStaff(role?: string | null): boolean {
   return role === 'ADMIN' || role === 'EDITOR'
 }
 
-// Qué niveles de contenido puede ver cada rol.
+// QuÃ© niveles de contenido puede ver cada rol.
 // null = ve todo (administrador).
 // El editor ve lo que el administrador le habilite: 'ALL' (todo), 'CLUB' o 'MENTORIA'.
 export function visibleLevels(role?: string | null, viewLevel?: string | null): string[] | null {

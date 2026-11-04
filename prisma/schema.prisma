@@ -29,10 +29,11 @@ model User {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  sessions     Session[]
-  activityLogs ActivityLog[]
-  progress     LessonProgress[]
-  securityLogs SecurityLog[]
+  sessions        Session[]
+  activityLogs    ActivityLog[]
+  progress        LessonProgress[]
+  securityLogs    SecurityLog[]
+  journalAccounts JournalAccount[]
 
   @@map("users")
 }
@@ -156,7 +157,7 @@ model SupportThread {
   name          String
   email         String?
   phone         String?
-  offlineContact Boolean         @default(false) // dejó sus datos con soporte fuera de línea
+  offlineContact Boolean         @default(false) // dejÃ³ sus datos con soporte fuera de lÃ­nea
   status        String           @default("OPEN") // OPEN | CLOSED
   ipHash        String
   unreadAdmin   Int              @default(0)
@@ -181,7 +182,7 @@ model SupportMessage {
   @@map("support_messages")
 }
 
-// Ajustes simples clave/valor (por ejemplo, si soporte está en línea).
+// Ajustes simples clave/valor (por ejemplo, si soporte estÃ¡ en lÃ­nea).
 model AppSetting {
   key       String   @id
   value     String
@@ -283,7 +284,7 @@ model VideoIncident {
   @@map("video_incidents")
 }
 
-// ---------- Recuperar contraseña y bienvenida ----------
+// ---------- Recuperar contraseÃ±a y bienvenida ----------
 model PasswordReset {
   id        String    @id @default(cuid())
   userId    String
@@ -309,4 +310,63 @@ model Testimonial {
   updatedAt   DateTime @default(now()) @updatedAt
 
   @@map("testimonials")
+}
+
+// ---------- Trading Journal ----------
+
+// Cada "eval"/cuenta que tiene un alumno (puede tener varias a la vez).
+model JournalAccount {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String   // ej: "Eval 1 - FTMO 100k"
+  propFirm    String?
+  accountSize Float?
+  status      String   @default("ACTIVE") // ACTIVE, PASSED, FAILED, FUNDED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries     JournalEntry[]
+
+  @@index([userId])
+  @@map("journal_accounts")
+}
+
+// Cada operaciÃ³n/registro que sube el alumno dentro de una cuenta.
+model JournalEntry {
+  id            String   @id @default(cuid())
+  accountId     String
+  date          DateTime
+  pair          String?
+  resultMoney   Float?
+  resultPercent Float?
+  resultRR      Float?
+  dayTag        String   @default("NEUTRAL") // GOOD, BAD, NEUTRAL
+  note          String?
+  screenshotUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  account       JournalAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  comments      JournalComment[]
+
+  @@index([accountId])
+  @@index([date])
+  @@map("journal_entries")
+}
+
+// Comentarios del equipo (admin/editor) sobre una operaciÃ³n del alumno.
+model JournalComment {
+  id         String   @id @default(cuid())
+  entryId    String
+  authorId   String
+  authorName String?
+  authorRole String?
+  content    String
+  createdAt  DateTime @default(now())
+
+  entry      JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@map("journal_comments")
 }
