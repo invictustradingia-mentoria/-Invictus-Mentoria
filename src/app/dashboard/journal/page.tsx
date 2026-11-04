@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import {
-  LineChart, Plus, Trash2, Image as ImageIcon, TrendingUp, TrendingDown, Minus,
+  LineChart, Plus, Trash2, Image as ImageIcon,
   Smile, Frown, Meh, MessageSquare, Loader2, Target, Percent, DollarSign, Flame,
-  Wallet, Activity, Trophy,
+  Wallet, Activity, Trophy, Maximize2, X, Quote,
 } from 'lucide-react'
 
 type AccountStatus = 'ACTIVE' | 'PASSED' | 'FAILED' | 'FUNDED'
@@ -130,6 +130,45 @@ function Kpi({ icon: Icon, label: lbl, value, valueCls }: { icon: any; label: st
   )
 }
 
+function StatBox({ icon: Icon, label: lbl, value, cls }: { icon?: any; label: string; value: string; cls?: string }) {
+  return (
+    <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+      <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-gray-400">
+        {Icon && <Icon size={10} />} {lbl}
+      </div>
+      <p className={`mt-0.5 text-[13px] font-black ${cls || 'text-[#1d1d1f]'}`}>{value}</p>
+    </div>
+  )
+}
+
+function ScreenshotThumb({ url, onOpen }: { url: string; onOpen: () => void }) {
+  return (
+    <button type="button" onClick={onOpen}
+      className="group relative block h-32 w-full sm:w-44 shrink-0 overflow-hidden rounded-xl border border-gray-200 cursor-pointer">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt="Captura del trade" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+        <span className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
+          <Maximize2 size={11} /> Ver captura
+        </span>
+      </div>
+    </button>
+  )
+}
+
+function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6" onClick={onClose}>
+      <button type="button" onClick={onClose} aria-label="Cerrar"
+        className="absolute right-5 top-5 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 cursor-pointer">
+        <X size={20} />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="Captura del trade ampliada" className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+    </div>
+  )
+}
+
 export default function JournalPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -137,6 +176,7 @@ export default function JournalPage() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [loadingEntries, setLoadingEntries] = useState(false)
   const [msg, setMsg] = useState<{ t: string; ok: boolean } | null>(null)
+  const [lightbox, setLightbox] = useState<string | null>(null)
 
   const [showNewAccount, setShowNewAccount] = useState(false)
   const [accName, setAccName] = useState('')
@@ -348,6 +388,8 @@ export default function JournalPage() {
 
   return (
     <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8">
+      {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
+
       <div>
         <span className="text-[11px] font-bold text-[#0284c7] tracking-wider uppercase block">Seguimiento personal</span>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1d1d1f] flex items-center gap-2.5 mt-0.5">
@@ -564,7 +606,6 @@ export default function JournalPage() {
                 const d = DAY_TAG_LABEL[en.dayTag] || DAY_TAG_LABEL.NEUTRAL
                 const DIcon = d.icon
                 const money = en.resultMoney ?? 0
-                const MoneyIcon = money > 0 ? TrendingUp : money < 0 ? TrendingDown : Minus
                 const barColor = money > 0 ? 'bg-emerald-500' : money < 0 ? 'bg-rose-500' : 'bg-gray-300'
                 return (
                   <div key={en.id} className="relative overflow-hidden bg-white rounded-2xl border border-[#ededf0] shadow-sm">
@@ -581,31 +622,32 @@ export default function JournalPage() {
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-5 flex-wrap">
-                        {en.resultMoney !== null && (
-                          <span className={`flex items-center gap-1 text-base font-black ${moneyColor(en.resultMoney)}`}>
-                            <MoneyIcon size={15} /> {fmtMoney(en.resultMoney)}
-                          </span>
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex-1 min-w-0 space-y-3">
+                          <div className="grid grid-cols-3 gap-2">
+                            <StatBox icon={DollarSign} label="Resultado" value={en.resultMoney !== null ? fmtMoney(en.resultMoney) : '—'} cls={en.resultMoney !== null ? moneyColor(en.resultMoney) : undefined} />
+                            <StatBox icon={Percent} label="Porcentaje" value={en.resultPercent !== null ? `${en.resultPercent > 0 ? '+' : ''}${en.resultPercent}%` : '—'} />
+                            <StatBox icon={Target} label="R:R" value={en.resultRR !== null ? `${en.resultRR} R` : '—'} />
+                          </div>
+                          {en.note && (
+                            <blockquote className="flex gap-2 rounded-xl bg-gray-50 border-l-2 border-[#0284c7] pl-3 pr-3 py-2.5 text-[12px] text-gray-600 leading-relaxed">
+                              <Quote size={13} className="mt-0.5 shrink-0 text-[#0284c7]/50" />
+                              <span className="whitespace-pre-wrap">{en.note}</span>
+                            </blockquote>
+                          )}
+                        </div>
+                        {en.screenshotUrl && (
+                          <ScreenshotThumb url={en.screenshotUrl} onOpen={() => setLightbox(en.screenshotUrl!)} />
                         )}
-                        {en.resultPercent !== null && <span className="text-[12px] font-bold text-gray-500">{en.resultPercent > 0 ? '+' : ''}{en.resultPercent}%</span>}
-                        {en.resultRR !== null && <span className="text-[12px] font-bold text-gray-500 flex items-center gap-1"><Target size={11} /> {en.resultRR} R</span>}
                       </div>
 
-                      {en.note && <p className="text-[12px] text-gray-600 leading-relaxed whitespace-pre-wrap">{en.note}</p>}
-
-                      {en.screenshotUrl && (
-                        <a href={en.screenshotUrl} target="_blank" rel="noreferrer" className="block w-fit">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={en.screenshotUrl} alt="Captura del trade" className="max-h-48 rounded-xl border border-gray-200 object-cover" />
-                        </a>
-                      )}
-
                       {en.comments.length > 0 && (
-                        <div className="space-y-2 pt-2 border-t border-gray-100">
+                        <div className="space-y-2 pt-3 border-t border-gray-100">
+                          <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-gray-400"><MessageSquare size={11} /> Comentarios del mentor</p>
                           {en.comments.map((c) => (
                             <div key={c.id} className="bg-[#f0f9ff] border border-[#bae6fd] rounded-xl p-3">
                               <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0284c7]">
-                                <MessageSquare size={11} /> {c.authorName || 'Mentor'} · {new Date(c.createdAt).toLocaleDateString('es-AR')}
+                                {c.authorName || 'Mentor'} · {new Date(c.createdAt).toLocaleDateString('es-AR')}
                               </div>
                               <p className="text-[12px] text-[#1d1d1f] mt-1">{c.content}</p>
                             </div>

@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import {
-  LineChart, ArrowLeft, Search, TrendingUp, TrendingDown, Minus, Smile, Frown, Meh,
+  LineChart, ArrowLeft, Search, Smile, Frown, Meh,
   MessageSquare, Send, Trash2, Loader2, Target, Trophy, Wallet, Activity, Users2,
+  DollarSign, Percent, Maximize2, X, Quote,
 } from 'lucide-react'
 
 type DayTag = 'GOOD' | 'BAD' | 'NEUTRAL'
@@ -134,18 +135,57 @@ function Kpi({ icon: Icon, label: lbl, value, valueCls }: { icon: any; label: st
   )
 }
 
-function EntryCard({ entry, onComment, onDeleteComment, busyId }: {
+function StatBox({ icon: Icon, label: lbl, value, cls }: { icon?: any; label: string; value: string; cls?: string }) {
+  return (
+    <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+      <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-gray-400">
+        {Icon && <Icon size={10} />} {lbl}
+      </div>
+      <p className={`mt-0.5 text-[13px] font-black ${cls || 'text-[#1d1d1f]'}`}>{value}</p>
+    </div>
+  )
+}
+
+function ScreenshotThumb({ url, onOpen }: { url: string; onOpen: () => void }) {
+  return (
+    <button type="button" onClick={onOpen}
+      className="group relative block h-32 w-full sm:w-44 shrink-0 overflow-hidden rounded-xl border border-gray-200 cursor-pointer">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt="Captura del trade" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+        <span className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
+          <Maximize2 size={11} /> Ver captura
+        </span>
+      </div>
+    </button>
+  )
+}
+
+function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6" onClick={onClose}>
+      <button type="button" onClick={onClose} aria-label="Cerrar"
+        className="absolute right-5 top-5 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 cursor-pointer">
+        <X size={20} />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="Captura del trade ampliada" className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+    </div>
+  )
+}
+
+function EntryCard({ entry, onComment, onDeleteComment, busyId, onOpenImage }: {
   entry: Entry
   onComment: (entryId: string, content: string) => Promise<void>
   onDeleteComment: (id: string) => void
   busyId: string | null
+  onOpenImage: (url: string) => void
 }) {
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const d = DAY_TAG_LABEL[entry.dayTag] || DAY_TAG_LABEL.NEUTRAL
   const DIcon = d.icon
   const money = entry.resultMoney ?? 0
-  const MoneyIcon = money > 0 ? TrendingUp : money < 0 ? TrendingDown : Minus
   const barColor = money > 0 ? 'bg-emerald-500' : money < 0 ? 'bg-rose-500' : 'bg-gray-300'
 
   const send = async () => {
@@ -166,32 +206,33 @@ function EntryCard({ entry, onComment, onDeleteComment, busyId }: {
           <span className={`flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${d.cls}`}><DIcon size={11} /> {d.label}</span>
         </div>
 
-        <div className="flex items-center gap-5 flex-wrap">
-          {entry.resultMoney !== null && (
-            <span className={`flex items-center gap-1 text-base font-black ${moneyColor(entry.resultMoney)}`}>
-              <MoneyIcon size={15} /> {fmtMoney(entry.resultMoney)}
-            </span>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 min-w-0 space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <StatBox icon={DollarSign} label="Resultado" value={entry.resultMoney !== null ? fmtMoney(entry.resultMoney) : '—'} cls={entry.resultMoney !== null ? moneyColor(entry.resultMoney) : undefined} />
+              <StatBox icon={Percent} label="Porcentaje" value={entry.resultPercent !== null ? `${entry.resultPercent > 0 ? '+' : ''}${entry.resultPercent}%` : '—'} />
+              <StatBox icon={Target} label="R:R" value={entry.resultRR !== null ? `${entry.resultRR} R` : '—'} />
+            </div>
+            {entry.note && (
+              <blockquote className="flex gap-2 rounded-xl bg-gray-50 border-l-2 border-[#0284c7] pl-3 pr-3 py-2.5 text-[12px] text-gray-600 leading-relaxed">
+                <Quote size={13} className="mt-0.5 shrink-0 text-[#0284c7]/50" />
+                <span className="whitespace-pre-wrap">{entry.note}</span>
+              </blockquote>
+            )}
+          </div>
+          {entry.screenshotUrl && (
+            <ScreenshotThumb url={entry.screenshotUrl} onOpen={() => onOpenImage(entry.screenshotUrl!)} />
           )}
-          {entry.resultPercent !== null && <span className="text-[12px] font-bold text-gray-500">{entry.resultPercent > 0 ? '+' : ''}{entry.resultPercent}%</span>}
-          {entry.resultRR !== null && <span className="text-[12px] font-bold text-gray-500 flex items-center gap-1"><Target size={11} /> {entry.resultRR} R</span>}
         </div>
 
-        {entry.note && <p className="text-[12px] text-gray-600 leading-relaxed whitespace-pre-wrap">{entry.note}</p>}
-
-        {entry.screenshotUrl && (
-          <a href={entry.screenshotUrl} target="_blank" rel="noreferrer" className="block w-fit">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={entry.screenshotUrl} alt="Captura del trade" className="max-h-48 rounded-xl border border-gray-200 object-cover" />
-          </a>
-        )}
-
         {entry.comments.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-gray-100">
+          <div className="space-y-2 pt-3 border-t border-gray-100">
+            <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-gray-400"><MessageSquare size={11} /> Comentarios</p>
             {entry.comments.map((c) => (
               <div key={c.id} className="bg-[#f0f9ff] border border-[#bae6fd] rounded-xl p-3 flex items-start justify-between gap-2">
                 <div>
                   <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0284c7]">
-                    <MessageSquare size={11} /> {c.authorName || 'Equipo'} · {new Date(c.createdAt).toLocaleDateString('es-AR')}
+                    {c.authorName || 'Equipo'} · {new Date(c.createdAt).toLocaleDateString('es-AR')}
                   </div>
                   <p className="text-[12px] text-[#1d1d1f] mt-1">{c.content}</p>
                 </div>
@@ -229,6 +270,7 @@ export default function AdminJournalPage() {
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [msg, setMsg] = useState<{ t: string; ok: boolean } | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<string | null>(null)
 
   const notify = (t: string, ok: boolean) => { setMsg({ t, ok }); setTimeout(() => setMsg(null), 6000) }
 
@@ -302,8 +344,15 @@ export default function AdminJournalPage() {
   const avgWinRate = students && students.length > 0 ? Math.round(students.reduce((sum, s) => sum + s.winRate, 0) / students.length) : 0
 
   if (selectedUserId) {
+    const totalPnl = detail ? detail.accounts.reduce((sum, a) => sum + a.entries.reduce((s2, e) => s2 + (e.resultMoney || 0), 0), 0) : 0
+    const totalTrades = detail ? detail.accounts.reduce((sum, a) => sum + a.entries.length, 0) : 0
+    const totalWins = detail ? detail.accounts.reduce((sum, a) => sum + a.entries.filter((e) => (e.resultMoney || 0) > 0).length, 0) : 0
+    const totalWinRate = totalTrades > 0 ? Math.round((totalWins / totalTrades) * 100) : 0
+
     return (
       <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6">
+        {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
+
         <button type="button" onClick={() => setSelectedUserId(null)}
           className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 hover:text-[#0284c7] cursor-pointer">
           <ArrowLeft size={14} /> Volver al listado
@@ -327,6 +376,13 @@ export default function AdminJournalPage() {
               <p className="text-[12px] text-slate-400">{detail.student.email} · {detail.student.role}</p>
             </div>
 
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Kpi icon={Wallet} label="Resultado total" value={fmtMoney(totalPnl)} valueCls={moneyColor(totalPnl)} />
+              <Kpi icon={Activity} label="Operaciones" value={String(totalTrades)} />
+              <Kpi icon={Trophy} label="% ganadas" value={`${totalWinRate}%`} />
+              <Kpi icon={Users2} label="Cuentas" value={String(detail.accounts.length)} />
+            </div>
+
             {detail.accounts.length === 0 ? (
               <div className="bg-white rounded-3xl p-10 text-center border border-dashed border-gray-200 text-xs text-gray-400">
                 Este alumno todavía no creó ninguna cuenta en su journal.
@@ -341,21 +397,33 @@ export default function AdminJournalPage() {
                 const series = [...acc.entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((e) => ({ date: e.date, resultMoney: e.resultMoney }))
                 return (
                   <div key={acc.id} className="space-y-3">
-                    <div className="relative overflow-hidden bg-white rounded-2xl border border-[#ededf0] shadow-sm">
-                      <div className={`absolute inset-x-0 top-0 h-1 ${total >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                      <div className="p-4 flex items-center justify-between flex-wrap gap-3">
+                    <div className="bg-[#0b1220] rounded-3xl p-6 shadow-sm">
+                      <div className="flex flex-wrap items-start justify-between gap-6">
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-[#1d1d1f]">{acc.name}</p>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-sky-300/70">Cuenta</p>
                             <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>
                           </div>
-                          {acc.propFirm && <p className="text-[11px] text-gray-500 mt-0.5">{acc.propFirm}{acc.accountSize ? ` · $${acc.accountSize.toLocaleString('es-AR')}` : ''}</p>}
-                          <p className="text-[10px] text-gray-400 mt-1">{trades} operación{trades === 1 ? '' : 'es'} · {winRate}% ganadas</p>
+                          <p className="text-base font-black text-white mt-0.5">{acc.name}</p>
+                          {acc.propFirm && <p className="text-[11px] text-slate-400">{acc.propFirm}{acc.accountSize ? ` · $${acc.accountSize.toLocaleString('es-AR')}` : ''}</p>}
                         </div>
-                        <div className="flex items-center gap-4">
-                          <p className={`text-lg font-black ${moneyColor(total)}`}>{fmtMoney(total)}</p>
-                          <div className="w-24 h-10 hidden sm:block"><EquityCurve series={series} height={40} /></div>
+                        <div className="flex items-center gap-7">
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-slate-400">Resultado</p>
+                            <p className={`text-xl font-black ${total >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{fmtMoney(total)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-slate-400">Operaciones</p>
+                            <p className="text-xl font-black text-white">{trades}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase text-slate-400">% ganadas</p>
+                            <p className="text-xl font-black text-white">{winRate}%</p>
+                          </div>
                         </div>
+                      </div>
+                      <div className="mt-5 h-20">
+                        <EquityCurve series={series} height={80} />
                       </div>
                     </div>
 
@@ -364,7 +432,7 @@ export default function AdminJournalPage() {
                     ) : (
                       <div className="space-y-3">
                         {acc.entries.map((en) => (
-                          <EntryCard key={en.id} entry={en} onComment={addComment} onDeleteComment={deleteComment} busyId={busyId} />
+                          <EntryCard key={en.id} entry={en} onComment={addComment} onDeleteComment={deleteComment} busyId={busyId} onOpenImage={setLightbox} />
                         ))}
                       </div>
                     )}
