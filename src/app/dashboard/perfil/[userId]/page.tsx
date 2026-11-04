@@ -8,6 +8,8 @@ import Link from 'next/link'
 import ProfileHeader from '@/components/community/ProfileHeader'
 import FollowButton from '@/components/community/FollowButton'
 import PostCard, { type FeedPost } from '@/components/community/PostCard'
+import ProfileInfoPanel from '@/components/community/ProfileInfoPanel'
+import FollowListPanel from '@/components/community/FollowListPanel'
 
 interface PublicProfile {
   user: { id: string; name: string | null; role: string; avatarUrl: string | null; coverUrl: string | null; createdAt: string }
@@ -30,6 +32,7 @@ export default function PublicProfilePage() {
   const [avatars, setAvatars] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [tab, setTab] = useState<'posts' | 'info' | 'followers' | 'following'>('posts')
 
   const load = useCallback(async () => {
     try {
@@ -53,6 +56,7 @@ export default function PublicProfilePage() {
   }, [userId])
 
   useEffect(() => {
+    setTab('posts')
     load()
   }, [load])
 
@@ -79,7 +83,7 @@ export default function PublicProfilePage() {
   if (data.isMe) return null // se está redirigiendo a /dashboard/perfil
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-5 md:p-8">
+    <div className="mx-auto max-w-3xl space-y-4 p-3 sm:p-5 md:p-8">
       <Link href="/dashboard/chat" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#0284c7] dark:text-white/50">
         <ArrowLeft size={14} /> Volver a Comunidad
       </Link>
@@ -93,6 +97,8 @@ export default function PublicProfilePage() {
         following={data.followingCount}
         postsCount={data.postsCount}
         editable={false}
+        onFollowersClick={() => setTab('followers')}
+        onFollowingClick={() => setTab('following')}
         rightSlot={
           meId ? (
             <FollowButton
@@ -104,16 +110,32 @@ export default function PublicProfilePage() {
         }
       />
 
-      <div className="space-y-4">
-        {posts.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-12 text-center dark:border-white/10 dark:bg-white/[0.04]">
-            <p className="font-semibold text-slate-600 dark:text-white/70">Todavía no publicó nada.</p>
-          </div>
-        )}
-        {meId && posts.map((p) => (
-          <PostCard key={p.id} post={p} avatars={avatars} meId={meId} canModerate={false} apiBase="/api/student/community" onDeleted={removePost} />
-        ))}
+      {/* Tabs */}
+      <div className="-mx-3 flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-white/5 sm:mx-0 sm:inline-flex sm:w-fit">
+        <button onClick={() => setTab('posts')} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-bold transition sm:px-4 ${tab === 'posts' ? 'bg-white text-[#0284c7] shadow-sm dark:bg-white/10' : 'text-slate-500 dark:text-white/50'}`}>Publicaciones</button>
+        <button onClick={() => setTab('info')} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-bold transition sm:px-4 ${tab === 'info' ? 'bg-white text-[#0284c7] shadow-sm dark:bg-white/10' : 'text-slate-500 dark:text-white/50'}`}>Información</button>
+        <button onClick={() => setTab('followers')} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-bold transition sm:px-4 ${tab === 'followers' ? 'bg-white text-[#0284c7] shadow-sm dark:bg-white/10' : 'text-slate-500 dark:text-white/50'}`}>Seguidores</button>
+        <button onClick={() => setTab('following')} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-bold transition sm:px-4 ${tab === 'following' ? 'bg-white text-[#0284c7] shadow-sm dark:bg-white/10' : 'text-slate-500 dark:text-white/50'}`}>Siguiendo</button>
       </div>
+
+      {tab === 'posts' && (
+        <div className="space-y-4">
+          {posts.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-12 text-center dark:border-white/10 dark:bg-white/[0.04]">
+              <p className="font-semibold text-slate-600 dark:text-white/70">Todavía no publicó nada.</p>
+            </div>
+          )}
+          {meId && posts.map((p) => (
+            <PostCard key={p.id} post={p} avatars={avatars} meId={meId} canModerate={false} apiBase="/api/student/community" onDeleted={removePost} />
+          ))}
+        </div>
+      )}
+
+      {tab === 'info' && <ProfileInfoPanel userId={data.user.id} role={data.user.role} />}
+
+      {tab === 'followers' && meId && <FollowListPanel userId={data.user.id} kind="followers" meId={meId} emptyText="Todavía no tiene seguidores." />}
+
+      {tab === 'following' && meId && <FollowListPanel userId={data.user.id} kind="following" meId={meId} emptyText="Todavía no sigue a nadie." />}
     </div>
   )
 }

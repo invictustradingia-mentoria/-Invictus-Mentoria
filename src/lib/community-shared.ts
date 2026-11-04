@@ -48,8 +48,24 @@ export const ROLE_BADGE: Record<string, { label: string; gradient: string; glow?
   CLUB: { label: 'Club', gradient: 'linear-gradient(135deg,#64748b,#475569)' },
 }
 
+// Orden fijo para mostrar la leyenda de roles de la comunidad (tab "Información").
+export const ROLE_ORDER = ['ADMIN', 'EDITOR', 'MENTORIA', 'CLUB'] as const
+
 export function roleBadge(role: string) {
   return ROLE_BADGE[role] || ROLE_BADGE.CLUB
+}
+
+// Nombre legible de cada sesión de trading del Journal (campo JournalEntry.session).
+export const SESSION_LABEL: Record<string, string> = {
+  ASIA: 'Asia',
+  LONDRES: 'Londres',
+  NUEVA_YORK: 'Nueva York',
+  LONDRES_NY: 'Londres/NY',
+}
+
+export function sessionLabel(session: string | null | undefined): string {
+  if (!session) return '—'
+  return SESSION_LABEL[session] || session
 }
 
 // Da forma a un Post (con sus relaciones cargadas) para la respuesta JSON del feed,

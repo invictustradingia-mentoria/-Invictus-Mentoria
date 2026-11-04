@@ -267,13 +267,13 @@ export default function PostCard({
         </div>
       )}
 
-      <div className="mt-3 flex items-center gap-1 border-t border-slate-100 pt-2 dark:border-white/10">
+      <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-slate-100 pt-2 dark:border-white/10">
         {REACTION_TYPES.map((t) => (
           <button
             key={t}
             onClick={() => react(t)}
             title={REACTION_LABEL[t]}
-            className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${
+            className={`flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-semibold transition sm:px-2.5 ${
               mine === t ? 'bg-sky-50 text-[#0284c7] dark:bg-sky-500/15 dark:text-sky-300' : 'text-slate-500 hover:bg-slate-50 dark:text-white/50 dark:hover:bg-white/5'
             }`}
           >
@@ -283,13 +283,13 @@ export default function PostCard({
         ))}
         <button
           onClick={loadComments}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 dark:text-white/50 dark:hover:bg-white/5"
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 dark:text-white/50 dark:hover:bg-white/5 sm:px-2.5"
         >
           <MessageCircle size={16} /> {commentsCount > 0 ? commentsCount : 'Comentar'}
         </button>
         <button
           onClick={() => setShareOpen((v) => !v)}
-          className={`ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${
+          className={`ml-auto flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold transition sm:px-2.5 ${
             shared ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 hover:bg-slate-50 dark:text-white/50 dark:hover:bg-white/5'
           }`}
         >

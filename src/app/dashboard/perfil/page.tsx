@@ -8,6 +8,8 @@ import { Avatar } from '@/components/dashboard/DashboardShell'
 import { getMembership } from '@/lib/membership'
 import ProfileHeader from '@/components/community/ProfileHeader'
 import PostCard, { type FeedPost } from '@/components/community/PostCard'
+import ProfileInfoPanel from '@/components/community/ProfileInfoPanel'
+import FollowListPanel from '@/components/community/FollowListPanel'
 import { MAX_POST_LEN, NO_LINKS_MESSAGE } from '@/lib/community-shared'
 
 // Recorta al centro y reduce a 256x256 para que pese poco
@@ -80,7 +82,7 @@ export default function ProfilePage() {
   const [newPass, setNewPass] = useState('')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<{ text: string; type: 'ok' | 'err' } | null>(null)
-  const [tab, setTab] = useState<'posts' | 'settings'>('posts')
+  const [tab, setTab] = useState<'posts' | 'info' | 'followers' | 'following' | 'settings'>('posts')
 
   // Feed de publicaciones propias + contadores de seguidores
   const [posts, setPosts] = useState<FeedPost[]>([])
@@ -221,8 +223,8 @@ export default function ProfilePage() {
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-xs font-bold text-slate-400">Cargando perfil...</div>
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 p-5 md:p-8">
-      <h1 className="text-2xl font-black tracking-tight text-slate-900">Mi perfil</h1>
+    <div className="mx-auto max-w-3xl space-y-5 p-3 sm:p-5 md:p-8">
+      <h1 className="text-xl font-black tracking-tight text-slate-900 sm:text-2xl">Mi perfil</h1>
 
       {msg && (
         <div className={`flex items-center gap-2 rounded-2xl border p-3.5 text-xs font-bold ${msg.type === 'ok' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
@@ -231,12 +233,26 @@ export default function ProfilePage() {
       )}
 
       {/* Perfil estilo Facebook: portada + foto + badge de rol */}
-      <ProfileHeader name={name || 'Alumno'} role={role} avatarUrl={avatar} coverUrl={cover} followers={followers} following={following} postsCount={posts.length} onSave={saveProfileImages} />
+      <ProfileHeader
+        name={name || 'Alumno'}
+        role={role}
+        avatarUrl={avatar}
+        coverUrl={cover}
+        followers={followers}
+        following={following}
+        postsCount={posts.length}
+        onSave={saveProfileImages}
+        onFollowersClick={() => setTab('followers')}
+        onFollowingClick={() => setTab('following')}
+      />
 
       {/* Tabs */}
-      <div className="inline-flex rounded-xl bg-slate-100 p-1">
-        <button onClick={() => setTab('posts')} className={`rounded-lg px-4 py-1.5 text-xs font-bold transition ${tab === 'posts' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-slate-500'}`}>Publicaciones</button>
-        <button onClick={() => setTab('settings')} className={`rounded-lg px-4 py-1.5 text-xs font-bold transition ${tab === 'settings' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-slate-500'}`}>Configuración</button>
+      <div className="-mx-3 flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 sm:mx-0 sm:inline-flex sm:w-fit">
+        <button onClick={() => setTab('posts')} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-bold transition sm:px-4 ${tab === 'posts' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-slate-500'}`}>Publicaciones</button>
+        <button onClick={() => setTab('info')} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-bold transition sm:px-4 ${tab === 'info' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-slate-500'}`}>Información</button>
+        <button onClick={() => setTab('followers')} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-bold transition sm:px-4 ${tab === 'followers' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-slate-500'}`}>Seguidores</button>
+        <button onClick={() => setTab('following')} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-bold transition sm:px-4 ${tab === 'following' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-slate-500'}`}>Siguiendo</button>
+        <button onClick={() => setTab('settings')} className={`shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-bold transition sm:px-4 ${tab === 'settings' ? 'bg-white text-[#0284c7] shadow-sm' : 'text-slate-500'}`}>Configuración</button>
       </div>
 
       {tab === 'posts' && (
@@ -282,10 +298,16 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {tab === 'info' && meId && <ProfileInfoPanel userId={meId} role={role} />}
+
+      {tab === 'followers' && meId && <FollowListPanel userId={meId} kind="followers" meId={meId} emptyText="Todavía no tenés seguidores." />}
+
+      {tab === 'following' && meId && <FollowListPanel userId={meId} kind="following" meId={meId} emptyText="Todavía no seguís a nadie." />}
+
       {tab === 'settings' && (
         <div className="space-y-6">
           {/* Tarjeta con foto y membresía (configuración clásica, sin cambios) */}
-          <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${m.gradient} p-6 text-white shadow-xl ${m.glow}`}>
+          <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${m.gradient} p-4 text-white shadow-xl ${m.glow} sm:p-6`}>
             <MIcon size={140} className="absolute -right-6 -top-6 opacity-15" />
             <div className="relative flex flex-col items-center gap-5 sm:flex-row">
               <div className="relative">
@@ -314,7 +336,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Datos */}
-          <form onSubmit={saveData} className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <form onSubmit={saveData} className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-sm font-black text-slate-900">Datos personales</h2>
             <div><label className={labelCls}>Nombre</label><input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} required /></div>
             <div><label className={labelCls}>Nombre de usuario (único)</label><input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))} className={inputCls} placeholder="ej: trader_nyc" maxLength={20} autoCapitalize="none" /></div>
@@ -326,7 +348,7 @@ export default function ProfilePage() {
           </form>
 
           {/* Contraseña */}
-          <form onSubmit={savePass} className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <form onSubmit={savePass} className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="flex items-center gap-2 text-sm font-black text-slate-900"><Lock size={15} /> Cambiar contraseña</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div><label className={labelCls}>Contraseña actual</label><input type="password" value={curPass} onChange={(e) => setCurPass(e.target.value)} className={inputCls} autoComplete="current-password" /></div>

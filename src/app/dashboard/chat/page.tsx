@@ -346,7 +346,7 @@ function GlobalChat({ me }: { me: Me | null }) {
   const blocked = !!me?.sanction
 
   return (
-    <div className="flex h-[calc(100dvh-7.5rem)] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-[0_10px_40px_-12px_rgba(14,165,233,.25)] dark:border-white/10 dark:bg-white/[0.04] md:h-[calc(100dvh-6rem)]">
+    <div className="flex h-[70vh] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-[0_10px_40px_-12px_rgba(14,165,233,.25)] dark:border-white/10 dark:bg-white/[0.04] lg:h-[calc(100dvh-6rem)]">
       <header className="flex items-center gap-3 border-b border-sky-100 bg-gradient-to-r from-sky-500 to-sky-700 px-4 py-3 text-white dark:border-white/10">
         <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/20">
           <Users size={20} />

@@ -49,9 +49,24 @@ interface Props {
   editable?: boolean
   onSave?: (patch: { avatarUrl?: string | null; coverUrl?: string | null }) => Promise<void>
   rightSlot?: React.ReactNode
+  onFollowersClick?: () => void
+  onFollowingClick?: () => void
 }
 
-export default function ProfileHeader({ name, role, avatarUrl, coverUrl, followers, following, postsCount, editable = true, onSave, rightSlot }: Props) {
+export default function ProfileHeader({
+  name,
+  role,
+  avatarUrl,
+  coverUrl,
+  followers,
+  following,
+  postsCount,
+  editable = true,
+  onSave,
+  rightSlot,
+  onFollowersClick,
+  onFollowingClick,
+}: Props) {
   const [busyAvatar, setBusyAvatar] = useState(false)
   const [busyCover, setBusyCover] = useState(false)
   const [err, setErr] = useState('')
@@ -76,7 +91,7 @@ export default function ProfileHeader({ name, role, avatarUrl, coverUrl, followe
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.04]">
       <div
-        className="relative h-40 sm:h-56"
+        className="relative h-28 sm:h-56"
         style={{ background: coverUrl ? `url(${coverUrl}) center/cover no-repeat` : 'linear-gradient(120deg,#0b1220,#0f3a5f 45%,#0284c7 100%)' }}
       >
         {!coverUrl && (
@@ -89,7 +104,7 @@ export default function ProfileHeader({ name, role, avatarUrl, coverUrl, followe
               type="button"
               onClick={() => coverInput.current?.click()}
               disabled={busyCover}
-              className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg border border-white/30 bg-black/35 px-3 py-1.5 text-[11.5px] font-bold text-white backdrop-blur transition hover:bg-black/50 disabled:opacity-60"
+              className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-lg border border-white/30 bg-black/35 px-2.5 py-1.5 text-[10.5px] font-bold text-white backdrop-blur transition hover:bg-black/50 disabled:opacity-60 sm:bottom-3 sm:right-3 sm:px-3 sm:text-[11.5px]"
             >
               {busyCover ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} Editar portada
             </button>
@@ -97,14 +112,14 @@ export default function ProfileHeader({ name, role, avatarUrl, coverUrl, followe
         )}
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-4 px-4 pb-4 pt-0 sm:px-6">
-        <div className="-mt-10 flex items-end gap-4 sm:-mt-12">
+      <div className="flex flex-wrap items-end justify-between gap-3 px-3 pb-4 pt-0 sm:gap-4 sm:px-6">
+        <div className="-mt-8 flex items-end gap-3 sm:-mt-12 sm:gap-4">
           <div className="relative shrink-0">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt={name} className="h-20 w-20 rounded-full border-4 border-white object-cover dark:border-[#0b0f17] sm:h-28 sm:w-28" />
+              <img src={avatarUrl} alt={name} className="h-16 w-16 rounded-full border-4 border-white object-cover dark:border-[#0b0f17] sm:h-28 sm:w-28" />
             ) : (
-              <span className="grid h-20 w-20 place-items-center rounded-full border-4 border-white bg-gradient-to-br from-sky-500 to-cyan-400 text-2xl font-black text-white dark:border-[#0b0f17] sm:h-28 sm:w-28">
+              <span className="grid h-16 w-16 place-items-center rounded-full border-4 border-white bg-gradient-to-br from-sky-500 to-cyan-400 text-xl font-black text-white dark:border-[#0b0f17] sm:h-28 sm:w-28 sm:text-2xl">
                 {initialsOf(name)}
               </span>
             )}
@@ -116,32 +131,40 @@ export default function ProfileHeader({ name, role, avatarUrl, coverUrl, followe
                   onClick={() => avatarInput.current?.click()}
                   disabled={busyAvatar}
                   aria-label="Cambiar foto de perfil"
-                  className="absolute bottom-0 right-0 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-[#0284c7] text-white disabled:opacity-60 dark:border-[#0b0f17]"
+                  className="absolute bottom-0 right-0 grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-[#0284c7] text-white disabled:opacity-60 dark:border-[#0b0f17] sm:h-8 sm:w-8"
                 >
-                  {busyAvatar ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
+                  {busyAvatar ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
                 </button>
               </>
             )}
           </div>
-          <div className="pb-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-black text-[#1d1d1f] dark:text-white sm:text-xl">{name}</h1>
-              <RoleBadge role={role} />
+          <div className="min-w-0 pb-1">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h1 className="truncate text-base font-black text-[#1d1d1f] dark:text-white sm:text-xl">{name}</h1>
+              <RoleBadge role={role} size="sm" />
             </div>
             {(followers !== undefined || following !== undefined || postsCount !== undefined) && (
-              <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-white/50">
-                {followers !== undefined && <>{followers} seguidores</>}
-                {followers !== undefined && following !== undefined && ' · '}
-                {following !== undefined && <>{following} siguiendo</>}
-                {(followers !== undefined || following !== undefined) && postsCount !== undefined && ' · '}
-                {postsCount !== undefined && <>{postsCount} publicaciones</>}
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-[11px] font-semibold text-slate-500 dark:text-white/50 sm:text-xs">
+                {followers !== undefined && (
+                  <button type="button" onClick={onFollowersClick} disabled={!onFollowersClick} className={onFollowersClick ? 'hover:underline' : ''}>
+                    {followers} seguidores
+                  </button>
+                )}
+                {followers !== undefined && following !== undefined && <span>·</span>}
+                {following !== undefined && (
+                  <button type="button" onClick={onFollowingClick} disabled={!onFollowingClick} className={onFollowingClick ? 'hover:underline' : ''}>
+                    {following} siguiendo
+                  </button>
+                )}
+                {(followers !== undefined || following !== undefined) && postsCount !== undefined && <span>·</span>}
+                {postsCount !== undefined && <span>{postsCount} publicaciones</span>}
               </p>
             )}
           </div>
         </div>
         {rightSlot && <div className="pb-1">{rightSlot}</div>}
       </div>
-      {err && <p className="px-4 pb-3 text-xs font-semibold text-red-500 sm:px-6">{err}</p>}
+      {err && <p className="px-3 pb-3 text-xs font-semibold text-red-500 sm:px-6">{err}</p>}
     </div>
   )
 }
