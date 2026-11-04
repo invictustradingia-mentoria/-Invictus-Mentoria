@@ -7,7 +7,7 @@ import ChatAvatar from '@/components/chat/ChatAvatar'
 import EmojiPicker from '@/components/chat/EmojiPicker'
 import ProfileHeader from '@/components/community/ProfileHeader'
 import PostCard, { type FeedPost } from '@/components/community/PostCard'
-import { MAX_POST_LEN, profileHref } from '@/lib/community-shared'
+import { MAX_POST_LEN, NO_LINKS_MESSAGE, profileHref } from '@/lib/community-shared'
 
 interface Msg {
   id: string
@@ -119,13 +119,6 @@ function CommunityFeed({ me }: { me: Me }) {
     loadProfile()
   }, [loadFeed, loadProfile])
 
-  async function saveProfile(patch: { avatarUrl?: string | null; coverUrl?: string | null }) {
-    const r = await fetch('/api/student/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
-    const d = await r.json()
-    if (!r.ok) throw new Error(d.error || 'No se pudo guardar.')
-    setProfile((p) => (p ? { ...p, ...patch } : p))
-  }
-
   async function pickImage(file: File | undefined) {
     if (!file) return
     try {
@@ -158,6 +151,10 @@ function CommunityFeed({ me }: { me: Me }) {
 
   function removePost(id: string) {
     setPosts((p) => p.filter((x) => x.id !== id))
+  }
+
+  function prependShared(p: FeedPost) {
+    setPosts((prev) => [p, ...prev])
   }
 
   return (
@@ -194,6 +191,7 @@ function CommunityFeed({ me }: { me: Me }) {
           </div>
         )}
         {err && <p className="mt-2 text-xs font-semibold text-red-500">{err}</p>}
+        <p className="mt-2 text-[11px] text-slate-400 dark:text-white/40">{NO_LINKS_MESSAGE}</p>
         <div className="mt-2.5 flex items-center justify-between">
           <input ref={imgInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => pickImage(e.target.files?.[0])} />
           <button onClick={() => imgInput.current?.click()} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-50 dark:text-white/50 dark:hover:bg-white/5">
@@ -213,7 +211,7 @@ function CommunityFeed({ me }: { me: Me }) {
         </div>
       )}
       {posts.map((p) => (
-        <PostCard key={p.id} post={p} avatars={avatars} meId={me.id} canModerate={false} apiBase={API} onDeleted={removePost} />
+        <PostCard key={p.id} post={p} avatars={avatars} meId={me.id} canModerate={false} apiBase={API} onDeleted={removePost} onShared={prependShared} />
       ))}
     </div>
   )

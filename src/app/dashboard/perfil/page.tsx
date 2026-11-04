@@ -8,7 +8,7 @@ import { Avatar } from '@/components/dashboard/DashboardShell'
 import { getMembership } from '@/lib/membership'
 import ProfileHeader from '@/components/community/ProfileHeader'
 import PostCard, { type FeedPost } from '@/components/community/PostCard'
-import { MAX_POST_LEN } from '@/lib/community-shared'
+import { MAX_POST_LEN, NO_LINKS_MESSAGE } from '@/lib/community-shared'
 
 // Recorta al centro y reduce a 256x256 para que pese poco
 function resizeImage(file: File): Promise<string> {
@@ -90,6 +90,7 @@ export default function ProfilePage() {
   const [postText, setPostText] = useState('')
   const [postImage, setPostImage] = useState<string | null>(null)
   const [posting, setPosting] = useState(false)
+  const [postErr, setPostErr] = useState('')
   const postImgInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -187,6 +188,7 @@ export default function ProfilePage() {
     const content = postText.trim()
     if (!content || posting) return
     setPosting(true)
+    setPostErr('')
     try {
       const r = await fetch('/api/student/community/posts', {
         method: 'POST',
@@ -198,6 +200,8 @@ export default function ProfilePage() {
         setPosts((p) => [d.post, ...p])
         setPostText('')
         setPostImage(null)
+      } else {
+        setPostErr(d?.error || 'No se pudo publicar.')
       }
     } catch {}
     setPosting(false)
@@ -205,6 +209,10 @@ export default function ProfilePage() {
 
   function removePost(id: string) {
     setPosts((p) => p.filter((x) => x.id !== id))
+  }
+
+  function prependShared(p: FeedPost) {
+    setPosts((prev) => [p, ...prev])
   }
 
   const m = getMembership(role)
@@ -249,6 +257,8 @@ export default function ProfilePage() {
                 <button onClick={() => setPostImage(null)} className="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-slate-800 text-white shadow">✕</button>
               </div>
             )}
+            {postErr && <p className="mt-2 text-xs font-semibold text-red-500">{postErr}</p>}
+            <p className="mt-2 text-[11px] text-slate-400">{NO_LINKS_MESSAGE}</p>
             <div className="mt-2.5 flex items-center justify-between">
               <input ref={postImgInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => pickPostImage(e.target.files?.[0])} />
               <button onClick={() => postImgInput.current?.click()} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-50">
@@ -267,7 +277,7 @@ export default function ProfilePage() {
             </div>
           )}
           {meId && posts.map((p) => (
-            <PostCard key={p.id} post={p} avatars={postAvatars} meId={meId} canModerate={false} apiBase="/api/student/community" onDeleted={removePost} />
+            <PostCard key={p.id} post={p} avatars={postAvatars} meId={meId} canModerate={false} apiBase="/api/student/community" onDeleted={removePost} onShared={prependShared} />
           ))}
         </div>
       )}

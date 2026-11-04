@@ -1,4 +1,4 @@
-// Constantes compartidas por el feed de Comunidad (posts, reacciones, comentarios, perfiles).
+// Constantes compartidas por el feed de Comunidad (posts, reacciones, comentarios, perfiles, compartir).
 // Usado tanto por las rutas API (student/admin) como por las páginas de Comunidad.
 
 export const REACTION_TYPES = ['LIKE', 'LOVE', 'FIRE', 'CLAP'] as const
@@ -26,6 +26,16 @@ export const MAX_AVATAR_CHARS = 300_000 // ~225KB en base64
 
 export const IMAGE_DATA_URL_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/
 
+// Para evitar spam: no se permiten enlaces en publicaciones ni comentarios (solo texto, fotos y emojis).
+// Detecta http(s)://, www. y dominios "pelados" con TLDs comunes (ej: "ganarplata.com").
+export const URL_RE = /(https?:\/\/|www\.|\b[a-z0-9][a-z0-9-]{0,61}\.(com|net|org|io|co|info|biz|me|ly|gg|xyz|ru|top|site|online|club|shop|app|dev|ar|mx|cl|pe|uy|py|ve|br|us|ai|tv|link|click)\b)/i
+
+export const NO_LINKS_MESSAGE = 'Por seguridad contra el spam, no se permiten enlaces en las publicaciones ni comentarios (solo texto, fotos y emojis).'
+
+export function containsUrl(text: string): boolean {
+  return URL_RE.test(text)
+}
+
 export function cleanPostText(v: unknown, max: number): string {
   if (typeof v !== 'string') return ''
   return v.trim().slice(0, max)
@@ -43,7 +53,8 @@ export function roleBadge(role: string) {
 }
 
 // Da forma a un Post (con sus relaciones cargadas) para la respuesta JSON del feed,
-// calculando el conteo de reacciones por tipo y cuál puso el usuario actual (si alguna).
+// calculando el conteo de reacciones por tipo, cuál puso el usuario actual, y los datos
+// del post original si este post es un "compartido" de otro.
 export function shapePost(p: any, meId: string) {
   const counts: Record<string, number> = {}
   let myReaction: string | null = null
@@ -62,7 +73,19 @@ export function shapePost(p: any, meId: string) {
     reactionCounts: counts,
     reactionTotal: p.reactions.length,
     myReaction,
-    commentsCount: p._count.comments,
+    commentsCount: p._count?.comments ?? 0,
+    sharesCount: p._count?.shares ?? 0,
+    sharedFrom: p.sharedFrom
+      ? {
+          id: p.sharedFrom.id,
+          authorId: p.sharedFrom.authorId,
+          authorName: p.sharedFrom.author?.name || 'Usuario',
+          authorRole: p.sharedFrom.author?.role || 'CLUB',
+          content: p.sharedFrom.content,
+          imageUrl: p.sharedFrom.imageUrl,
+          createdAt: p.sharedFrom.createdAt,
+        }
+      : null,
   }
 }
 

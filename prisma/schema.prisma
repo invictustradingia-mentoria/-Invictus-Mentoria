@@ -383,19 +383,23 @@ model JournalComment {
 
 // Publicación que hace un alumno o miembro del equipo en el feed de Comunidad.
 model Post {
-  id        String   @id @default(cuid())
-  authorId  String
-  content   String
-  imageUrl  String? // imagen opcional adjunta al post (data URL)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  authorId     String
+  content      String
+  imageUrl     String? // imagen opcional adjunta al post (data URL)
+  sharedFromId String? // si este post es un "compartido" de otro post, apunta al original
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  reactions PostReaction[]
-  comments  PostComment[]
+  author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions    PostReaction[]
+  comments     PostComment[]
+  sharedFrom   Post?          @relation("PostShares", fields: [sharedFromId], references: [id], onDelete: SetNull)
+  shares       Post[]         @relation("PostShares")
 
   @@index([createdAt])
   @@index([authorId])
+  @@index([sharedFromId])
   @@map("posts")
 }
 

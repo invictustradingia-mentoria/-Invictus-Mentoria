@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { MessageCircle, Send, Trash2, Loader2 } from 'lucide-react'
+import { MessageCircle, Send, Trash2, Loader2, Share2, Check } from 'lucide-react'
 import ChatAvatar from '@/components/chat/ChatAvatar'
 import RoleBadge from './RoleBadge'
-import { REACTION_TYPES, REACTION_EMOJI, REACTION_LABEL, profileHref, type ReactionType } from '@/lib/community-shared'
+import { REACTION_TYPES, REACTION_EMOJI, REACTION_LABEL, profileHref, NO_LINKS_MESSAGE, type ReactionType } from '@/lib/community-shared'
 
 export interface FeedPost {
   id: string
@@ -19,6 +19,16 @@ export interface FeedPost {
   reactionTotal: number
   myReaction: string | null
   commentsCount: number
+  sharesCount?: number
+  sharedFrom?: {
+    id: string
+    authorId: string
+    authorName: string
+    authorRole: string
+    content: string
+    imageUrl: string | null
+    createdAt: string
+  } | null
 }
 
 interface CommentRow {
@@ -38,6 +48,34 @@ function when(d: string) {
   return new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
 }
 
+function SharedPostPreview({ post, avatars, meId }: { post: NonNullable<FeedPost['sharedFrom']>; avatars: Set<string>; meId: string }) {
+  const staff = post.authorRole === 'ADMIN' || post.authorRole === 'EDITOR'
+  return (
+    <Link
+      href={profileHref(post.authorId, meId)}
+      className="mt-3 block rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+    >
+      <div className="flex items-center gap-2">
+        <ChatAvatar userId={post.authorId} name={post.authorName} hasPhoto={avatars.has(post.authorId)} staff={staff} size={28} />
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-[12.5px] font-bold text-[#1d1d1f] dark:text-white">{post.authorName}</span>
+            <RoleBadge role={post.authorRole} size="sm" />
+          </div>
+          <span className="text-[10.5px] font-medium text-slate-400 dark:text-white/40">{when(post.createdAt)}</span>
+        </div>
+      </div>
+      {post.content && (
+        <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#2a2d32] dark:text-white/80">{post.content}</p>
+      )}
+      {post.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={post.imageUrl} alt="" className="mt-2 max-h-[320px] w-full rounded-lg object-cover" />
+      )}
+    </Link>
+  )
+}
+
 export default function PostCard({
   post,
   avatars,
@@ -45,6 +83,7 @@ export default function PostCard({
   canModerate,
   apiBase,
   onDeleted,
+  onShared,
 }: {
   post: FeedPost
   avatars: Set<string>
@@ -52,6 +91,7 @@ export default function PostCard({
   canModerate: boolean
   apiBase: string
   onDeleted: (id: string) => void
+  onShared?: (post: FeedPost) => void
 }) {
   const [counts, setCounts] = useState(post.reactionCounts)
   const [mine, setMine] = useState<string | null>(post.myReaction)
@@ -60,8 +100,15 @@ export default function PostCard({
   const [commentsLoaded, setCommentsLoaded] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [commentsCount, setCommentsCount] = useState(post.commentsCount)
+  const [commentError, setCommentError] = useState('')
   const [busy, setBusy] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [shareText, setShareText] = useState('')
+  const [sharesCount, setSharesCount] = useState(post.sharesCount ?? 0)
+  const [sharing, setSharing] = useState(false)
+  const [shareError, setShareError] = useState('')
+  const [shared, setShared] = useState(false)
 
   const staff = post.authorRole === 'ADMIN' || post.authorRole === 'EDITOR'
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
@@ -111,6 +158,7 @@ export default function PostCard({
     const content = commentText.trim()
     if (!content || busy) return
     setBusy(true)
+    setCommentError('')
     try {
       const r = await fetch(`${apiBase}/posts/${post.id}/comments`, {
         method: 'POST',
@@ -122,6 +170,8 @@ export default function PostCard({
         setComments((c) => [...c, d.comment])
         setCommentsCount((c) => c + 1)
         setCommentText('')
+      } else {
+        setCommentError(d?.error || 'No se pudo comentar.')
       }
     } catch {}
     setBusy(false)
@@ -139,6 +189,33 @@ export default function PostCard({
     const r = await fetch(`${apiBase}/posts/${post.id}`, { method: 'DELETE' }).catch(() => null)
     setDeleting(false)
     if (r && r.ok) onDeleted(post.id)
+  }
+
+  async function sendShare() {
+    if (sharing) return
+    setSharing(true)
+    setShareError('')
+    try {
+      const r = await fetch(`${apiBase}/posts/${post.id}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: shareText.trim() }),
+      })
+      const d = await r.json()
+      if (r.ok) {
+        setSharesCount((c) => c + 1)
+        setShareText('')
+        setShareOpen(false)
+        setShared(true)
+        setTimeout(() => setShared(false), 2500)
+        onShared?.(d.post)
+      } else {
+        setShareError(d?.error || 'No se pudo compartir.')
+      }
+    } catch {
+      setShareError('No se pudo compartir.')
+    }
+    setSharing(false)
   }
 
   const canDeletePost = canModerate || post.authorId === meId
@@ -168,11 +245,14 @@ export default function PostCard({
         )}
       </div>
 
-      <p className="mt-3 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-[#2a2d32] dark:text-white/85">{post.content}</p>
+      {post.content && (
+        <p className="mt-3 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-[#2a2d32] dark:text-white/85">{post.content}</p>
+      )}
       {post.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={post.imageUrl} alt="" className="mt-3 max-h-[480px] w-full rounded-xl object-cover" />
       )}
+      {post.sharedFrom && <SharedPostPreview post={post.sharedFrom} avatars={avatars} meId={meId} />}
 
       {total > 0 && (
         <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-white/50">
@@ -203,11 +283,47 @@ export default function PostCard({
         ))}
         <button
           onClick={loadComments}
-          className="ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 dark:text-white/50 dark:hover:bg-white/5"
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 dark:text-white/50 dark:hover:bg-white/5"
         >
           <MessageCircle size={16} /> {commentsCount > 0 ? commentsCount : 'Comentar'}
         </button>
+        <button
+          onClick={() => setShareOpen((v) => !v)}
+          className={`ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${
+            shared ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 hover:bg-slate-50 dark:text-white/50 dark:hover:bg-white/5'
+          }`}
+        >
+          {shared ? <Check size={16} /> : <Share2 size={16} />}
+          {shared ? 'Compartido' : sharesCount > 0 ? sharesCount : 'Compartir'}
+        </button>
       </div>
+
+      {shareOpen && (
+        <div className="mt-3 space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+          <textarea
+            value={shareText}
+            onChange={(e) => setShareText(e.target.value)}
+            placeholder="Agrega algo (opcional)…"
+            maxLength={2000}
+            rows={2}
+            className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-white/10 dark:bg-white/[0.05] dark:text-white [color-scheme:light] dark:[color-scheme:dark]"
+          />
+          {shareError && <p className="text-[12px] font-medium text-red-500">{shareError}</p>}
+          <p className="text-[11px] text-slate-400 dark:text-white/40">{NO_LINKS_MESSAGE}</p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setShareOpen(false)} className="rounded-lg px-3 py-1.5 text-[13px] font-semibold text-slate-500 hover:bg-slate-100 dark:text-white/50 dark:hover:bg-white/5">
+              Cancelar
+            </button>
+            <button
+              onClick={sendShare}
+              disabled={sharing}
+              className="flex items-center gap-1.5 rounded-lg bg-[#0284c7] px-3 py-1.5 text-[13px] font-semibold text-white disabled:opacity-50"
+            >
+              {sharing ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />} Compartir ahora
+            </button>
+          </div>
+        </div>
+      )}
 
       {commentsOpen && (
         <div className="mt-3 space-y-2.5 border-t border-slate-100 pt-3 dark:border-white/10">
@@ -231,6 +347,8 @@ export default function PostCard({
               </div>
             </div>
           ))}
+          {commentError && <p className="text-[12px] font-medium text-red-500">{commentError}</p>}
+          <p className="text-[11px] text-slate-400 dark:text-white/40">{NO_LINKS_MESSAGE}</p>
           <div className="flex items-center gap-2 pt-1">
             <input
               value={commentText}

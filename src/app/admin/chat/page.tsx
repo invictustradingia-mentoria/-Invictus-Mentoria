@@ -7,7 +7,7 @@ import ChatAvatar from '@/components/chat/ChatAvatar'
 import EmojiPicker from '@/components/chat/EmojiPicker'
 import ProfileHeader from '@/components/community/ProfileHeader'
 import PostCard, { type FeedPost } from '@/components/community/PostCard'
-import { MAX_POST_LEN } from '@/lib/community-shared'
+import { MAX_POST_LEN, NO_LINKS_MESSAGE } from '@/lib/community-shared'
 
 interface AMsg {
   id: string
@@ -170,6 +170,10 @@ function AdminCommunityFeed() {
     setPosts((p) => p.filter((x) => x.id !== id))
   }
 
+  function prependShared(p: FeedPost) {
+    setPosts((prev) => [p, ...prev])
+  }
+
   return (
     <div className="space-y-4">
       {profile && (
@@ -207,6 +211,7 @@ function AdminCommunityFeed() {
           </div>
         )}
         {err && <p className="mt-2 text-xs font-semibold text-red-500">{err}</p>}
+        <p className="mt-2 text-[11px] text-slate-400 dark:text-white/40">{NO_LINKS_MESSAGE}</p>
         <div className="mt-2.5 flex items-center justify-between">
           <input ref={imgInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => pickImage(e.target.files?.[0])} />
           <button onClick={() => imgInput.current?.click()} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-50 dark:text-white/50 dark:hover:bg-white/5">
@@ -226,7 +231,7 @@ function AdminCommunityFeed() {
         </div>
       )}
       {posts.map((p) => (
-        <PostCard key={p.id} post={p} avatars={avatars} meId="" canModerate apiBase={ADMIN_API} onDeleted={removePost} />
+        <PostCard key={p.id} post={p} avatars={avatars} meId="" canModerate apiBase={ADMIN_API} onDeleted={removePost} onShared={prependShared} />
       ))}
     </div>
   )

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prismaDash } from '@/lib/prisma-dashboard'
 import { getStaff } from '@/lib/chat-utils'
-import { cleanPostText, MAX_COMMENT_LEN } from '@/lib/community-shared'
+import { cleanPostText, containsUrl, MAX_COMMENT_LEN, NO_LINKS_MESSAGE } from '@/lib/community-shared'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -34,6 +34,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const body = await req.json().catch(() => ({}))
     const content = cleanPostText(body?.content, MAX_COMMENT_LEN)
     if (!content) return NextResponse.json({ error: 'Escribe un comentario.' }, { status: 400 })
+    if (containsUrl(content)) return NextResponse.json({ error: NO_LINKS_MESSAGE }, { status: 400 })
 
     const post = await prismaDash.post.findUnique({ where: { id: params.id }, select: { id: true } })
     if (!post) return NextResponse.json({ error: 'La publicación no existe.' }, { status: 404 })

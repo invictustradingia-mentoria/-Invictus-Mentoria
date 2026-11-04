@@ -8,10 +8,12 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const NO_STORE = { 'Cache-Control': 'no-store' }
+const AUTHOR_SELECT = { select: { id: true, name: true, role: true } } as const
 const INCLUDE = {
-  author: { select: { id: true, name: true, role: true } },
+  author: AUTHOR_SELECT,
   reactions: { select: { type: true, userId: true } },
-  _count: { select: { comments: true } },
+  _count: { select: { comments: true, shares: true } },
+  sharedFrom: { include: { author: AUTHOR_SELECT } },
 } as const
 
 // Publicaciones hechas por un usuario puntual (para su página de perfil).
@@ -27,7 +29,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       include: INCLUDE,
     })
 
-    const avatars = await avatarIds([params.id])
+    const ids = Array.from(
+      new Set([params.id, ...posts.flatMap((p: any) => (p.sharedFrom ? [p.sharedFrom.authorId] : []))])
+    )
+    const avatars = await avatarIds(ids)
 
     return NextResponse.json({ posts: posts.map((p: any) => shapePost(p, me.id)), avatars }, { headers: NO_STORE })
   } catch (err: any) {
