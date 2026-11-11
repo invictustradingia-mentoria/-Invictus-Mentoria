@@ -171,7 +171,10 @@ export default function RegisterPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
                 placeholder="ej: trader_nyc"
-                autoComplete="username"
+                name="campus-handle"
+                autoComplete="off"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 autoCapitalize="none"
                 spellCheck={false}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#0284c7] font-medium text-[#1d1d1f]"
